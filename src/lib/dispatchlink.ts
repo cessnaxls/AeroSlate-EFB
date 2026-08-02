@@ -15,6 +15,9 @@ export interface Airport {
   size: 'large' | 'medium' | 'small';
 }
 
+export type Fr24PasteFormat = 'airport-table' | 'airport-compact' | 'aircraft-history-cards' | 'aircraft-history-table';
+export type Fr24TimeMode = 'utc' | 'local-converted' | 'local-unresolved' | 'unknown';
+
 export interface FlightCandidate {
   id: string;
   date: string;
@@ -26,6 +29,17 @@ export interface FlightCandidate {
   std: string;
   sta: string;
   ete: string;
+  sourceFormat?: Fr24PasteFormat;
+  timeMode?: Fr24TimeMode;
+  rawStd?: string;
+  rawSta?: string;
+}
+
+export interface Fr24ParseResult {
+  flights: FlightCandidate[];
+  formats: Fr24PasteFormat[];
+  timeModes: Fr24TimeMode[];
+  warnings: string[];
 }
 
 function parseCsvLine(line: string): string[] {
@@ -98,30 +112,201 @@ export function normalizeAirportCode(value: string, airports: Map<string, Airpor
   return airports.get(raw)?.icao || raw || '—';
 }
 
-function zulu(value?: string): string {
-  const raw = (value || '').trim().toLowerCase().replace(/z/g, '').replace(/\s/g, '');
-  const match = raw.match(/^(\d{1,2}):?(\d{2})$/);
-  if (!match) return value?.trim() || '—';
-  const hour = Number(match[1]); const minute = Number(match[2]);
-  if (hour > 23 || minute > 59) return value?.trim() || '—';
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}z`;
+type SourceClockMode = 'utc' | 'local' | 'unknown';
+
+interface ClockValue {
+  minutes: number;
+  label: string;
 }
 
-function ete(std?: string, sta?: string): string {
-  const toMinutes = (v?: string) => {
-    const match = (v || '').replace(/z/gi, '').match(/^(\d{1,2}):?(\d{2})$/);
-    return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+interface ScheduleResult {
+  std: string;
+  sta: string;
+  ete: string;
+  timeMode: Fr24TimeMode;
+}
+
+const MONTH_INDEX: Record<string, number> = {
+  JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+  JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11
+};
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function cleanLine(value: string): string {
+  return String(value || '').replace(/[\u00a0\u202f]/g, ' ').trim();
+}
+
+function parseClock(value?: string): ClockValue | null {
+  const raw = cleanLine(value || '').replace(/\b(?:UTC|ZULU)\b/gi, '').replace(/z$/i, '').trim();
+  let match = raw.match(/^(\d{1,2}):(\d{2})\s*([AP]M)?$/i);
+  if (!match) match = raw.match(/^(\d{1,2})(\d{2})\s*([AP]M)?$/i);
+  if (!match) return null;
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const meridiem = (match[3] || '').toUpperCase();
+  if (minute > 59) return null;
+  if (meridiem) {
+    if (hour < 1 || hour > 12) return null;
+    if (hour === 12) hour = 0;
+    if (meridiem === 'PM') hour += 12;
+  } else if (hour > 23) return null;
+  const minutes = hour * 60 + minute;
+  return { minutes, label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}` };
+}
+
+function normalizedDate(value: string, fallbackYear = new Date().getUTCFullYear()): string | null {
+  const clean = cleanLine(value).replace(/^[A-Za-z]+,\s*/, '');
+  let match = clean.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  if (match) return `${match[1].padStart(2, '0')} ${match[2][0].toUpperCase()}${match[2].slice(1).toLowerCase()} ${match[3]}`;
+  match = clean.match(/^([A-Za-z]{3})\s+(\d{1,2})(?:,?\s+(\d{4}))?$/);
+  if (match) return `${match[2].padStart(2, '0')} ${match[1][0].toUpperCase()}${match[1].slice(1).toLowerCase()} ${match[3] || fallbackYear}`;
+  return null;
+}
+
+function dateParts(value: string): { day: number; month: number; year: number } | null {
+  const normalized = normalizedDate(value);
+  if (!normalized) return null;
+  const match = normalized.match(/^(\d{2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  if (!match) return null;
+  const month = MONTH_INDEX[match[2].toUpperCase()];
+  return month === undefined ? null : { day: Number(match[1]), month, year: Number(match[3]) };
+}
+
+function addDays(value: string, count: number): string {
+  const parts = dateParts(value);
+  if (!parts) return value;
+  const date = new Date(Date.UTC(parts.year, parts.month, parts.day + count));
+  return `${String(date.getUTCDate()).padStart(2, '0')} ${MONTH_LABELS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
+
+function pageYear(text: string): number {
+  const years = [...text.matchAll(/\b(20\d{2})\b/g)].map(match => Number(match[1])).filter(year => year >= 2000 && year <= 2100);
+  return years.length ? years[0] : new Date().getUTCFullYear();
+}
+
+function todayAtAirport(airport: Airport | undefined, yearHint: number): string {
+  const now = new Date();
+  try {
+    if (airport?.timezoneName) {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: airport.timezoneName, day: '2-digit', month: 'short', year: 'numeric' }).formatToParts(now);
+      const day = parts.find(part => part.type === 'day')?.value;
+      const month = parts.find(part => part.type === 'month')?.value;
+      if (day && month) return `${day} ${month} ${yearHint}`;
+    }
+  } catch { /* fall through */ }
+  return `${String(now.getUTCDate()).padStart(2, '0')} ${MONTH_LABELS[now.getUTCMonth()]} ${yearHint}`;
+}
+
+function sourceClockMode(text: string, defaultLocal = false): SourceClockMode {
+  if (/all times are in\s+(?:utc|zulu)|\bUTC\s+TIME\b|\bTIMES?\s+IN\s+UTC\b/i.test(text)) return 'utc';
+  if (/all times are in local timezone|\bLOCAL TIME\s*:/i.test(text)) return 'local';
+  return defaultLocal ? 'local' : 'unknown';
+}
+
+function airportForCode(code: string, airports: Map<string, Airport>): Airport | undefined {
+  return airports.get(code) || [...airports.values()].find(airport => airport.icao === code || airport.iata === code);
+}
+
+function zonedInstant(dateLabel: string, timeValue: string, airport: Airport | undefined): Date | null {
+  const date = dateParts(dateLabel);
+  const clock = parseClock(timeValue);
+  if (!date || !clock || !airport?.timezoneName) return null;
+  const hour = Math.floor(clock.minutes / 60);
+  const minute = clock.minutes % 60;
+  const desired = Date.UTC(date.year, date.month, date.day, hour, minute, 0);
+  let guess = desired;
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: airport.timezoneName,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    });
+    for (let iteration = 0; iteration < 3; iteration += 1) {
+      const parts = formatter.formatToParts(new Date(guess));
+      const take = (type: string) => Number(parts.find(part => part.type === type)?.value || 0);
+      const represented = Date.UTC(take('year'), take('month') - 1, take('day'), take('hour') % 24, take('minute'), take('second'));
+      const delta = represented - desired;
+      if (Math.abs(delta) < 1000) break;
+      guess -= delta;
+    }
+    return new Date(guess);
+  } catch {
+    return null;
+  }
+}
+
+function utcLabel(value: Date | null): string {
+  return value ? `${String(value.getUTCHours()).padStart(2, '0')}:${String(value.getUTCMinutes()).padStart(2, '0')}z` : '—';
+}
+
+function durationMinutes(value?: string): number | null {
+  const match = cleanLine(value || '').match(/^(\d{1,2}):(\d{2})$/);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+function scheduleTimes(
+  dateLabel: string,
+  rawStd: string,
+  rawSta: string,
+  departure: string,
+  arrival: string,
+  sourceMode: SourceClockMode,
+  airports: Map<string, Airport>,
+  durationHint?: string
+): ScheduleResult {
+  const depClock = parseClock(rawStd);
+  const arrClock = parseClock(rawSta);
+  if (sourceMode === 'utc') {
+    const elapsed = depClock && arrClock ? (arrClock.minutes - depClock.minutes + 1440) % 1440 : null;
+    return {
+      std: depClock ? `${depClock.label}z` : '—',
+      sta: arrClock ? `${arrClock.label}z` : '—',
+      ete: elapsed === null ? '—' : `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`,
+      timeMode: 'utc'
+    };
+  }
+
+  if (sourceMode === 'local') {
+    const depAirport = airportForCode(departure, airports);
+    const arrAirport = airportForCode(arrival, airports);
+    const depInstant = depClock ? zonedInstant(dateLabel, rawStd, depAirport) : null;
+    let arrInstant: Date | null = null;
+    let elapsed: number | null = null;
+    if (arrClock && arrAirport) {
+      const candidates = [-1, 0, 1, 2]
+        .map(dayOffset => zonedInstant(addDays(dateLabel, dayOffset), rawSta, arrAirport))
+        .filter((value): value is Date => Boolean(value));
+      if (depInstant && candidates.length) {
+        const hint = durationMinutes(durationHint);
+        const viable = candidates.map(value => ({ value, minutes: Math.round((value.getTime() - depInstant.getTime()) / 60000) }))
+          .filter(candidate => candidate.minutes >= 0 && candidate.minutes <= 30 * 60);
+        viable.sort((a, b) => hint === null ? a.minutes - b.minutes : Math.abs(a.minutes - hint) - Math.abs(b.minutes - hint));
+        if (viable[0]) { arrInstant = viable[0].value; elapsed = viable[0].minutes; }
+      } else arrInstant = candidates[0] || null;
+    }
+    const resolved = (!depClock || Boolean(depInstant)) && (!arrClock || Boolean(arrInstant));
+    return {
+      std: depClock ? (depInstant ? utcLabel(depInstant) : depClock.label) : '—',
+      sta: arrClock ? (arrInstant ? utcLabel(arrInstant) : arrClock.label) : '—',
+      ete: elapsed === null ? (depClock && arrClock ? `${Math.floor(((arrClock.minutes - depClock.minutes + 1440) % 1440) / 60)}:${String((arrClock.minutes - depClock.minutes + 1440) % 60).padStart(2, '0')}` : '—') : `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`,
+      timeMode: resolved ? 'local-converted' : 'local-unresolved'
+    };
+  }
+
+  const elapsed = depClock && arrClock ? (arrClock.minutes - depClock.minutes + 1440) % 1440 : null;
+  return {
+    std: depClock?.label || '—',
+    sta: arrClock?.label || '—',
+    ete: elapsed === null ? '—' : `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`,
+    timeMode: 'unknown'
   };
-  const dep = toMinutes(std); const arr = toMinutes(sta);
-  if (dep === null || arr === null) return '—';
-  const minutes = (arr - dep + 1440) % 1440;
-  return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
 }
 
 const COMMON_IATA_TO_ICAO: Record<string, string> = {
   AA: 'AAL', UA: 'UAL', DL: 'DAL', WN: 'SWA', AS: 'ASA', B6: 'JBU', NK: 'NKS', F9: 'FFT',
   MQ: 'ENY', OH: 'JIA', PT: 'PDT', YX: 'RPA', OO: 'SKW', YV: 'ASH', G7: 'GJS', C5: 'UCA',
-  ZW: 'AWI', CP: 'CPZ', AX: 'LOF', '9E': 'EDV'
+  ZW: 'AWI', CP: 'CPZ', AX: 'LOF', '9E': 'EDV', MX: 'MXY', G4: 'AAY', '5X': 'UPS',
+  AC: 'ACA', XP: 'VXP', '2I': 'SRU'
 };
 
 function airlineMap(text: string) {
@@ -136,8 +321,8 @@ function operatorIcao(text: string): string | undefined {
 }
 
 function flightToIcao(value: string, operator: string | undefined, map: Record<string, string>): string {
-  const match = (value || '').trim().toUpperCase().match(/^([A-Z]{3}|[A-Z0-9]{2})(\d+[A-Z]?)$/);
-  if (!match) return (value || '—').toUpperCase();
+  const match = cleanLine(value || '').toUpperCase().match(/^([A-Z]{3}|[A-Z0-9]{2})(\d+[A-Z]?)$/);
+  if (!match) return cleanLine(value || '—').toUpperCase() || '—';
   if (match[1].length === 3) return match[1] + match[2];
   return (operator || map[match[1]] || match[1]) + match[2];
 }
@@ -150,96 +335,289 @@ function pageAirport(text: string, airports: Map<string, Airport>): string {
 }
 
 function parseAircraft(raw: string): [string, string] {
-  const match = (raw || '').trim().match(/\b([A-Z0-9]{3,4})\b(?:\s*\(([A-Z0-9-]+)\))?/i);
-  return match ? [match[1].toUpperCase(), (match[2] || '—').toUpperCase()] : [(raw || '—').toUpperCase(), '—'];
+  const match = cleanLine(raw).match(/\b([A-Z0-9]{3,4})\b(?:\s*\(([A-Z0-9-]+)\))?/i);
+  return match ? [match[1].toUpperCase(), (match[2] || '—').toUpperCase()] : [cleanLine(raw || '—').toUpperCase(), '—'];
+}
+
+function parseCompactAircraft(raw: string): [string, string] {
+  const compact = cleanLine(raw).replace(/^\s+/, '');
+  const typeMatch = compact.match(/^([A-Z0-9]{3,4}|-)\s*(.*)$/i);
+  if (!typeMatch) return ['—', '—'];
+  const aircraft = typeMatch[1] === '-' ? '—' : typeMatch[1].toUpperCase();
+  const rest = typeMatch[2] || '';
+  const registration = rest.match(/^(N(?:[1-9]\d{0,2}[A-Z]{2}|[1-9]\d{0,3}[A-Z]|[1-9]\d{0,4})|[A-Z]{1,2}-[A-Z0-9]{3,5})/i)?.[1]?.toUpperCase() || '—';
+  return [aircraft, registration];
 }
 
 function rowId(row: Omit<FlightCandidate, 'id'>) {
   return `${row.date}|${row.flightNumber}|${row.departure}|${row.arrival}|${row.std}`;
 }
 
-function parseAirportPage(lines: string[], text: string, airports: Map<string, Airport>): FlightCandidate[] {
-  const departureIndex = lines.findIndex(line => /^Departures$/i.test(line));
-  const arrivalIndex = lines.findIndex(line => /^Arrivals$/i.test(line));
-  const isDeparture = departureIndex >= 0 && (arrivalIndex < 0 || departureIndex < arrivalIndex);
-  const start = isDeparture ? departureIndex : arrivalIndex;
-  if (start < 0) return [];
+function operationalSection(lines: string[]): { start: number; isDeparture: boolean } | null {
+  const tableHeader = lines.findIndex(line => /\bTIME\b.*\bFLIGHT\b.*\b(?:TO|FROM)\b/i.test(cleanLine(line)));
+  if (tableHeader >= 0) {
+    for (let index = tableHeader - 1; index >= Math.max(0, tableHeader - 12); index -= 1) {
+      if (/^Departures$/i.test(cleanLine(lines[index]))) return { start: tableHeader + 1, isDeparture: true };
+      if (/^Arrivals$/i.test(cleanLine(lines[index]))) return { start: tableHeader + 1, isDeparture: false };
+    }
+  }
+  const departures = lines.map((line, index) => /^Departures$/i.test(cleanLine(line)) ? index : -1).filter(index => index >= 0);
+  const arrivals = lines.map((line, index) => /^Arrivals$/i.test(cleanLine(line)) ? index : -1).filter(index => index >= 0);
+  const departureIndex = departures.at(-1) ?? -1;
+  const arrivalIndex = arrivals.at(-1) ?? -1;
+  const start = Math.max(departureIndex, arrivalIndex);
+  return start >= 0 ? { start: start + 1, isDeparture: departureIndex > arrivalIndex } : null;
+}
+
+function parseAirportTable(lines: string[], text: string, airports: Map<string, Airport>): FlightCandidate[] {
+  const section = operationalSection(lines);
+  if (!section) return [];
   const home = pageAirport(text, airports);
+  const sourceMode = sourceClockMode(text);
+  const format: Fr24PasteFormat = 'airport-table';
+  const year = pageYear(text);
+  let date = todayAtAirport(airportForCode(home, airports), year);
   const rows: FlightCandidate[] = [];
-  let date = '—';
-  for (let i = start + 1; i < lines.length;) {
-    const line = lines[i].trim();
+
+  for (let index = section.start; index < lines.length; index += 1) {
+    const line = cleanLine(lines[index]);
     if (/delay statistics|disclaimer|all times are/i.test(line)) break;
-    if (/^[A-Za-z]+,\s+[A-Za-z]{3}\s+\d{1,2}$/.test(line)) { date = line; i += 1; continue; }
-    if (/\bTIME\b.*\bFLIGHT\b/i.test(line)) { i += 1; continue; }
-    const tabbed = line.split('\t').map(v => v.trim());
-    const time = /^\d{1,2}:\d{2}$/.test(tabbed[0] || '') ? tabbed[0] : (/^\d{1,2}:\d{2}$/.test(line) ? line : '');
-    if (!time) { i += 1; continue; }
-    const flightInRow = Boolean(tabbed[1]);
-    const rawFlight = (flightInRow ? tabbed[1] : (lines[i + 1] || '—')).toUpperCase();
-    const flight = flightToIcao(rawFlight, undefined, COMMON_IATA_TO_ICAO);
-    const hasPlaceInRow = Boolean(tabbed[2]);
-    const place = tabbed[2] || lines[i + (flightInRow ? 1 : 2)] || '—';
-    const aircraftLineIndex = hasPlaceInRow ? i + 1 : i + (flightInRow ? 2 : 3);
-    const aircraftLine = lines[aircraftLineIndex] || '—';
-    const aircraftRaw = aircraftLine.split(/\t+/).filter(Boolean).at(-1) || aircraftLine;
+    const dateValue = normalizedDate(line, year);
+    if (dateValue) { date = dateValue; continue; }
+    if (/^Load (?:earlier|later) flights$/i.test(line)) continue;
+
+    const cells = String(lines[index]).replace(/[\u00a0\u202f]/g, ' ').split('\t').map(cleanLine);
+    const rawTime = cells[0] || '';
+    if (!parseClock(rawTime)) continue;
+    let rawFlight = cells[1] || '';
+    let place = cells[2] || '';
+    let aircraftRaw = cells[4] || '';
+
+    if (!/\([A-Z0-9]{3,4}\)/i.test(place)) {
+      const next = cleanLine(lines[index + 1] || '');
+      if (/\([A-Z0-9]{3,4}\)/i.test(next)) { place = next; index += 1; }
+    }
+    if (!aircraftRaw || !/\b[A-Z0-9]{3,4}\b(?:\s*\([A-Z0-9-]+\))?/i.test(aircraftRaw)) {
+      const next = String(lines[index + 1] || '').replace(/[\u00a0\u202f]/g, ' ').split('\t').map(cleanLine).filter(Boolean);
+      aircraftRaw = next.at(-1) || cleanLine(lines[index + 1] || '');
+      if (aircraftRaw) index += 1;
+    }
+
     const [aircraft, registration] = parseAircraft(aircraftRaw);
+    if (!rawFlight) rawFlight = registration !== '—' ? registration : '—';
     const other = normalizeAirportCode(place, airports);
-    const base = {
-      date, aircraft, registration, flightNumber: flight,
-      departure: isDeparture ? home : other,
-      arrival: isDeparture ? other : home,
-      std: isDeparture ? zulu(time) : '—',
-      sta: isDeparture ? '—' : zulu(time),
-      ete: '—'
+    const departure = section.isDeparture ? home : other;
+    const arrival = section.isDeparture ? other : home;
+    const schedule = scheduleTimes(date, section.isDeparture ? rawTime : '', section.isDeparture ? '' : rawTime, departure, arrival, sourceMode, airports);
+    const base: Omit<FlightCandidate, 'id'> = {
+      date, aircraft, registration,
+      flightNumber: flightToIcao(rawFlight, undefined, COMMON_IATA_TO_ICAO),
+      departure, arrival,
+      std: schedule.std, sta: schedule.sta, ete: schedule.ete,
+      sourceFormat: format, timeMode: schedule.timeMode,
+      rawStd: section.isDeparture ? cleanLine(rawTime) : '', rawSta: section.isDeparture ? '' : cleanLine(rawTime)
     };
     rows.push({ id: rowId(base), ...base });
-    i = Math.max(i + 1, aircraftLineIndex + 1);
   }
   return rows;
 }
 
-export function parseFr24Paste(clip: string, airports: Map<string, Airport>): FlightCandidate[] {
-  if (!clip.trim()) return [];
-  const lines = clip.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-  const text = lines.join('\n');
-  const airportRows = parseAirportPage(lines, text, airports);
-  if (airportRows.length) return airportRows;
-
-  const registration = text.match(/Flight history for aircraft\s*-\s*([A-Z0-9-]+)/i)?.[1]?.toUpperCase() || '—';
-  const aircraft = text.match(/TYPE CODE\s*([A-Z0-9]{3,4})/i)?.[1]?.toUpperCase() || '—';
-  const map = airlineMap(text); const operator = operatorIcao(text);
+function parseAirportCompact(lines: string[], text: string, airports: Map<string, Airport>): FlightCandidate[] {
+  const section = operationalSection(lines);
+  if (!section) return [];
+  const home = pageAirport(text, airports);
+  const sourceMode = sourceClockMode(text);
+  const format: Fr24PasteFormat = 'airport-compact';
+  const year = pageYear(text);
+  let date = todayAtAirport(airportForCode(home, airports), year);
+  let previousClock: number | null = null;
   const rows: FlightCandidate[] = [];
 
-  for (const line of lines) {
-    if (!line.includes('\t')) continue;
-    const parts = line.split('\t').map(v => v.trim()).filter(Boolean);
-    if (parts.length < 8 || !/^\d{1,2}\s+[A-Za-z]{3}\s+\d{4}$/.test(parts[0])) continue;
-    const [date, dep, arr, rawFlight, , rawStd, , rawSta] = parts;
-    const base = {
+  for (let index = section.start; index < lines.length; index += 1) {
+    const line = cleanLine(lines[index]);
+    if (/delay statistics|disclaimer|all times are/i.test(line)) break;
+    const dateValue = normalizedDate(line, year);
+    if (dateValue) { date = dateValue; previousClock = null; continue; }
+    const match = line.match(/^(\d{1,2}:\d{2}\s*(?:AM|PM)?)\s+(?:([A-Z0-9]{2,3}\d{1,5}[A-Z]?)\s+)?(.+?)\s*\(([A-Z0-9]{3,4})\)\s*$/i);
+    if (!match) continue;
+    const clock = parseClock(match[1]);
+    if (!clock) continue;
+    if (previousClock !== null && clock.minutes < previousClock - 360) date = addDays(date, 1);
+    previousClock = clock.minutes;
+    const place = `${match[3]} (${match[4]})`;
+    const aircraftLine = cleanLine(lines[index + 1] || '');
+    const [aircraft, registration] = parseCompactAircraft(aircraftLine);
+    if (aircraftLine && !/^(?:Estimated|Scheduled|Landed|Load |\* All times|Departure delay|Disclaimer)/i.test(aircraftLine)) index += 1;
+    const rawFlight = match[2] || (registration !== '—' ? registration : '—');
+    const other = normalizeAirportCode(place, airports);
+    const departure = section.isDeparture ? home : other;
+    const arrival = section.isDeparture ? other : home;
+    const schedule = scheduleTimes(date, section.isDeparture ? match[1] : '', section.isDeparture ? '' : match[1], departure, arrival, sourceMode, airports);
+    const base: Omit<FlightCandidate, 'id'> = {
       date, aircraft, registration,
-      flightNumber: /^\([A-Z0-9-]+\)$/.test(rawFlight) || rawFlight === '—' ? registration : flightToIcao(rawFlight, operator, map),
-      departure: normalizeAirportCode(dep, airports), arrival: normalizeAirportCode(arr, airports),
-      std: zulu(rawStd), sta: zulu(rawSta), ete: ete(rawStd, rawSta)
+      flightNumber: flightToIcao(rawFlight, undefined, COMMON_IATA_TO_ICAO),
+      departure, arrival,
+      std: schedule.std, sta: schedule.sta, ete: schedule.ete,
+      sourceFormat: format, timeMode: schedule.timeMode,
+      rawStd: section.isDeparture ? cleanLine(match[1]) : '', rawSta: section.isDeparture ? '' : cleanLine(match[1])
     };
     rows.push({ id: rowId(base), ...base });
-  }
-  if (rows.length) return rows;
-
-  for (let i = 0; i + 7 < lines.length; i += 1) {
-    if (!/^\d{1,2}\s+[A-Za-z]{3}\s+\d{4}$/.test(lines[i])) continue;
-    const [date, dep, arr, rawFlight, , rawStd, , rawSta] = lines.slice(i, i + 8);
-    if (!/\([A-Z0-9]{3,4}\)/.test(dep) || !/\([A-Z0-9]{3,4}\)/.test(arr)) continue;
-    const base = {
-      date, aircraft, registration,
-      flightNumber: /^\([A-Z0-9-]+\)$/.test(rawFlight) || rawFlight === '—' ? registration : flightToIcao(rawFlight, operator, map),
-      departure: normalizeAirportCode(dep, airports), arrival: normalizeAirportCode(arr, airports),
-      std: zulu(rawStd), sta: zulu(rawSta), ete: ete(rawStd, rawSta)
-    };
-    rows.push({ id: rowId(base), ...base });
-    i += 7;
   }
   return rows;
+}
+
+function aircraftHeader(text: string): { registration: string; aircraft: string; map: Record<string, string>; operator?: string } {
+  return {
+    registration: text.match(/Flight history for aircraft\s*-\s*([A-Z0-9-]+)/i)?.[1]?.toUpperCase() || '—',
+    aircraft: text.match(/TYPE CODE\s*\n?\s*([A-Z0-9]{3,4})/i)?.[1]?.toUpperCase() || '—',
+    map: airlineMap(text),
+    operator: operatorIcao(text)
+  };
+}
+
+function parseAircraftCards(lines: string[], text: string, airports: Map<string, Airport>): FlightCandidate[] {
+  const historyIndex = lines.findIndex(line => /^FLIGHTS HISTORY$/i.test(cleanLine(line)));
+  if (historyIndex < 0) return [];
+  const header = aircraftHeader(text);
+  const sourceMode = sourceClockMode(text, true);
+  const format: Fr24PasteFormat = 'aircraft-history-cards';
+  const rows: FlightCandidate[] = [];
+  const isFlight = (value: string) => /^[A-Z0-9]{2,3}\d{1,5}[A-Z]?$/i.test(cleanLine(value));
+  const isDate = (value: string) => Boolean(normalizedDate(value));
+
+  for (let index = historyIndex + 1; index < lines.length;) {
+    if (!isFlight(lines[index]) || !isDate(lines[index + 1] || '')) { index += 1; continue; }
+    let end = index + 2;
+    while (end < lines.length && !(isFlight(lines[end]) && isDate(lines[end + 1] || ''))) {
+      if (/More than \d+ days|Looking for even more|© \d{4}/i.test(cleanLine(lines[end]))) break;
+      end += 1;
+    }
+    const block = lines.slice(index, end).map(cleanLine);
+    const after = (label: string) => {
+      const at = block.findIndex(value => value.toUpperCase() === label);
+      return at >= 0 ? block[at + 1] || '' : '';
+    };
+    const date = normalizedDate(block[1]) || block[1];
+    const departure = normalizeAirportCode(after('FROM'), airports);
+    const arrival = normalizeAirportCode(after('TO'), airports);
+    const rawStd = after('STD');
+    const rawSta = after('STA');
+    const durationHint = block.slice(2).find(value => /^\d{1,2}:\d{2}$/.test(value));
+    const schedule = scheduleTimes(date, rawStd, rawSta, departure, arrival, sourceMode, airports, durationHint);
+    const base: Omit<FlightCandidate, 'id'> = {
+      date, aircraft: header.aircraft, registration: header.registration,
+      flightNumber: flightToIcao(block[0], header.operator, header.map),
+      departure, arrival,
+      std: schedule.std, sta: schedule.sta, ete: schedule.ete,
+      sourceFormat: format, timeMode: schedule.timeMode,
+      rawStd, rawSta
+    };
+    if (departure !== '—' && arrival !== '—') rows.push({ id: rowId(base), ...base });
+    index = Math.max(end, index + 1);
+  }
+  return rows;
+}
+
+function parseAircraftTable(lines: string[], text: string, airports: Map<string, Airport>): FlightCandidate[] {
+  const headerIndex = lines.findIndex(line => /\bDATE\b.*\bFROM\b.*\bTO\b.*\bFLIGHT\b.*\bSTD\b.*\bSTA\b/i.test(cleanLine(line)));
+  if (headerIndex < 0) return [];
+  const header = aircraftHeader(text);
+  const sourceMode = sourceClockMode(text, true);
+  const format: Fr24PasteFormat = 'aircraft-history-table';
+  const rows: FlightCandidate[] = [];
+
+  for (let index = headerIndex + 1; index < lines.length; index += 1) {
+    const parts = String(lines[index]).replace(/[\u00a0\u202f]/g, ' ').split('\t').map(cleanLine).filter(Boolean);
+    const dateIndex = parts.findIndex(value => Boolean(normalizedDate(value)));
+    if (dateIndex < 0 || parts.length < dateIndex + 8) continue;
+    const date = normalizedDate(parts[dateIndex]) || parts[dateIndex];
+    const departure = normalizeAirportCode(parts[dateIndex + 1], airports);
+    const arrival = normalizeAirportCode(parts[dateIndex + 2], airports);
+    const rawFlight = parts[dateIndex + 3];
+    const durationHint = parts[dateIndex + 4];
+    const rawStd = parts[dateIndex + 5];
+    const rawSta = parts[dateIndex + 7];
+    const schedule = scheduleTimes(date, rawStd, rawSta, departure, arrival, sourceMode, airports, durationHint);
+    const base: Omit<FlightCandidate, 'id'> = {
+      date, aircraft: header.aircraft, registration: header.registration,
+      flightNumber: rawFlight === '—' ? header.registration : flightToIcao(rawFlight, header.operator, header.map),
+      departure, arrival,
+      std: schedule.std, sta: schedule.sta, ete: schedule.ete,
+      sourceFormat: format, timeMode: schedule.timeMode,
+      rawStd, rawSta
+    };
+    rows.push({ id: rowId(base), ...base });
+  }
+  return rows;
+}
+
+function splitFr24Documents(clip: string): string[] {
+  const normalized = clip.replace(/\r\n?/g, '\n');
+  const loginParts = normalized.split(/^\s*LOG IN\s*$/gmi).map(part => part.trim()).filter(part => /Flight tracker map|Flight history for aircraft|\bDepartures\b|\bArrivals\b/i.test(part));
+  if (loginParts.length > 1) return loginParts;
+  const starts = [...normalized.matchAll(/^\s*Flight tracker map\s*$/gmi)].map(match => match.index || 0);
+  if (starts.length <= 1) return [normalized];
+  return starts.map((start, index) => normalized.slice(start, starts[index + 1] ?? normalized.length).trim()).filter(Boolean);
+}
+
+function mergeFlights(rows: FlightCandidate[]): FlightCandidate[] {
+  const merged = new Map<string, FlightCandidate>();
+  for (const row of rows) {
+    const key = `${row.date}|${row.flightNumber}|${row.departure}|${row.arrival}|${row.std}`;
+    const prior = merged.get(key);
+    if (!prior) { merged.set(key, row); continue; }
+    const choose = (a: string, b: string) => a && a !== '—' ? a : b;
+    const combined = {
+      ...prior,
+      aircraft: choose(prior.aircraft, row.aircraft),
+      registration: choose(prior.registration, row.registration),
+      sta: choose(prior.sta, row.sta),
+      ete: choose(prior.ete, row.ete),
+      rawSta: choose(prior.rawSta || '', row.rawSta || ''),
+      timeMode: prior.timeMode === 'local-unresolved' ? row.timeMode : prior.timeMode
+    };
+    merged.set(key, { ...combined, id: rowId(combined) });
+  }
+  return [...merged.values()];
+}
+
+export function parseFr24PasteDetailed(clip: string, airports: Map<string, Airport>): Fr24ParseResult {
+  if (!clip.trim()) return { flights: [], formats: [], timeModes: [], warnings: [] };
+  const allRows: FlightCandidate[] = [];
+  const formats = new Set<Fr24PasteFormat>();
+  const warnings = new Set<string>();
+
+  for (const document of splitFr24Documents(clip)) {
+    const rawLines = document.split(/\r?\n/).filter(line => cleanLine(line));
+    const text = rawLines.map(cleanLine).join('\n');
+    let rows: FlightCandidate[] = [];
+    let format: Fr24PasteFormat | null = null;
+    if (/\bDATE\b.*\bFROM\b.*\bTO\b.*\bFLIGHT\b.*\bSTD\b.*\bSTA\b/i.test(text) && /Flight history for aircraft/i.test(text)) {
+      format = 'aircraft-history-table'; rows = parseAircraftTable(rawLines, text, airports);
+    } else if (/FLIGHTS HISTORY/i.test(text) && /Flight history for aircraft/i.test(text)) {
+      format = 'aircraft-history-cards'; rows = parseAircraftCards(rawLines, text, airports);
+    } else if (/\bTIME\b.*\bFLIGHT\b.*\b(?:TO|FROM)\b/i.test(text) && /\b(?:Departures|Arrivals)\b/i.test(text)) {
+      format = 'airport-table'; rows = parseAirportTable(rawLines, text, airports);
+    } else if (/\b(?:Departures|Arrivals)\b/i.test(text)) {
+      format = 'airport-compact'; rows = parseAirportCompact(rawLines, text, airports);
+    }
+    if (format && rows.length) formats.add(format);
+    allRows.push(...rows);
+    if (format === 'airport-compact' && !rawLines.some(line => Boolean(normalizedDate(cleanLine(line), pageYear(text))))) {
+      warnings.add('The compact airport paste does not include calendar dates. DispatchLink inferred the first date from the device date at the airport and detected midnight rollover from the schedule order.');
+    }
+  }
+
+  const flights = mergeFlights(allRows);
+  const timeModes = [...new Set(flights.map(row => row.timeMode || 'unknown'))];
+  if (timeModes.includes('local-converted')) warnings.add('FR24 identified the pasted schedule as local time. DispatchLink converted each time to UTC using the departure or arrival airport timezone in airports.dat.');
+  if (timeModes.includes('local-unresolved')) warnings.add('Some local times could not be converted because an airport timezone was unavailable. Review those rows before dispatching.');
+  if (timeModes.includes('unknown')) warnings.add('The paste did not identify its timezone. Times were normalized but not converted.');
+  return { flights, formats: [...formats], timeModes, warnings: [...warnings] };
+}
+
+export function parseFr24Paste(clip: string, airports: Map<string, Airport>): FlightCandidate[] {
+  return parseFr24PasteDetailed(clip, airports).flights;
 }
 
 const TYPE_MAP: Record<string, string> = {

@@ -15,6 +15,7 @@ jobs:
           cache: npm
       - run: npm install
       - run: npm run check
+      - run: npm run test:parser
       - run: npm run native:dist
       - uses: actions/upload-artifact@v4
         with:

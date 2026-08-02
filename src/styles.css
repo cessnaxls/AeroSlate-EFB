@@ -292,3 +292,10 @@ select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(67,181,255,
 .sync-banner { display: flex; gap: 11px; align-items: center; margin: 13px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 11px; background: rgba(255,255,255,.025); }
 .sync-banner > div { display: flex; flex-direction: column; gap: 3px; }.sync-banner small { color: var(--muted); }
 .sync-banner.watching { border-color: rgba(61, 160, 215, .55); background: rgba(37, 120, 168, .11); }.sync-banner.synced { border-color: rgba(53, 174, 119, .55); background: rgba(35, 130, 86, .12); }
+
+.parser-result { margin-top: 12px; display: grid; gap: 8px; }
+.parser-format-row { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.parser-format-row > strong { color: var(--muted); font-size: 11px; margin-right: 2px; }
+.parser-warning { margin: 0; }
+.source-format { display: block; font-size: 10px; font-weight: 800; color: #a9dfff; white-space: nowrap; }
+.data-table td small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; white-space: nowrap; }

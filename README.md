@@ -1,4 +1,4 @@
-# DispatchLink EFB 0.3
+# DispatchLink EFB 0.3.1
 
 A GitHub/Render-backed, Windows-native and browser EFB for **flight simulation**. The app treats SimBrief as the dispatch/OFP backend, Navigraph as the chart provider, and simulator telemetry as the source of actual flight events. DispatchLink presents the resulting information in one consistent workflow instead of making each page maintain a separate copy of the flight.
 
@@ -14,6 +14,33 @@ A GitHub/Render-backed, Windows-native and browser EFB for **flight simulation**
 6. **Record** — the cloud logbook and duty drafts mirror the active flight, scheduled times and OOOI times. Synced fields are deliberately read-only so conflicting copies cannot be created.
 
 The FAA registry download/cache system is not present. Airport lookup and IATA-to-ICAO conversion use the supplied `public/data/airports.dat` file.
+
+## FR24 paste formats
+
+The Flight Finder automatically detects and parses all four layouts supplied in the regression fixture:
+
+- Airport departures/arrivals desktop table
+- Airport departures/arrivals compact or mobile card layout
+- Aircraft-history card layout with `STD`, `STA`, `FROM` and `TO` labels
+- Aircraft-history desktop table
+
+The parser also:
+
+- Ignores page navigation, status, delay-statistics and disclaimer text
+- Accepts 12-hour and 24-hour clocks
+- Detects whether FR24 identifies the source as local or UTC
+- Converts local schedules to `HH:MMz` using each airport's IANA timezone from `airports.dat`
+- Infers compact-page dates from the airport/device date and detects midnight rollover
+- Handles blank flight numbers by using the aircraft registration when available
+- Normalizes two-letter airline flight numbers to ICAO operator codes
+- Merges duplicate airport/history rows so aircraft-history STA and ETE enrich the airport schedule row
+- Shows the detected format and time treatment in the Flight Finder
+
+Run the exact supplied-format regression test with:
+
+```bash
+npm run test:parser
+```
 
 ## SimBrief-backed dispatch and TOLR/TLR
 
@@ -107,6 +134,7 @@ Checks:
 
 ```bash
 npm run check
+npm run test:parser
 npm run build
 node --check server/index.mjs
 python -m py_compile bridge/dispatchlink_bridge.py

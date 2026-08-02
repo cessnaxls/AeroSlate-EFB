@@ -2,11 +2,13 @@
   "name": "dispatchlink-efb",
   "productName": "DispatchLink EFB",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Provider-backed all-in-one flight-simulation EFB using SimBrief, Navigraph, MSFS and X-Plane.",
   "main": "electron/main.cjs",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently \"vite\" \"node --watch server/index.mjs\"",
     "build": "tsc -b && vite build",
@@ -14,7 +16,8 @@
     "check": "tsc -b --pretty false",
     "native:dev": "concurrently \"vite\" \"node --watch server/index.mjs\" \"wait-on http://localhost:5173 && electron .\"",
     "native:start": "electron .",
-    "native:dist": "npm run build && electron-builder"
+    "native:dist": "npm run build && electron-builder",
+    "test:parser": "node tests/parser-regression.mjs"
   },
   "dependencies": {
     "cookie-session": "^2.1.1",
@@ -38,11 +41,29 @@
     "appId": "com.dispatchlink.efb",
     "productName": "DispatchLink EFB",
     "asar": true,
-    "files": ["electron/**/*", "dist/**/*", "package.json"],
-    "directories": { "output": "release" },
-    "win": { "target": ["nsis", "zip"] },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true },
-    "mac": { "target": "dmg" },
-    "linux": { "target": "AppImage" }
+    "files": [
+      "electron/**/*",
+      "dist/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

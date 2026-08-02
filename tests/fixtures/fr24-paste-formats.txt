@@ -1,0 +1,1441 @@
+Ok that worked. Here are the formats I’d like to paste and parse successfully:
+
+
+
+
+LOG IN
+
+Flight tracker map
+>
+Aviation data
+>
+Airports
+>
+United States
+>
+Jacksonville International Airport
+JAX/KJAX
+Jacksonville International Airport
+United States
+86%
+MY FLIGHTRADAR24
+RATING 
+31 °C
+WEATHER
+19 kts
+WIND
+210 °
+DIRECTION
+LOCAL TIME: 3:45 PM
+0.4
+ARRIVAL
+DELAY INDEX 
+1.3
+DEPARTURE
+DELAY INDEX 
+General
+Arrivals
+Departures
+On Ground
+Reviews
+Routes
+Weather
+Statistics
+
+Departures
+TIME	FLIGHT	TO	AIRLINE	AIRCRAFT		STATUS
+Load earlier flights
+Sunday, Aug 02
+3:30 PM	WN4860	
+Austin (AUS)
+Southwest Airlines	B738 (N8661A)	
+Estimated dep. 3:39 PM
+3:31 PM	MX401	
+Norfolk (ORF)
+Breeze Airways	BCS3 (N249BZ)	
+Estimated dep. 4:58 PM
+3:35 PM	B61417	
+Fort Lauderdale (FLL)
+JetBlue	A320 (N715JB)	
+Estimated dep. 4:25 PM
+3:54 PM	DL5461	
+New York (LGA)
+Delta Connection	CRJ9 (N605LR)	
+Estimated dep. 5:01 PM
+3:55 PM	G42728	
+Belleville (BLV)
+Allegiant Air	A320 (N261NV)	
+Estimated dep. 4:35 PM
+3:55 PM	WN2156	
+Nashville (BNA)
+Southwest Airlines	B737 (N278WN)	
+Estimated dep. 4:05 PM
+4:14 PM	DL2990	
+Atlanta (ATL)
+Delta Air Lines	A321 (N118DY)	
+Estimated dep. 4:09 PM
+4:23 PM	UA4047	
+Houston (IAH)
+United Express	E75L (N87302)	
+Estimated dep. 4:37 PM
+4:29 PM	AA5248	
+Philadelphia (PHL)
+American Eagle	CRJ9 (N587NN)	
+Estimated dep. 5:12 PM
+4:48 PM	UA2796	
+New York (EWR)
+United Airlines	B39M (N37450)	
+Estimated dep. 5:11 PM
+4:55 PM	UA2211	
+Chicago (ORD)
+United Airlines	A319 (N883UA)	
+Estimated dep. 5:26 PM
+4:55 PM	WN1765	
+Denver (DEN)
+Southwest Airlines	B737 (N919WN)	
+Estimated dep. 5:06 PM
+5:05 PM	MX1252	
+Pittsburgh (PIT)
+Breeze Airways	BCS3 (N245BZ)	
+Estimated dep. 5:30 PM
+5:32 PM	DL2720	
+Atlanta (ATL)
+Delta Air Lines	B739 (N806DN)	
+Estimated dep. 5:32 PM
+5:35 PM	B6678	
+New York (JFK)
+JetBlue	BCS3 (N3241J)	
+Estimated dep. 5:41 PM
+5:49 PM	DL2392	
+Minneapolis (MSP)
+Delta Air Lines	A319 (N357NB)	
+Estimated dep. 5:57 PM
+5:50 PM	AA1990	
+Philadelphia (PHL)
+American Airlines	A319 (N716UW)	
+Estimated dep. 8:02 PM
+5:50 PM	DL1035	
+New York (JFK)
+Delta Air Lines	BCS1 (N126DU)	
+Estimated dep. 6:07 PM
+5:50 PM	WN2164	
+Chicago (MDW)
+Southwest Airlines	B737 (N290WN)	
+Estimated dep. 6:01 PM
+5:58 PM	AA3317	
+Chicago (ORD)
+American Airlines	A319 (N755US)	
+Estimated dep. 5:58 PM
+6:11 PM	AA1999	
+Charlotte (CLT)
+American Airlines	A321 (N151AN)	
+Estimated dep. 6:31 PM
+6:20 PM	MX749	
+Richmond (RIC)
+Breeze Airways	BCS3 (N241BZ)	
+Estimated dep. 6:38 PM
+6:22 PM	DL2994	
+Detroit (DTW)
+Delta Air Lines	A320 (N375NC)	
+Estimated dep. 6:22 PM
+6:29 PM	F93083	
+Atlanta (ATL)
+Frontier (Cloud the Three-Wattled Bellbird Livery)	A21N (N624FR)	
+Estimated dep. 6:42 PM
+6:35 PM	UA6012	
+Chicago (ORD)
+United Express	E75L (N154SY)	
+Estimated dep. 6:35 PM
+6:36 PM	EJA550	
+East Hampton (HTO)
+NetJets	-	
+Estimated dep. 6:42 PM
+6:40 PM	JRE736	
+Atlanta (PDK)
+flyExclusive	C25B	
+Estimated dep. 6:50 PM
+6:42 PM	2I7546	
+Cincinnati (CVG)
+Star Peru	B763	
+Estimated dep. 6:54 PM
+7:02 PM	DL2627	
+Atlanta (ATL)
+Delta Air Lines	A321 (N313DN)	
+Estimated dep. 7:02 PM
+7:04 PM	DL5471	
+New York (LGA)
+Delta Connection	CRJ9 (N153PQ)	
+Estimated dep. 7:04 PM
+7:09 PM	AA1982	
+Washington (DCA)
+American Airlines	A319 (N702UW)	
+Estimated dep. 7:25 PM
+7:09 PM	UA758	
+New York (EWR)
+United Airlines	B39M (N17411)	
+Estimated dep. 7:09 PM
+7:23 PM	G43168	
+Flint (FNT)
+Allegiant Air	A320 (N282NV)	
+Estimated dep. 7:23 PM
+7:25 PM	DL5657	
+Boston (BOS)
+Delta Connection	E75S (N239JQ)	
+Estimated dep. 7:25 PM
+7:30 PM	WN2159	
+Baltimore (BWI)
+Southwest Airlines	B737 (N211WN)	
+Estimated dep. 8:49 PM
+7:37 PM	AA3605	
+Miami (MIA)
+American Eagle	E75L (N291NN)	
+Estimated dep. 7:37 PM
+7:41 PM	AA1980	
+Dallas (DFW)
+American Airlines	B738 (N969AN)	
+Estimated dep. 7:41 PM
+7:43 PM	B61743	
+San Juan (SJU)
+JetBlue	A320 (N593JB)	
+Estimated dep. 7:56 PM
+7:55 PM	WN449	
+St. Louis (STL)
+Southwest Airlines	B737 (N939WN)	
+Estimated dep. 9:17 PM
+8:17 PM	AA1991	
+Charlotte (CLT)
+American Airlines	A320 (N123UW)	
+Estimated dep. 8:45 PM
+8:18 PM	DL2189	
+Atlanta (ATL)
+Delta Air Lines	A321 (N363DN)	
+Estimated dep. 8:18 PM
+8:21 PM	5X334	
+San Juan (SJU)
+UPS	B763	
+Estimated dep. 8:33 PM
+8:23 PM	G4459	
+Des Moines (DSM)
+Allegiant Air	A320 (N254NV)	
+Estimated dep. 8:42 PM
+8:40 PM	B6810	
+Boston (BOS)
+JetBlue	BCS3 (N3280J)	
+Estimated dep. 8:40 PM
+9:03 PM	MX399	
+Raleigh-Durham (RDU)
+Breeze Airways	BCS3 (N217BZ)	
+Estimated dep. 9:03 PM
+9:10 PM	WN2157	
+Nashville (BNA)
+Southwest Airlines	B738 (N8685B)	
+Estimated dep. 10:33 PM
+9:40 PM	G42748	
+Pittsburgh (PIT)
+Allegiant Air	A320 (N261NV)	
+Estimated dep. 9:57 PM
+9:49 PM	MX796	
+Akron (CAK)
+Breeze Airways	BCS3 (N221BZ)	
+Estimated dep. 9:49 PM
+9:53 PM	F92816	
+Philadelphia (PHL)
+Frontier (Rosa the Pink-headed Warbler Livery)	A21N (N638FR)	
+Estimated dep. 9:53 PM
+10:33 PM	MX1253	
+Fort Lauderdale (FLL)
+Breeze Airways	BCS3 (N245BZ)	
+Estimated dep. 10:33 PM
+Monday, Aug 03
+5:35 AM	WN2162	
+Houston (HOU)
+Southwest Airlines	B737 (N7748A)	
+Estimated dep. 5:47 AM
+5:52 AM	AA2789	
+Dallas (DFW)
+American Airlines	B738 (N995NN)	
+Estimated dep. 5:52 AM
+6:00 AM	AA2711	
+Miami (MIA)
+American Airlines	A319 (N834AW)	
+Estimated dep. 6:00 AM
+6:00 AM	AA5552	
+Washington (DCA)
+American Eagle	CRJ7 (N515AE)	
+Estimated dep. 6:00 AM
+6:00 AM	DL2722	
+Atlanta (ATL)
+Delta Air Lines	A321 (N339DN)	
+Estimated dep. 6:12 AM
+6:05 AM	B61678	
+New York (JFK)
+JetBlue	A320 (N507JT)	
+Estimated dep. 6:05 AM
+6:15 AM	DL5797	
+New York (LGA)
+Delta Connection	E75S (N206JQ)	
+Estimated dep. 6:15 AM
+6:18 AM	AA1834	
+Charlotte (CLT)
+American Airlines	A321 (N161AA)	
+Estimated dep. 6:18 AM
+6:20 AM	WN2155	
+Nashville (BNA)
+Southwest Airlines	B38M (N8806Q)	
+Estimated dep. 6:35 AM
+6:24 AM	UA2673	
+New York (EWR)
+United Airlines	B739 (N66814)	
+Estimated dep. 6:24 AM
+6:45 AM	DL5632	
+Boston (BOS)
+Delta Connection	E75S (N242JQ)	
+Estimated dep. 6:45 AM
+6:55 AM	WN1181	
+Baltimore (BWI)
+Southwest Airlines	B738 (N8512U)	
+Estimated dep. 6:55 AM
+7:00 AM	AA709	
+Philadelphia (PHL)
+American Airlines	A320 (N128UW)	
+Estimated dep. 7:00 AM
+7:00 AM	DL4959	
+New York (JFK)
+Delta Connection	CRJ9 (N917XJ)	
+Estimated dep. 7:00 AM
+7:05 AM	DL2450	
+Atlanta (ATL)
+Delta Air Lines	B752 (N6709)	
+Estimated dep. 7:05 AM
+7:05 AM	UA2453	
+Houston (IAH)
+United Airlines	B739 (N68834)	
+Estimated dep. 7:05 AM
+7:10 AM	AA2102	
+Chicago (ORD)
+American Airlines	B738 (N920AN)	
+Estimated dep. 7:10 AM
+7:10 AM	B62117	
+Fort Lauderdale (FLL)
+JetBlue	A320 (N637JB)	
+Estimated dep. 7:10 AM
+7:20 AM	UA1733	
+Chicago (ORD)
+United Airlines	B739 (N63890)	
+Estimated dep. 7:31 AM
+7:24 AM	AA1171	
+Dallas (DFW)
+American Airlines	A321 (N992AU)	
+Estimated dep. 7:24 AM
+7:45 AM	WN1384	
+Chicago (MDW)
+Southwest Airlines (Missouri One Livery)	B737 (N280WN)	
+Estimated dep. 7:50 AM
+8:00 AM	AA2858	
+Phoenix (PHX)
+American Airlines	A320 (N651AW)	
+Estimated dep. 8:00 AM
+8:00 AM	AA3492	
+Miami (MIA)
+American Eagle	E75L (N316GS)	
+Estimated dep. 8:00 AM
+8:09 AM	UA671	
+Denver (DEN)
+United Airlines	B738 (N76265)	
+Estimated dep. 8:09 AM
+8:25 AM	DL2569	
+Atlanta (ATL)
+Delta Air Lines	B752 (N685DA)	
+Estimated dep. 8:25 AM
+8:47 AM	G41102	
+Pittsburgh (PIT)
+Allegiant Air	A320 (N261NV)	
+Estimated dep. 8:58 AM
+9:11 AM	AA1537	
+Dallas (DFW)
+American Airlines (AirCal Retro Livery)	B738 (N917NN)	
+Estimated dep. 9:11 AM
+9:20 AM	UA1434	
+Washington (IAD)
+United Airlines	A319 (N801UA)	
+Estimated dep. 9:20 AM
+9:20 AM	UA6224	
+Houston (IAH)
+United Express	E75L (N87303)	
+Estimated dep. 9:20 AM
+9:21 AM	AA1989	
+Charlotte (CLT)
+American Airlines (Reno Air Retro Livery)	B738 (N916NN)	
+Estimated dep. 9:37 AM
+9:35 AM	UA1144	
+New York (EWR)
+United Airlines	B737 (N24736)	
+Estimated dep. 9:35 AM
+9:37 AM	MX401	
+Norfolk (ORF)
+Breeze Airways	BCS3 (N249BZ)	
+Estimated dep. 9:46 AM
+9:47 AM	AA2865	
+Philadelphia (PHL)
+American Airlines	A319 (N754UW)	
+Estimated dep. 10:03 AM
+9:48 AM	XP476	
+New Haven (HVN)
+Avelo Airlines	B738 (N814VL)	
+Estimated dep. 10:06 AM
+9:57 AM	DL2328	
+Atlanta (ATL)
+Delta Air Lines	B752 (N710TW)	
+Estimated dep. 10:12 AM
+9:59 AM	AA3609	
+Miami (MIA)
+American Eagle	E75L (N277NN)	
+Estimated dep. 9:59 AM
+10:12 AM	G4556	
+Grand Rapids (GRR)
+Allegiant Air (Insomniac Livery)	A320 (N198NV)	
+Scheduled
+10:40 AM	AC1253	
+Toronto (YYZ)
+Air Canada	BCS3 (C-GJXV)	
+Estimated dep. 11:12 AM
+10:45 AM		
+Miami (OPF)
+-	BE40 (N482RK)	
+Estimated dep. 10:59 AM
+10:46 AM	B61310	
+Boston (BOS)
+JetBlue	BCS3 (N3125J)	
+Estimated dep. 10:46 AM
+10:49 AM	F93306	
+San Juan (SJU)
+Frontier (Wellington the Black-footed Ferret)	A20N (N362FR)	
+Estimated dep. 11:01 AM
+11:00 AM	WN979	
+Baltimore (BWI)
+Southwest Airlines	B738 (N8641B)	
+Estimated dep. 11:08 AM
+11:16 AM	DL2356	
+Atlanta (ATL)
+Delta Air Lines	A321 (N303DN)	
+Estimated dep. 11:31 AM
+11:24 AM	DL5848	
+New York (LGA)
+Delta Connection	E75S (N207JQ)	
+Estimated dep. 11:39 AM
+11:31 AM	AA1975	
+Dallas (DFW)
+American Airlines	B738 (N820NN)	
+Estimated dep. 11:31 AM
+11:33 AM	UA5434	
+Chicago (ORD)
+United Express	E75L (N121SY)	
+Estimated dep. 11:48 AM
+11:37 AM	UA4039	
+Houston (IAH)
+United Express	E75L (N88326)	
+Estimated dep. 11:37 AM
+11:48 AM	UA2826	
+Washington (IAD)
+United Airlines	B39M (N17405)	
+Estimated dep. 11:48 AM
+11:49 AM	AA949	
+Washington (DCA)
+American Airlines	A319 (N705UW)	
+Estimated dep. 12:05 PM
+12:02 PM	DL2333	
+Detroit (DTW)
+Delta Air Lines	A320 (N376NW)	
+Estimated dep. 12:17 PM
+Load later flights
+* All times are in local timezone
+Departure delay statistics
+1.3
+Departure delay index
+15
+MIN
+Average departure delay
+45%
+Delayed departures
+0%
+Canceled departures
+Decreasing
+Departures delay trend
+ Disclaimer: The information provided on this page is a compilation of data from many different sources including flight scheduling systems, airline booking systems, airports, airlines and other third-party data providers. The data is provided as is, there are no guarantees that the information is fully correct or up to date. Changes and errors may occur. Therefore Flightradar24 cannot be held liable either for the accuracy of the information or for ensuring that the information is up to date at all times. Some of the flights presented may be charter, cargo, ambulance or other types of flights not available for passenger travel.
+© 2026 Flightradar24 AB
+Contact usFAQCareersPrivacyTermsManage Consent
+
+
+LOG IN
+
+
+Get the best flight tracking experience using our app.Open in app 
+Flight tracker map
+>
+Aviation data
+>
+Airports
+>
+United States
+>
+Jacksonville International Airport
+JAX/KJAX
+Jacksonville International Airport
+United States
+31 °C
+WEATHER
+19 kts
+WIND
+210 °
+DIRECTION
+86%
+MY FLIGHTRADAR24
+RATING 
+0.4
+ARRIVAL
+DELAY INDEX 
+1.3
+DEPARTURE
+DELAY INDEX 
+General
+Arrivals
+Departures
+On Ground
+Reviews
+Routes
+Weather
+Statistics
+
+Departures
+Load earlier flights
+Estimated dep. 4:25 PM
+ 3:35 PM B61417 Fort Lauderdale(FLL)
+ A320N715JBJetBlue
+Estimated dep. 5:01 PM
+ 3:54 PM DL5461 New York(LGA)
+ CRJ9N605LRDelta Connection
+Estimated dep. 4:35 PM
+ 3:55 PM G42728 Belleville(BLV)
+ A320N261NVAllegiant Air
+Estimated dep. 4:05 PM
+ 3:55 PM WN2156 Nashville(BNA)
+ B737N278WNSouthwest Airlines
+Estimated dep. 4:09 PM
+ 4:14 PM DL2990 Atlanta(ATL)
+ A321N118DYDelta Air Lines
+Estimated dep. 4:37 PM
+ 4:23 PM UA4047 Houston(IAH)
+ E75LN87302United Express
+Estimated dep. 5:12 PM
+ 4:29 PM AA5248 Philadelphia(PHL)
+ CRJ9N587NNAmerican Eagle
+Estimated dep. 5:11 PM
+ 4:48 PM UA2796 New York(EWR)
+ B39MN37450United Airlines
+Estimated dep. 5:26 PM
+ 4:55 PM UA2211 Chicago(ORD)
+ A319N883UAUnited Airlines
+Estimated dep. 5:06 PM
+ 4:55 PM WN1765 Denver(DEN)
+ B737N919WNSouthwest Airlines
+Estimated dep. 5:30 PM
+ 5:05 PM MX1252 Pittsburgh(PIT)
+ BCS3N245BZBreeze Airways
+Estimated dep. 5:32 PM
+ 5:32 PM DL2720 Atlanta(ATL)
+ B739N806DNDelta Air Lines
+Estimated dep. 5:41 PM
+ 5:35 PM B6678 New York(JFK)
+ BCS3N3241JJetBlue
+Estimated dep. 5:57 PM
+ 5:49 PM DL2392 Minneapolis(MSP)
+ A319N357NBDelta Air Lines
+Estimated dep. 8:02 PM
+ 5:50 PM AA1990 Philadelphia(PHL)
+ A319N716UWAmerican Airlines
+Estimated dep. 6:07 PM
+ 5:50 PM DL1035 New York(JFK)
+ BCS1N126DUDelta Air Lines
+Estimated dep. 6:01 PM
+ 5:50 PM WN2164 Chicago(MDW)
+ B737N290WNSouthwest Airlines
+Estimated dep. 5:58 PM
+ 5:58 PM AA3317 Chicago(ORD)
+ A319N755USAmerican Airlines
+Estimated dep. 6:31 PM
+ 6:11 PM AA1999 Charlotte(CLT)
+ A321N151ANAmerican Airlines
+Estimated dep. 6:38 PM
+ 6:20 PM MX749 Richmond(RIC)
+ BCS3N241BZBreeze Airways
+Estimated dep. 6:22 PM
+ 6:22 PM DL2994 Detroit(DTW)
+ A320N375NCDelta Air Lines
+Estimated dep. 6:42 PM
+ 6:29 PM F93083 Atlanta(ATL)
+ A21NN624FRFrontier (Cloud the Three-Wattled Bellbird Livery)
+Estimated dep. 6:35 PM
+ 6:35 PM UA6012 Chicago(ORD)
+ E75LN154SYUnited Express
+Estimated dep. 6:42 PM
+ 6:36 PM EJA550 East Hampton(HTO)
+ -NetJets
+Estimated dep. 6:50 PM
+ 6:40 PM JRE736 Atlanta(PDK)
+ C25BflyExclusive
+Estimated dep. 6:54 PM
+ 6:42 PM 2I7546 Cincinnati(CVG)
+ B763Star Peru
+Estimated dep. 7:02 PM
+ 7:02 PM DL2627 Atlanta(ATL)
+ A321N313DNDelta Air Lines
+Estimated dep. 7:04 PM
+ 7:04 PM DL5471 New York(LGA)
+ CRJ9N153PQDelta Connection
+Estimated dep. 7:25 PM
+ 7:09 PM AA1982 Washington(DCA)
+ A319N702UWAmerican Airlines
+Estimated dep. 7:09 PM
+ 7:09 PM UA758 New York(EWR)
+ B39MN17411United Airlines
+Estimated dep. 7:23 PM
+ 7:23 PM G43168 Flint(FNT)
+ A320N282NVAllegiant Air
+Estimated dep. 7:25 PM
+ 7:25 PM DL5657 Boston(BOS)
+ E75SN239JQDelta Connection
+Estimated dep. 8:49 PM
+ 7:30 PM WN2159 Baltimore(BWI)
+ B737N211WNSouthwest Airlines
+Estimated dep. 7:37 PM
+ 7:37 PM AA3605 Miami(MIA)
+ E75LN291NNAmerican Eagle
+Estimated dep. 7:41 PM
+ 7:41 PM AA1980 Dallas(DFW)
+ B738N969ANAmerican Airlines
+Estimated dep. 7:56 PM
+ 7:43 PM B61743 San Juan(SJU)
+ A320N593JBJetBlue
+Estimated dep. 9:17 PM
+ 7:55 PM WN449 St. Louis(STL)
+ B737N939WNSouthwest Airlines
+Estimated dep. 8:45 PM
+ 8:17 PM AA1991 Charlotte(CLT)
+ A320N123UWAmerican Airlines
+Estimated dep. 8:18 PM
+ 8:18 PM DL2189 Atlanta(ATL)
+ A321N363DNDelta Air Lines
+Estimated dep. 8:33 PM
+ 8:21 PM 5X334 San Juan(SJU)
+ B763UPS
+Estimated dep. 8:42 PM
+ 8:23 PM G4459 Des Moines(DSM)
+ A320N254NVAllegiant Air
+Estimated dep. 8:40 PM
+ 8:40 PM B6810 Boston(BOS)
+ BCS3N3280JJetBlue
+Estimated dep. 9:03 PM
+ 9:03 PM MX399 Raleigh-Durham(RDU)
+ BCS3N217BZBreeze Airways
+Estimated dep. 10:33 PM
+ 9:10 PM WN2157 Nashville(BNA)
+ B738N8685BSouthwest Airlines
+Estimated dep. 9:57 PM
+ 9:40 PM G42748 Pittsburgh(PIT)
+ A320N261NVAllegiant Air
+Estimated dep. 9:49 PM
+ 9:49 PM MX796 Akron(CAK)
+ BCS3N221BZBreeze Airways
+Estimated dep. 9:53 PM
+ 9:53 PM F92816 Philadelphia(PHL)
+ A21NN638FRFrontier (Rosa the Pink-headed Warbler Livery)
+Estimated dep. 10:33 PM
+ 10:33 PM MX1253 Fort Lauderdale(FLL)
+ BCS3N245BZBreeze Airways
+Estimated dep. 5:47 AM
+ 5:35 AM WN2162 Houston(HOU)
+ B737N7748ASouthwest Airlines
+Estimated dep. 5:52 AM
+ 5:52 AM AA2789 Dallas(DFW)
+ B738N995NNAmerican Airlines
+Estimated dep. 6:00 AM
+ 6:00 AM AA2711 Miami(MIA)
+ A319N834AWAmerican Airlines
+Estimated dep. 6:00 AM
+ 6:00 AM AA5552 Washington(DCA)
+ CRJ7N515AEAmerican Eagle
+Estimated dep. 6:12 AM
+ 6:00 AM DL2722 Atlanta(ATL)
+ A321N339DNDelta Air Lines
+Estimated dep. 6:05 AM
+ 6:05 AM B61678 New York(JFK)
+ A320N507JTJetBlue
+Estimated dep. 6:15 AM
+ 6:15 AM DL5797 New York(LGA)
+ E75SN206JQDelta Connection
+Estimated dep. 6:18 AM
+ 6:18 AM AA1834 Charlotte(CLT)
+ A321N161AAAmerican Airlines
+Estimated dep. 6:35 AM
+ 6:20 AM WN2155 Nashville(BNA)
+ B38MN8806QSouthwest Airlines
+Estimated dep. 6:24 AM
+ 6:24 AM UA2673 New York(EWR)
+ B739N66814United Airlines
+Estimated dep. 6:45 AM
+ 6:45 AM DL5632 Boston(BOS)
+ E75SN242JQDelta Connection
+Estimated dep. 6:55 AM
+ 6:55 AM WN1181 Baltimore(BWI)
+ B738N8512USouthwest Airlines
+Estimated dep. 7:00 AM
+ 7:00 AM AA709 Philadelphia(PHL)
+ A320N128UWAmerican Airlines
+Estimated dep. 7:00 AM
+ 7:00 AM DL4959 New York(JFK)
+ CRJ9N917XJDelta Connection
+Estimated dep. 7:05 AM
+ 7:05 AM DL2450 Atlanta(ATL)
+ B752N6709Delta Air Lines
+Estimated dep. 7:05 AM
+ 7:05 AM UA2453 Houston(IAH)
+ B739N68834United Airlines
+Estimated dep. 7:10 AM
+ 7:10 AM AA2102 Chicago(ORD)
+ B738N920ANAmerican Airlines
+Estimated dep. 7:10 AM
+ 7:10 AM B62117 Fort Lauderdale(FLL)
+ A320N637JBJetBlue
+Estimated dep. 7:31 AM
+ 7:20 AM UA1733 Chicago(ORD)
+ B739N63890United Airlines
+Estimated dep. 7:24 AM
+ 7:24 AM AA1171 Dallas(DFW)
+ A321N992AUAmerican Airlines
+Estimated dep. 7:50 AM
+ 7:45 AM WN1384 Chicago(MDW)
+ B737N280WNSouthwest Airlines (Missouri One Livery)
+Estimated dep. 8:00 AM
+ 8:00 AM AA2858 Phoenix(PHX)
+ A320N651AWAmerican Airlines
+Estimated dep. 8:00 AM
+ 8:00 AM AA3492 Miami(MIA)
+ E75LN316GSAmerican Eagle
+Estimated dep. 8:09 AM
+ 8:09 AM UA671 Denver(DEN)
+ B738N76265United Airlines
+Estimated dep. 8:25 AM
+ 8:25 AM DL2569 Atlanta(ATL)
+ B752N685DADelta Air Lines
+Estimated dep. 8:58 AM
+ 8:47 AM G41102 Pittsburgh(PIT)
+ A320N261NVAllegiant Air
+Estimated dep. 9:11 AM
+ 9:11 AM AA1537 Dallas(DFW)
+ B738N917NNAmerican Airlines (AirCal Retro Livery)
+Estimated dep. 9:20 AM
+ 9:20 AM UA1434 Washington(IAD)
+ A319N801UAUnited Airlines
+Estimated dep. 9:20 AM
+ 9:20 AM UA6224 Houston(IAH)
+ E75LN87303United Express
+Estimated dep. 9:37 AM
+ 9:21 AM AA1989 Charlotte(CLT)
+ B738N916NNAmerican Airlines (Reno Air Retro Livery)
+Estimated dep. 9:35 AM
+ 9:35 AM UA1144 New York(EWR)
+ B737N24736United Airlines
+Estimated dep. 9:46 AM
+ 9:37 AM MX401 Norfolk(ORF)
+ BCS3N249BZBreeze Airways
+Estimated dep. 10:03 AM
+ 9:47 AM AA2865 Philadelphia(PHL)
+ A319N754UWAmerican Airlines
+Estimated dep. 10:06 AM
+ 9:48 AM XP476 New Haven(HVN)
+ B738N814VLAvelo Airlines
+Estimated dep. 10:12 AM
+ 9:57 AM DL2328 Atlanta(ATL)
+ B752N710TWDelta Air Lines
+Estimated dep. 9:59 AM
+ 9:59 AM AA3609 Miami(MIA)
+ E75LN277NNAmerican Eagle
+Scheduled
+ 10:12 AM G4556 Grand Rapids(GRR)
+ A320N198NVAllegiant Air (Insomniac Livery)
+Estimated dep. 11:12 AM
+ 10:40 AM AC1253 Toronto(YYZ)
+ BCS3C-GJXVAir Canada
+Estimated dep. 10:59 AM
+ 10:45 AM  Miami(OPF)
+ BE40N482RK-
+Estimated dep. 10:46 AM
+ 10:46 AM B61310 Boston(BOS)
+ BCS3N3125JJetBlue
+Estimated dep. 11:01 AM
+ 10:49 AM F93306 San Juan(SJU)
+ A20NN362FRFrontier (Wellington the Black-footed Ferret)
+Estimated dep. 11:08 AM
+ 11:00 AM WN979 Baltimore(BWI)
+ B738N8641BSouthwest Airlines
+Estimated dep. 11:31 AM
+ 11:16 AM DL2356 Atlanta(ATL)
+ A321N303DNDelta Air Lines
+Estimated dep. 11:39 AM
+ 11:24 AM DL5848 New York(LGA)
+ E75SN207JQDelta Connection
+Estimated dep. 11:31 AM
+ 11:31 AM AA1975 Dallas(DFW)
+ B738N820NNAmerican Airlines
+Estimated dep. 11:48 AM
+ 11:33 AM UA5434 Chicago(ORD)
+ E75LN121SYUnited Express
+Estimated dep. 11:37 AM
+ 11:37 AM UA4039 Houston(IAH)
+ E75LN88326United Express
+Estimated dep. 11:48 AM
+ 11:48 AM UA2826 Washington(IAD)
+ B39MN17405United Airlines
+Estimated dep. 12:05 PM
+ 11:49 AM AA949 Washington(DCA)
+ A319N705UWAmerican Airlines
+Estimated dep. 12:17 PM
+ 12:02 PM DL2333 Detroit(DTW)
+ A320N376NWDelta Air Lines
+Estimated dep. 12:20 PM
+ 12:20 PM DL5483 New York(JFK)
+ CRJ9N695CADelta Connection
+Estimated dep. 12:24 PM
+ 12:24 PM DL5597 Boston(BOS)
+ E75SN214JQDelta Connection
+Load later flights
+* All times are in local timezone
+Departure delay statistics
+1.3
+Departure delay index
+15
+MIN
+Average departure delay
+45%
+Delayed departures
+0%
+Canceled departures
+Decreasing
+Departures delay trend
+ Disclaimer: The information provided on this page is a compilation of data from many different sources including flight scheduling systems, airline booking systems, airports, airlines and other third-party data providers. The data is provided as is, there are no guarantees that the information is fully correct or up to date. Changes and errors may occur. Therefore Flightradar24 cannot be held liable either for the accuracy of the information or for ensuring that the information is up to date at all times. Some of the flights presented may be charter, cargo, ambulance or other types of flights not available for passenger travel.
+© 2026 Flightradar24 AB
+Contact usFAQCareersPrivacyTermsManage Consent
+
+
+LOG IN
+
+
+Get the best flight tracking experience using our app.Open in app 
+Flight tracker map
+>
+Aviation data
+>
+Aircraft
+>
+N715JB
+Flight history for aircraft - N715JB
+AIRCRAFT
+Airbus A320-232
+AIRLINE
+JetBlue
+OPERATOR
+JetBlue
+TYPE CODE
+A320
+Code
+B6 / JBU
+Code
+B6 / JBU
+MODE S
+A98F6A
+SERIAL NUMBER (MSN)
+AGE
+© Eric Zhang | Jetphotos © George Shatsman | Jetphotos 
+
+FLIGHTS HISTORY
+ B6686
+ 03 Aug 2026
+ -
+Estimated departure 11:30 AM
+STD
+11:30 AM
+ATD
+—
+STA
+2:29 PM
+FROM
+Fort Lauderdale (FLL)
+TO
+New York (EWR)
+ B62005
+ 03 Aug 2026
+ -
+Estimated departure 6:00 AM
+STD
+6:00 AM
+ATD
+—
+STA
+8:42 AM
+FROM
+Pittsburgh (PIT)
+TO
+Fort Lauderdale (FLL)
+ B62008
+ 02 Aug 2026
+ -
+Estimated departure 6:45 PM
+STD
+6:45 PM
+ATD
+—
+STA
+9:28 PM
+FROM
+Fort Lauderdale (FLL)
+TO
+Pittsburgh (PIT)
+ B61417
+ 02 Aug 2026
+ -
+Estimated departure 4:25 PM
+STD
+3:35 PM
+ATD
+—
+STA
+4:54 PM
+FROM
+Jacksonville (JAX)
+TO
+Fort Lauderdale (FLL)
+ B62118
+ 02 Aug 2026
+ 0:51
+Landed 3:31 PM
+STD
+1:20 PM
+ATD
+2:41 PM
+STA
+2:40 PM
+FROM
+Fort Lauderdale (FLL)
+TO
+Jacksonville (JAX)
+ B61394
+ 02 Aug 2026
+ 0:41
+Landed 11:38 AM
+STD
+10:42 AM
+ATD
+10:57 AM
+STA
+11:44 AM
+FROM
+Nassau (NAS)
+TO
+Fort Lauderdale (FLL)
+ B61493
+ 02 Aug 2026
+ 0:32
+Landed 9:24 AM
+STD
+8:43 AM
+ATD
+8:52 AM
+STA
+9:42 AM
+FROM
+Fort Lauderdale (FLL)
+TO
+Nassau (NAS)
+ B61248
+ 02 Aug 2026
+ 1:55
+Landed 7:09 AM
+STD
+5:01 AM
+ATD
+5:14 AM
+STA
+7:17 AM
+FROM
+Santo Domingo (SDQ)
+TO
+Fort Lauderdale (FLL)
+ B61989
+ 01 Aug 2026
+ 1:55
+Landed 12:24 AM
+STD
+9:35 PM
+ATD
+10:30 PM
+STA
+11:59 PM
+FROM
+Fort Lauderdale (FLL)
+TO
+Santo Domingo (SDQ)
+ B61972
+ 01 Aug 2026
+ 2:26
+Landed 7:25 PM
+STD
+3:20 PM
+ATD
+3:59 PM
+STA
+7:14 PM
+FROM
+Austin (AUS)
+TO
+Fort Lauderdale (FLL)
+ B61971
+ 01 Aug 2026
+ 2:31
+Landed 2:42 PM
+STD
+12:10 PM
+ATD
+1:11 PM
+STA
+2:14 PM
+FROM
+Fort Lauderdale (FLL)
+TO
+Austin (AUS)
+ B62148
+ 01 Aug 2026
+ 1:24
+Landed 10:31 AM
+STD
+9:00 AM
+ATD
+9:07 AM
+STA
+11:06 AM
+FROM
+Charlotte (CLT)
+TO
+Fort Lauderdale (FLL)
+ B61149
+ 31 Jul 2026
+ 1:45
+Landed 9:34 PM
+STD
+6:59 PM
+ATD
+7:49 PM
+STA
+9:09 PM
+FROM
+Fort Lauderdale (FLL)
+TO
+Charlotte (CLT)
+ B62582
+ 31 Jul 2026
+ 1:42
+Landed 5:09 PM
+STD
+2:27 PM
+ATD
+2:27 PM
+STA
+5:41 PM
+FROM
+Nashville (BNA)
+TO
+Fort Lauderdale (FLL)
+ B6681
+ 31 Jul 2026
+ 1:53
+Landed 1:22 PM
+STD
+12:05 PM
+ATD
+12:29 PM
+STA
+1:32 PM
+FROM
+Fort Lauderdale (FLL)
+TO
+Nashville (BNA)
+ B62282
+ 31 Jul 2026
+ 2:38
+Landed 10:57 AM
+STD
+7:00 AM
+ATD
+7:19 AM
+STA
+10:57 AM
+FROM
+Dallas (DFW)
+TO
+Fort Lauderdale (FLL)
+ B62279
+ 30 Jul 2026
+ 2:26
+Landed 11:17 PM
+STD
+8:59 PM
+ATD
+9:51 PM
+STA
+11:16 PM
+FROM
+Fort Lauderdale (FLL)
+TO
+Dallas (DFW)
+ B6789
+ 30 Jul 2026
+ 2:32
+Landed 8:16 PM
+STD
+4:10 PM
+ATD
+5:45 PM
+STA
+7:10 PM
+FROM
+Detroit (DTW)
+TO
+Fort Lauderdale (FLL)
+ B6790
+ 30 Jul 2026
+ 2:40
+Landed 4:43 PM
+STD
+12:00 PM
+ATD
+2:03 PM
+STA
+3:10 PM
+FROM
+Fort Lauderdale (FLL)
+TO
+Detroit (DTW)
+ B62380
+ 30 Jul 2026
+ 2:07
+Landed 11:00 AM
+STD
+7:24 AM
+ATD
+7:52 AM
+STA
+10:47 AM
+FROM
+Houston (IAH)
+TO
+Fort Lauderdale (FLL)
+ B62779
+ 29 Jul 2026
+ 2:06
+Landed 10:49 PM
+STD
+9:00 PM
+ATD
+9:43 PM
+STA
+11:02 PM
+FROM
+Fort Lauderdale (FLL)
+TO
+Houston (IAH)
+ B62201
+ 29 Jul 2026
+ 2:28
+Landed 8:06 PM
+STD
+12:00 PM
+ATD
+5:38 PM
+STA
+3:10 PM
+FROM
+New York (JFK)
+TO
+Fort Lauderdale (FLL)
+ B61901
+ 29 Jul 2026
+ 1:06
+Landed 3:58 PM
+STD
+9:15 AM
+ATD
+2:52 PM
+STA
+10:42 AM
+FROM
+Buffalo (BUF)
+TO
+New York (JFK)
+ B6492
+ 28 Jul 2026
+ 4:23
+Landed 1:42 PM
+STD
+11:35 PM
+ATD
+6:19 AM
+STA
+7:29 AM
+FROM
+Los Angeles (LAX)
+TO
+Buffalo (BUF)
+ B6491
+ 28 Jul 2026
+ 4:50
+Landed 2:32 AM
+STD
+8:20 PM
+ATD
+12:43 AM
+STA
+10:38 PM
+FROM
+Buffalo (BUF)
+TO
+Los Angeles (LAX)
+ B61115
+ 28 Jul 2026
+ 1:11
+Landed 10:00 PM
+STD
+5:40 PM
+ATD
+8:49 PM
+STA
+7:19 PM
+FROM
+Boston (BOS)
+TO
+Buffalo (BUF)
+ B62896
+ 28 Jul 2026
+ 4:12
+Landed 3:37 PM
+STD
+11:06 AM
+ATD
+11:24 AM
+STA
+3:18 PM
+FROM
+Punta Cana (PUJ)
+TO
+Boston (BOS)
+ B62895
+ 28 Jul 2026
+ 3:56
+Landed 10:03 AM
+STD
+6:00 AM
+ATD
+6:07 AM
+STA
+10:06 AM
+FROM
+Boston (BOS)
+TO
+Punta Cana (PUJ)
+ B6974
+ 27 Jul 2026
+ 4:59
+Landed 10:58 PM
+STD
+6:00 PM
+ATD
+5:58 PM
+STA
+10:54 PM
+FROM
+Oranjestad (AUA)
+TO
+Boston (BOS)
+ B6773
+ 27 Jul 2026
+ 4:18
+Landed 4:10 PM
+STD
+11:45 AM
+ATD
+11:52 AM
+STA
+4:40 PM
+FROM
+Boston (BOS)
+TO
+Oranjestad (AUA)
+ B6322
+ 27 Jul 2026
+ 2:44
+Landed 9:25 AM
+STD
+6:40 AM
+ATD
+6:41 AM
+STA
+9:49 AM
+FROM
+West Palm Beach (PBI)
+TO
+Boston (BOS)
+ B623
+ 26 Jul 2026
+ 1:48
+Landed 8:01 PM
+STD
+6:00 PM
+ATD
+6:13 PM
+STA
+8:35 PM
+FROM
+Washington (DCA)
+TO
+West Palm Beach (PBI)
+ B624
+ 26 Jul 2026
+ 2:05
+Landed 4:42 PM
+STD
+2:32 PM
+ATD
+2:37 PM
+STA
+4:59 PM
+FROM
+West Palm Beach (PBI)
+TO
+Washington (DCA)
+More than 7 days of N715JB history is available with an upgrade to a Silver (90 days), Gold (1 year), or Business (3 years) subscription.
+7-day FREE trial | Learn more
+Looking for even more aviation data?
+We have all your aviation data needs covered. The Flightradar24 API offers powerful endpoints to access real-time aircraft positions, comprehensive airline/airport, and historic flight data.
+Or check out our Data services page for information about flight events, estimated time of arrival data, flight schedules, and more.
+Discover the Flightradar24 API
+© 2026 Flightradar24 AB
+Contact usFAQCareersPrivacyTermsManage Consent
+
+
+
+LOG IN
+
+
+
+Flight tracker map
+>
+Aviation data
+>
+Aircraft
+>
+N715JB
+Flight history for aircraft - N715JB
+AIRCRAFT
+Airbus A320-232
+AIRLINE
+JetBlue
+OPERATOR
+JetBlue
+TYPE CODE
+A320
+Code
+B6 / JBU
+Code
+B6 / JBU
+MODE S
+A98F6A
+SERIAL NUMBER (MSN)
+AGE
+© Eric Zhang | Jetphotos © George Shatsman | Jetphotos 
+
+ 	DATE	FROM	TO	FLIGHT	FLIGHT TIME	STD	ATD	STA		STATUS		 
+ 	03 Aug 2026	Fort Lauderdale (FLL)	New York (EWR)	B6686	—	11:30 AM	—	2:29 PM	
+Estimated departure 11:30 AM	  Share	 
+ 	03 Aug 2026	Pittsburgh (PIT)	Fort Lauderdale (FLL)	B62005	—	6:00 AM	—	8:42 AM	
+Estimated departure 6:00 AM	  Share	 
+ 	02 Aug 2026	Fort Lauderdale (FLL)	Pittsburgh (PIT)	B62008	—	6:45 PM	—	9:28 PM	
+Estimated departure 6:45 PM	  Share	 
+ 	02 Aug 2026	Jacksonville (JAX)	Fort Lauderdale (FLL)	B61417	—	3:35 PM	—	4:54 PM	
+Estimated departure 4:25 PM	  Share	 
+ 	02 Aug 2026	Fort Lauderdale (FLL)	Jacksonville (JAX)	B62118	0:51	1:20 PM	2:41 PM	2:40 PM	
+Landed 3:31 PM	 KML  CSV   Live	 
+ 	02 Aug 2026	Nassau (NAS)	Fort Lauderdale (FLL)	B61394	0:41	10:42 AM	10:57 AM	11:44 AM	
+Landed 11:38 AM	 KML  CSV   Play	 
+ 	02 Aug 2026	Fort Lauderdale (FLL)	Nassau (NAS)	B61493	0:32	8:43 AM	8:52 AM	9:42 AM	
+Landed 9:24 AM	 KML  CSV   Play	 
+ 	02 Aug 2026	Santo Domingo (SDQ)	Fort Lauderdale (FLL)	B61248	1:55	5:01 AM	5:14 AM	7:17 AM	
+Landed 7:09 AM	 KML  CSV   Play	 
+ 	01 Aug 2026	Fort Lauderdale (FLL)	Santo Domingo (SDQ)	B61989	1:55	9:35 PM	10:30 PM	11:59 PM	
+Landed 12:24 AM	 KML  CSV   Play	 
+ 	01 Aug 2026	Austin (AUS)	Fort Lauderdale (FLL)	B61972	2:26	3:20 PM	3:59 PM	7:14 PM	
+Landed 7:25 PM	 KML  CSV   Play	 
+ 	01 Aug 2026	Fort Lauderdale (FLL)	Austin (AUS)	B61971	2:31	12:10 PM	1:11 PM	2:14 PM	
+Landed 2:42 PM	 KML  CSV   Play	 
+ 	01 Aug 2026	Charlotte (CLT)	Fort Lauderdale (FLL)	B62148	1:24	9:00 AM	9:07 AM	11:06 AM	
+Landed 10:31 AM	 KML  CSV   Play	 
+ 	31 Jul 2026	Fort Lauderdale (FLL)	Charlotte (CLT)	B61149	1:45	6:59 PM	7:49 PM	9:09 PM	
+Landed 9:34 PM	 KML  CSV   Play	 
+ 	31 Jul 2026	Nashville (BNA)	Fort Lauderdale (FLL)	B62582	1:42	2:27 PM	2:27 PM	5:41 PM	
+Landed 5:09 PM	 KML  CSV   Play	 
+ 	31 Jul 2026	Fort Lauderdale (FLL)	Nashville (BNA)	B6681	1:53	12:05 PM	12:29 PM	1:32 PM	
+Landed 1:22 PM	 KML  CSV   Play	 
+ 	31 Jul 2026	Dallas (DFW)	Fort Lauderdale (FLL)	B62282	2:38	7:00 AM	7:19 AM	10:57 AM	
+Landed 10:57 AM	 KML  CSV   Play	 
+ 	30 Jul 2026	Fort Lauderdale (FLL)	Dallas (DFW)	B62279	2:26	8:59 PM	9:51 PM	11:16 PM	
+Landed 11:17 PM	 KML  CSV   Play	 
+ 	30 Jul 2026	Detroit (DTW)	Fort Lauderdale (FLL)	B6789	2:32	4:10 PM	5:45 PM	7:10 PM	
+Landed 8:16 PM	 KML  CSV   Play	 
+ 	30 Jul 2026	Fort Lauderdale (FLL)	Detroit (DTW)	B6790	2:40	12:00 PM	2:03 PM	3:10 PM	
+Landed 4:43 PM	 KML  CSV   Play	 
+ 	30 Jul 2026	Houston (IAH)	Fort Lauderdale (FLL)	B62380	2:07	7:24 AM	7:52 AM	10:47 AM	
+Landed 11:00 AM	 KML  CSV   Play	 
+ 	29 Jul 2026	Fort Lauderdale (FLL)	Houston (IAH)	B62779	2:06	9:00 PM	9:43 PM	11:02 PM	
+Landed 10:49 PM	 KML  CSV   Play	 
+ 	29 Jul 2026	New York (JFK)	Fort Lauderdale (FLL)	B62201	2:28	12:00 PM	5:38 PM	3:10 PM	
+Landed 8:06 PM	 KML  CSV   Play	 
+ 	29 Jul 2026	Buffalo (BUF)	New York (JFK)	B61901	1:06	9:15 AM	2:52 PM	10:42 AM	
+Landed 3:58 PM	 KML  CSV   Play	 
+ 	28 Jul 2026	Los Angeles (LAX)	Buffalo (BUF)	B6492	4:23	11:35 PM	6:19 AM	7:29 AM	
+Landed 1:42 PM	 KML  CSV   Play	 
+ 	28 Jul 2026	Buffalo (BUF)	Los Angeles (LAX)	B6491	4:50	8:20 PM	12:43 AM	10:38 PM	
+Landed 2:32 AM	 KML  CSV   Play	 
+ 	28 Jul 2026	Boston (BOS)	Buffalo (BUF)	B61115	1:11	5:40 PM	8:49 PM	7:19 PM	
+Landed 10:00 PM	 KML  CSV   Play	 
+ 	28 Jul 2026	Punta Cana (PUJ)	Boston (BOS)	B62896	4:12	11:06 AM	11:24 AM	3:18 PM	
+Landed 3:37 PM	 KML  CSV   Play	 
+ 	28 Jul 2026	Boston (BOS)	Punta Cana (PUJ)	B62895	3:56	6:00 AM	6:07 AM	10:06 AM	
+Landed 10:03 AM	 KML  CSV   Play	 
+ 	27 Jul 2026	Oranjestad (AUA)	Boston (BOS)	B6974	4:59	6:00 PM	5:58 PM	10:54 PM	
+Landed 10:58 PM	 KML  CSV   Play	 
+ 	27 Jul 2026	Boston (BOS)	Oranjestad (AUA)	B6773	4:18	11:45 AM	11:52 AM	4:40 PM	
+Landed 4:10 PM	 KML  CSV   Play	 
+ 	27 Jul 2026	West Palm Beach (PBI)	Boston (BOS)	B6322	2:44	6:40 AM	6:41 AM	9:49 AM	
+Landed 9:25 AM	 KML  CSV   Play	 
+ 	26 Jul 2026	Washington (DCA)	West Palm Beach (PBI)	B623	1:48	6:00 PM	6:13 PM	8:35 PM	
+Landed 8:01 PM	 KML  CSV   Play	 
+ 	26 Jul 2026	West Palm Beach (PBI)	Washington (DCA)	B624	2:05	2:32 PM	2:37 PM	4:59 PM	
+Landed 4:42 PM	 KML  CSV   Play	 
+ 	
+More than 7 days of N715JB history is available with an upgrade to a Silver (90 days), Gold (1 year), or Business (3 years) subscription.
+7-day FREE trial | Learn more	 
+ 	
+Looking for even more aviation data?
+We have all your aviation data needs covered. The Flightradar24 API offers powerful endpoints to access real-time aircraft positions, comprehensive airline/airport, and historic flight data.
+Or check out our Data services page for information about flight events, estimated time of arrival data, flight schedules, and more.
+Discover the Flightradar24 API
+ 
+© 2026 Flightradar24 AB
+Contact usFAQCareersPrivacyTermsManage Consent

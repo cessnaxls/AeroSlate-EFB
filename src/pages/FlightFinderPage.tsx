@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, MapPinned, Plane, RefreshCw, Search, Shuffle, Upload } from 'lucide-react';
-import { airportMap, buildSimbriefDispatch, parseAirportsDat, parseFr24Paste, type Airport, type FlightCandidate } from '../lib/dispatchlink';
+import { airportMap, buildSimbriefDispatch, parseAirportsDat, parseFr24PasteDetailed, type Airport, type FlightCandidate, type Fr24ParseResult, type Fr24PasteFormat } from '../lib/dispatchlink';
 import { loadLocal, saveLocal } from '../lib/storage';
 
 interface Props {
@@ -10,6 +10,20 @@ interface Props {
 
 function airportLabel(airport: Airport) {
   return `${airport.icao}${airport.iata ? ` / ${airport.iata}` : ''} — ${airport.name}, ${airport.city}`;
+}
+
+const FORMAT_LABELS: Record<Fr24PasteFormat, string> = {
+  'airport-table': 'Airport table',
+  'airport-compact': 'Airport compact/mobile',
+  'aircraft-history-cards': 'Aircraft history cards',
+  'aircraft-history-table': 'Aircraft history table'
+};
+
+function timeModeLabel(mode?: FlightCandidate['timeMode']) {
+  if (mode === 'local-converted') return 'Local → Zulu';
+  if (mode === 'local-unresolved') return 'Local, review';
+  if (mode === 'utc') return 'Zulu source';
+  return 'Timezone unknown';
 }
 
 export function FlightFinderPage({ onDispatch, notify }: Props) {
@@ -22,6 +36,7 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
   const [paste, setPaste] = useState(() => loadLocal('dispatchlink.finder.paste', ''));
   const [flights, setFlights] = useState<FlightCandidate[]>(() => loadLocal('dispatchlink.finder.flights', []));
   const [selectedFlight, setSelectedFlight] = useState<FlightCandidate | null>(() => loadLocal<FlightCandidate | null>('dispatchlink.finder.flight', null));
+  const [parseInfo, setParseInfo] = useState<Fr24ParseResult | null>(null);
 
   useEffect(() => {
     fetch('/data/airports.dat').then(response => response.text()).then(text => setAirports(parseAirportsDat(text))).catch(() => notify('Unable to load airports.dat.')).finally(() => setLoadingAirports(false));
@@ -47,9 +62,10 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
   };
 
   const parse = () => {
-    const rows = parseFr24Paste(paste, airportMap(airports));
-    setFlights(rows); setSelectedFlight(rows[0] || null);
-    notify(rows.length ? `Parsed ${rows.length} real-world flight${rows.length === 1 ? '' : 's'}.` : 'No FR24 rows were recognized. Copy the full airport or aircraft-history table with FR24 set to UTC.');
+    const result = parseFr24PasteDetailed(paste, airportMap(airports));
+    setParseInfo(result); setFlights(result.flights); setSelectedFlight(result.flights[0] || null);
+    const formats = result.formats.map(format => FORMAT_LABELS[format]).join(', ');
+    notify(result.flights.length ? `Parsed ${result.flights.length} flight${result.flights.length === 1 ? '' : 's'} from ${formats || 'FR24'}.` : 'No supported FR24 rows were recognized. Paste the complete airport or aircraft-history page.');
   };
 
   const dispatch = (flight: FlightCandidate) => { const plan = buildSimbriefDispatch(flight); onDispatch(plan.url, flight, plan.staticId); };
@@ -71,20 +87,24 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
     </section>
 
     <section className="card">
-      <header><div><Upload size={18} /><h3>Real-world flight parser</h3></div><button className="text-button" onClick={() => { setPaste(''); setFlights([]); setSelectedFlight(null); }}><RefreshCw size={15} /> Clear</button></header>
+      <header><div><Upload size={18} /><h3>Real-world flight parser</h3></div><button className="text-button" onClick={() => { setPaste(''); setFlights([]); setSelectedFlight(null); setParseInfo(null); }}><RefreshCw size={15} /> Clear</button></header>
       <div className="card-body">
-        <p>Paste an FR24 airport departures/arrivals table or an aircraft-history table. Times are retained exactly as pasted and normalized to <strong>HH:MMz</strong>; no local-time conversion is applied.</p>
+        <p>Paste any supported FR24 airport or aircraft-history layout. DispatchLink automatically recognizes desktop tables, compact/mobile cards, aircraft-history cards, and aircraft-history tables. UTC sources are retained; local sources are converted to <strong>HH:MMz</strong> with the applicable airport timezone from <strong>airports.dat</strong>.</p>
         <textarea className="fr24-paste" value={paste} onChange={event => setPaste(event.target.value)} placeholder="Paste the complete FR24 table here…" />
         <div className="button-row"><button className="primary" onClick={parse}><Search size={17} /> Parse FR24 data</button><button onClick={() => { if (!flights.length) return notify('Parse flights first.'); const row = flights[Math.floor(Math.random() * flights.length)]; setSelectedFlight(row); notify(`Selected ${row.flightNumber}.`); }}><Shuffle size={17} /> Random flight</button></div>
+        {parseInfo && <div className="parser-result">
+          <div className="parser-format-row"><strong>Detected</strong>{parseInfo.formats.map(format => <span className="pill blue" key={format}>{FORMAT_LABELS[format]}</span>)}{parseInfo.timeModes.map(mode => <span className={mode === 'local-unresolved' || mode === 'unknown' ? 'pill warn' : 'pill good'} key={mode}>{timeModeLabel(mode)}</span>)}</div>
+          {parseInfo.warnings.map(warning => <div className="notice warn parser-warning" key={warning}><p>{warning}</p></div>)}
+        </div>}
       </div>
     </section>
 
     <section className="card span-full">
       <header><div><Plane size={18} /><h3>Available flights</h3></div><span className="pill neutral">{flights.length} rows</span></header>
       <div className="card-body table-wrap">
-        <table className="data-table flight-table"><thead><tr><th></th><th>Date</th><th>Flight</th><th>Route</th><th>Aircraft</th><th>Registration</th><th>STD</th><th>STA</th><th>ETE</th><th></th></tr></thead><tbody>
-          {flights.map(row => <tr key={row.id} className={selectedFlight?.id === row.id ? 'selected' : ''} onClick={() => setSelectedFlight(row)}><td><input type="radio" readOnly checked={selectedFlight?.id === row.id} /></td><td>{row.date}</td><td><strong>{row.flightNumber}</strong></td><td>{row.departure} → {row.arrival}</td><td>{row.aircraft}</td><td>{row.registration}</td><td>{row.std}</td><td>{row.sta}</td><td>{row.ete}</td><td><button className="primary compact" onClick={event => { event.stopPropagation(); dispatch(row); }}>Dispatch</button></td></tr>)}
-          {!flights.length && <tr><td colSpan={10} className="empty-cell">Paste and parse FR24 data to create a dispatchable flight list.</td></tr>}
+        <table className="data-table flight-table"><thead><tr><th></th><th>Date</th><th>Flight</th><th>Route</th><th>Aircraft</th><th>Registration</th><th>STD</th><th>STA</th><th>ETE</th><th>Source</th><th></th></tr></thead><tbody>
+          {flights.map(row => <tr key={row.id} className={selectedFlight?.id === row.id ? 'selected' : ''} onClick={() => setSelectedFlight(row)}><td><input type="radio" readOnly checked={selectedFlight?.id === row.id} /></td><td>{row.date}</td><td><strong>{row.flightNumber}</strong></td><td>{row.departure} → {row.arrival}</td><td>{row.aircraft}</td><td>{row.registration}</td><td title={row.rawStd ? `Pasted: ${row.rawStd}` : undefined}>{row.std}</td><td title={row.rawSta ? `Pasted: ${row.rawSta}` : undefined}>{row.sta}</td><td>{row.ete}</td><td><span className="source-format">{row.sourceFormat ? FORMAT_LABELS[row.sourceFormat] : 'FR24'}</span><small>{timeModeLabel(row.timeMode)}</small></td><td><button className="primary compact" onClick={event => { event.stopPropagation(); dispatch(row); }}>Dispatch</button></td></tr>)}
+          {!flights.length && <tr><td colSpan={11} className="empty-cell">Paste and parse FR24 data to create a dispatchable flight list.</td></tr>}
         </tbody></table>
       </div>
       {selectedFlight && <div className="dispatch-bar"><div><span>Selected flight</span><strong>{selectedFlight.flightNumber} · {selectedFlight.departure} → {selectedFlight.arrival} · {selectedFlight.aircraft} {selectedFlight.registration}</strong></div><button className="primary" onClick={() => dispatch(selectedFlight)}><Plane size={17} /> Build in SimBrief</button></div>}
