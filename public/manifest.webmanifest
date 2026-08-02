@@ -1,0 +1,10 @@
+{
+  "name": "DispatchLink EFB",
+  "short_name": "DL EFB",
+  "description": "SimBrief-first electronic flight bag with simulator-linked Navigraph support.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#081018",
+  "theme_color": "#081018",
+  "icons": []
+}

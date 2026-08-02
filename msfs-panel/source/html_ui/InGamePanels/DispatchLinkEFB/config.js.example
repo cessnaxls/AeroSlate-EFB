@@ -1,0 +1,5 @@
+// Copy this file to config.js before building the MSFS package.
+window.DISPATCHLINK_CONFIG = {
+  efbUrl: "https://YOUR-RENDER-SERVICE.onrender.com",
+  simLinkToken: "COPY_THE_SIM_LINK_TOKEN_FROM_RENDER"
+};

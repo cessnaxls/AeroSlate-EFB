@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: dispatchlink-efb
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_BASE_URL
+        sync: false
+      - key: NAVIGRAPH_CLIENT_ID
+        sync: false
+      - key: NAVIGRAPH_CLIENT_SECRET
+        sync: false
+      - key: NAVIGRAPH_REDIRECT_URI
+        sync: false
+      - key: NAVIGRAPH_CHARTS_APPROVED
+        value: "false"
+      - key: SIM_LINK_TOKEN
+        generateValue: true
