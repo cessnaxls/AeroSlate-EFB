@@ -1,4 +1,4 @@
-# AeroSlate EFB 0.4.1 Free
+# AeroSlate EFB 0.4.2 Free
 
 AeroSlate is a GitHub/Render-backed electronic flight bag for **flight simulation** that is configured to deploy on Render's free web-service plan. It uses SimBrief as the dispatch and OFP backend, Navigraph as the chart/navigation provider, and the local simulator bridge as the source of live flight data and actual event times.
 

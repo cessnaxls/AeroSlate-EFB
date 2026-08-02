@@ -1,6 +1,13 @@
-# AeroSlate EFB changelog
+# AeroSlate EFB 0.4.2
 
-## 0.4.1 Free — 2026-08-02
+## GitHub Actions build fix
+
+- Fixed Web Crypto `BufferSource` type errors in `cloudLedger.ts` under TypeScript 5.9 DOM declarations.
+- Copies typed-array input into owned `ArrayBuffer` objects before PBKDF2, AES-GCM, and SHA-256 Web Crypto calls.
+- Pins TypeScript to 5.8.3 so local, GitHub Actions, and Render checks use the same compiler instead of silently advancing through a caret range.
+- No encryption format or runtime behavior changed; existing encrypted Gist vaults remain compatible.
+
+## 0.4.2 Free — 2026-08-02
 
 ### Free Render deployment
 

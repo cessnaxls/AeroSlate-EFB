@@ -82,15 +82,23 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-function base64ToBytes(value: string): Uint8Array {
+function base64ToBytes(value: string): Uint8Array<ArrayBuffer> {
   const binary = atob(value);
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
   return bytes;
 }
 
+function toOwnedArrayBuffer(bytes: Uint8Array<ArrayBufferLike>): ArrayBuffer {
+  // Web Crypto's BufferSource declarations in TypeScript 5.9 require an
+  // ArrayBuffer-backed view, not a view that might use SharedArrayBuffer.
+  const owned = new Uint8Array(bytes.byteLength);
+  owned.set(bytes);
+  return owned.buffer;
+}
+
 export async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  const digest = await crypto.subtle.digest('SHA-256', toOwnedArrayBuffer(new TextEncoder().encode(value)));
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
@@ -148,9 +156,9 @@ export function mergeLedgers(localInput: AeroSlateLedger, cloudInput: AeroSlateL
 }
 
 async function deriveVaultKey(passphrase: string, salt: Uint8Array, iterations: number): Promise<CryptoKey> {
-  const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  const material = await crypto.subtle.importKey('raw', toOwnedArrayBuffer(new TextEncoder().encode(passphrase)), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: toOwnedArrayBuffer(salt), iterations, hash: 'SHA-256' },
     material,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -164,7 +172,7 @@ export async function encryptLedger(ledger: AeroSlateLedger, passphrase: string)
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveVaultKey(passphrase, salt, PBKDF2_ITERATIONS);
   const plaintext = new TextEncoder().encode(JSON.stringify(normalizeLedger(ledger)));
-  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: toOwnedArrayBuffer(iv) }, key, toOwnedArrayBuffer(plaintext));
   const envelope: VaultEnvelope = {
     format: 'aeroslate-encrypted-ledger',
     version: 1,
@@ -188,7 +196,11 @@ export async function decryptLedger(payload: string, passphrase: string): Promis
     const salt = base64ToBytes(envelope.salt);
     const iv = base64ToBytes(envelope.iv);
     const key = await deriveVaultKey(passphrase, salt, Number(envelope.iterations || PBKDF2_ITERATIONS));
-    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, base64ToBytes(envelope.ciphertext));
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: toOwnedArrayBuffer(iv) },
+      key,
+      toOwnedArrayBuffer(base64ToBytes(envelope.ciphertext))
+    );
     return normalizeLedger(JSON.parse(new TextDecoder().decode(plaintext)));
   } catch {
     throw new Error('Unable to decrypt the cloud vault. Check the passphrase.');
