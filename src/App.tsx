@@ -11,8 +11,15 @@ import {
   getWeather, numberText, summary, weight, zuluFromEpoch, type AnyRecord
 } from './lib/ofp';
 import { loadLocal, saveLocal } from './lib/storage';
+import type { FlightCandidate } from './lib/dispatchlink';
+import { FlightFinderPage } from './pages/FlightFinderPage';
+import { SimBriefDispatchPage } from './pages/SimBriefDispatchPage';
+import { ToldPage } from './pages/ToldPage';
+import { SimPage } from './pages/SimPage';
+import { OOOIPage } from './pages/OOOIPage';
+import { RecordsPage } from './pages/RecordsPage';
 
-type Page = 'dashboard' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'times' | 'checklists' | 'scratchpad' | 'settings';
+type Page = 'dashboard' | 'finder' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'told' | 'sim' | 'times' | 'records' | 'checklists' | 'scratchpad' | 'settings';
 interface RuntimeStatus {
   simLinked: boolean;
   chartsApproved: boolean;
@@ -37,12 +44,17 @@ interface NavigraphChart {
 
 const NAV_ITEMS: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Flight deck', icon: LayoutDashboard },
-  { id: 'charts', label: 'Charts', icon: Map },
+  { id: 'finder', label: 'Real-world flight finder', icon: Search },
+  { id: 'simbrief', label: 'SimBrief dispatch', icon: Plane },
+  { id: 'charts', label: 'Charts & documents', icon: Map },
   { id: 'ofp', label: 'OFP', icon: FileText },
   { id: 'navlog', label: 'Navlog', icon: Route },
   { id: 'weather', label: 'Weather & NOTAMs', icon: CloudSun },
   { id: 'fuel', label: 'Fuel monitor', icon: Fuel },
+  { id: 'told', label: 'TOLD worksheet', icon: Calculator },
+  { id: 'sim', label: 'Simulator data', icon: Activity },
   { id: 'times', label: 'OOOI & schedule', icon: Timer },
+  { id: 'records', label: 'Logbook & duty', icon: BookOpenCheck },
   { id: 'checklists', label: 'Checklists', icon: ClipboardCheck },
   { id: 'scratchpad', label: 'Scratchpad', icon: NotebookPen },
   { id: 'settings', label: 'Connections', icon: Settings }
@@ -88,6 +100,8 @@ export default function App() {
   const [runtime, setRuntime] = useState<RuntimeStatus>({ simLinked: false, chartsApproved: false, navigraphConfigured: false, navigraphSignedIn: false, mode: 'standalone' });
   const [clock, setClock] = useState(new Date());
   const [chartSource, setChartSource] = useState<ChartSource | null>(null);
+  const [dispatchUrl, setDispatchUrl] = useState(() => loadLocal('dispatchlink.dispatch.url', ''));
+  const [dispatchFlight, setDispatchFlight] = useState<FlightCandidate | null>(() => loadLocal<FlightCandidate | null>('dispatchlink.dispatch.flight', null));
 
   const flight = useMemo(() => summary(ofp), [ofp]);
 
@@ -129,6 +143,12 @@ export default function App() {
     setOfp(demoOFP); saveLocal('dispatchlink.lastOFP', demoOFP); setMessage('Demo Hawker OFP loaded.'); setPage('dashboard');
   };
 
+  const openDispatch = (url: string, selected: FlightCandidate) => {
+    setDispatchUrl(url); setDispatchFlight(selected);
+    saveLocal('dispatchlink.dispatch.url', url); saveLocal('dispatchlink.dispatch.flight', selected);
+    setPage('simbrief'); setMessage(`Prepared ${selected.flightNumber} in SimBrief.`);
+  };
+
   const openOFPChart = () => {
     const url = getOFPDocument(ofp);
     if (!url) { setMessage('This SimBrief response did not include an OFP PDF link.'); return; }
@@ -162,12 +182,17 @@ export default function App() {
       {message && <div className="toast" onClick={() => setMessage('')}>{message}<X size={15} /></div>}
       <div className="page-content">
         {page === 'dashboard' && <Dashboard ofp={ofp} flight={flight} setPage={setPage} openOFP={openOFPChart} />}
+        {page === 'finder' && <FlightFinderPage onDispatch={openDispatch} notify={setMessage} />}
+        {page === 'simbrief' && <SimBriefDispatchPage url={dispatchUrl} flight={dispatchFlight} />}
         {page === 'charts' && <ChartsPage ofp={ofp} flight={flight} runtime={runtime} source={chartSource} setSource={setChartSource} refreshRuntime={refreshRuntime} />}
         {page === 'ofp' && <OFPPage ofp={ofp} flight={flight} openOFP={openOFPChart} />}
         {page === 'navlog' && <NavlogPage ofp={ofp} flight={flight} />}
         {page === 'weather' && <WeatherPage ofp={ofp} flight={flight} />}
         {page === 'fuel' && <FuelPage ofp={ofp} flight={flight} />}
-        {page === 'times' && <TimesPage ofp={ofp} flight={flight} />}
+        {page === 'told' && <ToldPage />}
+        {page === 'sim' && <SimPage />}
+        {page === 'times' && <OOOIPage release={flight.release} origin={flight.origin} destination={flight.destination} schedOut={flight.schedOut} schedIn={flight.schedIn} />}
+        {page === 'records' && <RecordsPage flight={flight} />}
         {page === 'checklists' && <ChecklistPage flight={flight} />}
         {page === 'scratchpad' && <ScratchpadPage flight={flight} />}
         {page === 'settings' && <SettingsPage simbriefKey={simbriefKey} setSimbriefKey={setSimbriefKey} mode={simbriefMode} setMode={setSimbriefMode} loading={loadingOFP} importOFP={importOFP} loadDemo={loadDemo} runtime={runtime} refreshRuntime={refreshRuntime} />}
@@ -222,7 +247,7 @@ function Dashboard({ ofp, flight, setPage, openOFP }: { ofp: AnyRecord | null; f
       </Card>
       <Card title="Quick cockpit" icon={BookOpenCheck} className="span-3">
         <div className="quick-grid">
-          {[['Charts', Map, 'charts'], ['Fuel monitor', Fuel, 'fuel'], ['OOOI times', Timer, 'times'], ['Checklists', ClipboardCheck, 'checklists'], ['Scratchpad', NotebookPen, 'scratchpad'], ['Connections', Link2, 'settings']].map(([label, Icon, id]) => <button key={String(id)} onClick={() => setPage(id as Page)}><Icon size={23} /><span>{String(label)}</span></button>)}
+          {[['Flight finder', Search, 'finder'], ['Charts', Map, 'charts'], ['TOLD', Calculator, 'told'], ['OOOI times', Timer, 'times'], ['Logbook', BookOpenCheck, 'records'], ['Connections', Link2, 'settings']].map(([label, Icon, id]) => <button key={String(id)} onClick={() => setPage(id as Page)}><Icon size={23} /><span>{String(label)}</span></button>)}
         </div>
       </Card>
     </div>
@@ -272,8 +297,9 @@ function ChartsPage({ ofp, flight, runtime, source, setSource, refreshRuntime }:
       <div className="connection-panel">
         <div><span className={`status-dot ${runtime.simLinked ? 'online' : ''}`} /><strong>{runtime.simLinked ? 'Simulator link active' : 'Simulator link required'}</strong></div>
         <div><span className={`status-dot ${runtime.navigraphSignedIn ? 'online' : ''}`} /><strong>{runtime.navigraphSignedIn ? 'Navigraph signed in' : 'Navigraph not signed in'}</strong></div>
-        {!runtime.chartsApproved && <p>Navigraph terminal charts remain disabled until Navigraph approves this simulator-linked implementation.</p>}
-        {runtime.chartsApproved && runtime.simLinked && !runtime.navigraphSignedIn && runtime.navigraphConfigured && <a className="primary button-link" href="/api/navigraph/login" target="_blank" rel="noreferrer">Sign in to Navigraph</a>}
+        {!runtime.chartsApproved && <p>The third-party Charts API remains disabled until Navigraph approves this virtual-environment implementation.</p>}
+        {runtime.chartsApproved && runtime.simLinked && !runtime.navigraphSignedIn && runtime.navigraphConfigured && <a className="primary button-link" href="/api/navigraph/login" target="_blank" rel="noreferrer">Sign in to approved Charts API</a>}
+        <button onClick={() => window.open('https://charts.navigraph.com/', 'dispatchlink-navigraph', 'popup=yes,width=1500,height=1000')}><Map size={15} /> Open standalone Navigraph Charts</button>
         <button className="text-button" onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh connection</button>
       </div>
       <div className="document-list">
@@ -445,8 +471,9 @@ function SettingsPage({ simbriefKey, setSimbriefKey, mode, setMode, loading, imp
     </Card>
     <Card title="Navigraph connection" icon={Map}>
       <div className="connection-cards"><div className={runtime.chartsApproved ? 'ok' : 'blocked'}>{runtime.chartsApproved ? <Check /> : <X />}<span><strong>Developer approval</strong><small>{runtime.chartsApproved ? 'Enabled' : 'Required'}</small></span></div><div className={runtime.simLinked ? 'ok' : 'blocked'}>{runtime.simLinked ? <Wifi /> : <WifiOff />}<span><strong>Simulator link</strong><small>{runtime.simLinked ? 'Active' : 'Inactive'}</small></span></div><div className={runtime.navigraphSignedIn ? 'ok' : 'blocked'}>{runtime.navigraphSignedIn ? <Check /> : <X />}<span><strong>Navigraph account</strong><small>{runtime.navigraphSignedIn ? 'Signed in' : 'Not connected'}</small></span></div></div>
-      {!runtime.chartsApproved && <div className="notice warn"><strong>Why charts are gated</strong><p>Navigraph does not permit its Charts API in an ordinary standalone browser, desktop, or physical-tablet EFB. This project includes a simulator-link gate and an MSFS panel stub so you can submit the correct architecture for approval.</p></div>}
-      {runtime.chartsApproved && runtime.simLinked && !runtime.navigraphSignedIn && runtime.navigraphConfigured && <a href="/api/navigraph/login" target="_blank" rel="noreferrer" className="primary button-link">Sign in to Navigraph</a>}
+      {!runtime.chartsApproved && <div className="notice warn"><strong>Navigraph licensing boundary</strong><p>The Navigraph Charts API cannot be enabled as an unapproved standalone EFB. DispatchLink therefore offers the official standalone Charts portal in a reusable app window, while the drawing workspace supports SimBrief PDFs and user-supplied charts. The direct API adapter stays gated for an approved virtual-environment build.</p></div>}
+      <button onClick={() => window.open('https://charts.navigraph.com/', 'dispatchlink-navigraph', 'popup=yes,width=1500,height=1000')}><Map size={16} /> Open Navigraph Charts portal</button>
+      {runtime.chartsApproved && runtime.simLinked && !runtime.navigraphSignedIn && runtime.navigraphConfigured && <a href="/api/navigraph/login" target="_blank" rel="noreferrer" className="primary button-link">Sign in to approved API mode</a>}
       {runtime.navigraphSignedIn && <button onClick={async () => { await fetch('/api/navigraph/logout', { method: 'POST' }); await refreshRuntime(); }}>Disconnect Navigraph</button>}
       <button className="text-button" onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh status</button>
     </Card>

@@ -1,19 +1,19 @@
 # Navigraph developer access request checklist
 
-Send the request to the developer contact listed in the current Navigraph Developer Portal. Verify the address in the portal before sending.
+Verify the current request process in the Navigraph Developer Portal before submitting.
 
 Include:
 
-- Application name: DispatchLink EFB
-- Affiliation: personal/open-source flight-simulation project (adjust as appropriate)
-- Platform: Render-hosted web backend and MSFS in-process InGame Panel wrapper
-- Purpose: personal computer flight simulation only
-- Requested access: Charts API and Navigation Data API
+- Application: DispatchLink EFB
+- Platform: Render-hosted PWA plus an optional MSFS in-game panel and local MSFS/X-Plane bridge
+- Purpose: personal/open-source flight-simulation EFB
+- Requested access: Charts API and, if needed, Navigation Data API
 - Authentication: Authorization Code Flow with PKCE
 - Redirect URI: `https://YOUR-SERVICE.onrender.com/api/navigraph/callback`
-- Chart handling: online retrieval only; no chart image storage or offline cache; `Cache-Control: no-store`
-- Simulator enforcement: chart routes require a heartbeat from the MSFS panel within the preceding 20 seconds
-- End-user requirement: individual Navigraph account and subscription
-- Annotation behavior: locally stored vector markup only; chart image content is not stored
+- End-user requirement: each user authenticates with an eligible Navigraph account/subscription
+- Chart handling: online retrieval only, no chart-image persistence or offline cache, `Cache-Control: no-store`
+- Annotation handling: locally stored vector markup, separate from chart-image content
+- Virtual-environment enforcement: direct chart-image routes require a simulator heartbeat from the local bridge or MSFS panel within the previous 20 seconds
+- Standalone behavior: when no virtual-environment link is active, DispatchLink opens Navigraph's official Charts web application in a reusable window and does not call the third-party Charts API
 
-Ask Navigraph to confirm whether the hosted-in-panel architecture is approved before changing `NAVIGRAPH_CHARTS_APPROVED` to `true`.
+Ask Navigraph to confirm that the virtual-environment architecture is approved before setting `NAVIGRAPH_CHARTS_APPROVED=true`.
