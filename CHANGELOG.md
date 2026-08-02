@@ -1,51 +1,35 @@
-# AeroSlate EFB 0.4.0
+# AeroSlate EFB changelog
 
-## Identity and layout
+## 0.4.1 Free — 2026-08-02
 
-- Renamed the application, UI, PWA, native shell, server service, exports, bridge, and build metadata to AeroSlate EFB.
-- Added a new slate/wing application mark and 192/512 px tile icons.
-- Added iOS safe-area handling so the header clears the clock, Wi-Fi, and battery indicators.
-- Added responsive phone/tablet portrait and landscape layouts.
-- Added a phone bottom tab bar, tablet slide-out navigation, outside-tap menu dismissal, and landscape-phone height optimization.
-- Increased touch targets and prevented unwanted iOS form zoom.
-- Simplified the dashboard and grouped navigation into Plan, Brief, Fly, Record, and System.
-- Removed Checklists from the app workflow.
+### Free Render deployment
 
-## Provider workspaces
+- Changed the Blueprint web-service plan from `starter` to `free`.
+- Removed the persistent disk declaration and `DATA_DIR` environment variable.
+- Removed server-side record-file storage so the app never implies that Render's ephemeral filesystem is durable.
+- Uses Render's automatically supplied `RENDER_EXTERNAL_URL` when `APP_BASE_URL` is not set.
+- The Blueprint now requires no database, disk, or payment-backed instance.
 
-- Added persistent in-app Electron webviews for official SimBrief Dispatch, SimBrief Tools, and Navigraph Charts sessions.
-- Added provider child-window handling and isolated provider session storage.
-- Added mobile-native in-app-browser support when a compatible wrapper is present, with a named-window PWA fallback.
-- Added OFP-value application to matching SimBrief Tools controls.
-- Updated Binder links to the complete SimBrief OFP, returned map documents, Navigraph Charts, and SimBrief Tools.
+### Local-first encrypted records
 
-## Flight data
+- Flight and duty entries are written to device storage before any network operation.
+- Added per-device append-only SHA-256 audit chains so multiple devices can merge without rewriting previous device chains.
+- Added encrypted private GitHub Gist synchronization.
+- Ledger encryption uses AES-256-GCM with a PBKDF2-SHA256 derived key and a random salt/IV for every upload.
+- The GitHub token and passphrase remain in the client and are not sent to the Render service.
+- Added automatic sync after record save, manual sync, cloud pull/merge, encrypted backup export, and backup restore.
+- Added local CSV export for both flight and duty records.
+- Added a clear local/cloud status and record counts.
+- Added optional device-side remembering of the GitHub token/passphrase.
 
-- Fixed planned block time so it is calculated as STA minus STD with midnight rollover.
-- Reworked ICAO flight-plan extraction from SimBrief XML-to-JSON structures and copy-to-clipboard behavior.
-- Expanded navlog columns and added a persistent ForeFlight-style Active Navlog.
-- Added recursive complete-OFP NOTAM extraction, operational classification, an important-NOTAM panel, and full categorized filtering.
-- Reorganized fuel into plan flow, actual checkpoint, and fuel-trend sections; removed the appearance of hardcoded aircraft limits.
-- Replaced the visible TCalc debug presentation with configurable, purpose-grouped live simulator metrics.
-- Rebuilt OOOI, logbook, and duty layouts with clearer hierarchy and dropdowns where appropriate.
-- Automated scratchpad template insertion for each active flight.
-- Changed notifications to auto-dismiss with a visible countdown bar.
+### Compatibility and validation
 
-## Compatibility
+- Retained the complete AeroSlate 0.4.0 responsive UI, SimBrief, Navigraph workspace, FR24 parser, simulator bridge, OOOI, navlog, weather/NOTAM, fuel, runway-analysis, and native shell functionality.
+- TypeScript validation passes.
+- Parser regression continues to pass all four supplied FR24 layouts.
+- Node/Electron syntax and Python bridge compilation pass.
+- `render.yaml` validates as a free service with no disk or `DATA_DIR`.
 
-- Migrates legacy DispatchLink backend URLs, OFPs, provider settings, finder selections, OOOI values, and drafts where applicable.
-- Retains the legacy simulator bridge file temporarily while adding `bridge/aeroslate_bridge.py`.
+## 0.4.0 — 2026-08-02
 
-# DispatchLink EFB 0.3.1
-
-- Added automatic detection for four FR24 paste layouts: airport desktop table, airport compact/mobile, aircraft-history cards, and aircraft-history table.
-- Fixed airport navigation tabs being mistaken for the operational table heading.
-- Added 12-hour clock parsing, local-versus-UTC detection, airport-timezone conversion, compact date inference, midnight rollover, concatenated aircraft parsing, and duplicate-row enrichment.
-- Added exact parser regression fixtures and CI execution.
-
-# DispatchLink EFB 0.3.0
-
-- Reorganized the product around one active-flight workflow.
-- Added stable-ID SimBrief OFP watching and automatic synchronization.
-- Replaced generic TOLD estimates with SimBrief Runway Analysis/TLR presentation.
-- Added Electron provider sessions, authoritative time propagation, duty offsets, live telemetry, and native build workflows.
+See the previous release for the AeroSlate rebrand, responsive phone/tablet redesign, provider workspaces, active navlog, recursive NOTAM parsing, fuel workflow cleanup, and records/OOOI redesign.

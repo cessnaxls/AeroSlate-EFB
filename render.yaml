@@ -2,14 +2,10 @@ services:
   - type: web
     name: aeroslate-efb
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
-    disk:
-      name: aeroslate-records
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: 20
@@ -17,16 +13,6 @@ services:
         value: "1"
       - key: SESSION_SECRET
         generateValue: true
-      - key: APP_BASE_URL
-        sync: false
-      - key: DATA_DIR
-        value: /var/data
-      - key: NAVIGRAPH_CLIENT_ID
-        sync: false
-      - key: NAVIGRAPH_CLIENT_SECRET
-        sync: false
-      - key: NAVIGRAPH_REDIRECT_URI
-        sync: false
       - key: NAVIGRAPH_CHARTS_APPROVED
         value: "false"
       - key: SIM_LINK_TOKEN

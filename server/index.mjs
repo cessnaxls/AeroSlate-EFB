@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
@@ -10,15 +9,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 const app = express();
 const port = Number(process.env.PORT || 3000);
-const appBaseUrl = process.env.APP_BASE_URL || `http://localhost:${port}`;
+const appBaseUrl = process.env.APP_BASE_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${port}`;
 const redirectUri = process.env.NAVIGRAPH_REDIRECT_URI || `${appBaseUrl}/api/navigraph/callback`;
 const chartsApproved = String(process.env.NAVIGRAPH_CHARTS_APPROVED).toLowerCase() === 'true';
 const simLinkToken = process.env.SIM_LINK_TOKEN || 'development-sim-link';
-const dataDir = process.env.DATA_DIR || path.join(rootDir, '.aeroslate-data');
 const tokenStore = new Map();
 let lastSimHeartbeat = 0;
 let latestTelemetry = null;
-fs.mkdirSync(dataDir, { recursive: true });
 
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false, frameguard: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
@@ -66,51 +63,6 @@ async function requireNavigraph(req, res, next) {
   } catch (error) { res.status(502).json({ error: error instanceof Error ? error.message : 'Navigraph authentication failed.' }); }
 }
 
-function workspaceKey(req) {
-  const key = String(req.get('x-workspace-key') || '');
-  if (key.length < 12 || key.length > 256) throw new Error('Workspace key must contain 12–256 characters.');
-  return key;
-}
-function workspacePath(key) { return path.join(dataDir, `${crypto.createHash('sha256').update(key).digest('hex')}.vault`); }
-function encryptionKey(key) { return crypto.createHash('sha256').update(`dispatchlink-records:${key}`).digest(); }
-function emptyWorkspace() { return { version: 1, logbook: [], duty: [], audit: [] }; }
-function decryptWorkspace(key) {
-  const file = workspacePath(key);
-  if (!fs.existsSync(file)) return emptyWorkspace();
-  const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-  const decipher = crypto.createDecipheriv('aes-256-gcm', encryptionKey(key), Buffer.from(payload.iv, 'base64'));
-  decipher.setAuthTag(Buffer.from(payload.tag, 'base64'));
-  const plaintext = Buffer.concat([decipher.update(Buffer.from(payload.ciphertext, 'base64')), decipher.final()]);
-  const data = JSON.parse(plaintext.toString('utf8'));
-  return { ...emptyWorkspace(), ...data };
-}
-function encryptWorkspace(key, data) {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey(key), iv);
-  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(data), 'utf8'), cipher.final()]);
-  const payload = { version: 1, iv: iv.toString('base64'), tag: cipher.getAuthTag().toString('base64'), ciphertext: ciphertext.toString('base64') };
-  const file = workspacePath(key); const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(temp, JSON.stringify(payload), { mode: 0o600 }); fs.renameSync(temp, file);
-}
-function appendRecord(key, kind, data) {
-  const workspace = decryptWorkspace(key);
-  const id = crypto.randomUUID(); const createdAt = new Date().toISOString();
-  const previousHash = workspace.audit.at(-1)?.hash || 'GENESIS';
-  const canonical = JSON.stringify({ id, kind, createdAt, data, previousHash });
-  const auditHash = crypto.createHash('sha256').update(canonical).digest('hex');
-  const record = { id, createdAt, data, previousHash, auditHash };
-  workspace[kind].push(record);
-  workspace.audit.push({ id, kind, createdAt, previousHash, hash: auditHash });
-  encryptWorkspace(key, workspace);
-  return record;
-}
-function csvEscape(value) { const text = String(value ?? ''); return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text; }
-function recordsToCsv(records) {
-  const keys = [...new Set(records.flatMap(record => Object.keys(record.data || {})))];
-  const header = ['id', 'createdAt', ...keys, 'previousHash', 'auditHash'];
-  return [header, ...records.map(record => [record.id, record.createdAt, ...keys.map(key => record.data?.[key] ?? ''), record.previousHash, record.auditHash])].map(row => row.map(csvEscape).join(',')).join('\r\n');
-}
-
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'aeroslate-efb', time: new Date().toISOString() }));
 app.get('/api/runtime', (req, res) => {
   const sid = ensureSession(req); const tokens = tokenStore.get(sid);
@@ -136,26 +88,9 @@ app.post('/api/sim/telemetry', (req, res) => {
 });
 app.get('/api/sim/telemetry', (_req, res) => { res.set('cache-control', 'no-store'); res.json({ linked: simLinked(), telemetry: simLinked() ? latestTelemetry : latestTelemetry }); });
 
-app.get('/api/records', (req, res) => {
-  try { const key = workspaceKey(req); const workspace = decryptWorkspace(key); res.set('cache-control', 'no-store').json({ logbook: workspace.logbook, duty: workspace.duty, auditCount: workspace.audit.length }); }
-  catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : 'Unable to read records.' }); }
-});
-app.post('/api/records/:kind', (req, res) => {
-  try {
-    const kind = req.params.kind;
-    if (!['logbook', 'duty'].includes(kind)) return res.status(404).json({ error: 'Unknown record type.' });
-    if (!req.body?.data || typeof req.body.data !== 'object') return res.status(400).json({ error: 'Record data is required.' });
-    if (req.body.data.attested !== true || !String(req.body.data.signerName || '').trim()) return res.status(400).json({ error: 'A typed signer name and attestation are required.' });
-    const record = appendRecord(workspaceKey(req), kind, req.body.data); res.status(201).json(record);
-  } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : 'Unable to save record.' }); }
-});
-app.get('/api/records/export', (req, res) => {
-  try {
-    const kind = req.query.type === 'duty' ? 'duty' : 'logbook'; const workspace = decryptWorkspace(workspaceKey(req));
-    if (req.query.format === 'json') { res.set('content-disposition', `attachment; filename="aeroslate-${kind}.json"`); return res.json(workspace[kind]); }
-    res.type('text/csv').set('content-disposition', `attachment; filename="aeroslate-${kind}.csv"`).send(recordsToCsv(workspace[kind]));
-  } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : 'Unable to export records.' }); }
-});
+app.use('/api/records', (_req, res) => res.status(410).json({
+  error: 'Server-side record storage was removed for the free Render edition. AeroSlate now saves locally and optionally synchronizes an encrypted private GitHub Gist.'
+}));
 
 app.get('/api/simbrief', async (req, res) => {
   const username = typeof req.query.username === 'string' ? req.query.username.trim() : '';
@@ -169,7 +104,7 @@ app.get('/api/simbrief', async (req, res) => {
   const staticQuery = staticId ? `&static_id=${encodeURIComponent(staticId)}` : '';
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 15_000);
   try {
-    const response = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?${key}${staticQuery}&json=1`, { signal: controller.signal, headers: { 'user-agent': 'AeroSlate-EFB/0.4' } });
+    const response = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?${key}${staticQuery}&json=1`, { signal: controller.signal, headers: { 'user-agent': 'AeroSlate-EFB/0.4.1' } });
     const text = await response.text();
     if (!response.ok) return res.status(response.status).json({ error: 'SimBrief did not return an OFP.', details: text.slice(0, 300) });
     res.set('cache-control', 'no-store').json(JSON.parse(text));

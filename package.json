@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.4.0",
-  "description": "A responsive SimBrief- and Navigraph-backed all-in-one flight-simulation EFB for web, desktop, tablets, and phones.",
+  "version": "0.4.1",
+  "description": "A free-tier, responsive SimBrief- and Navigraph-backed all-in-one flight-simulation EFB with encrypted GitHub cloud record sync.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {

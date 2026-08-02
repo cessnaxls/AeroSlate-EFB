@@ -1,6 +1,6 @@
-# AeroSlate EFB 0.4.0
+# AeroSlate EFB 0.4.1 Free
 
-AeroSlate is a GitHub/Render-backed electronic flight bag for **flight simulation**. It uses SimBrief as the dispatch and OFP backend, Navigraph as the chart/navigation provider, and the local simulator bridge as the source of live flight data and actual event times.
+AeroSlate is a GitHub/Render-backed electronic flight bag for **flight simulation** that is configured to deploy on Render's free web-service plan. It uses SimBrief as the dispatch and OFP backend, Navigraph as the chart/navigation provider, and the local simulator bridge as the source of live flight data and actual event times.
 
 > **Simulation and recordkeeping aid.** AeroSlate is not an approved real-world navigation source, certified aircraft-performance program, operational-control system, or operator-approved flight-time-limitations system.
 
@@ -11,7 +11,7 @@ AeroSlate is a GitHub/Render-backed electronic flight bag for **flight simulatio
 3. **Generate** — generate the OFP in the embedded SimBrief provider workspace. AeroSlate watches the stable flight ID and imports the completed plan.
 4. **Brief** — OFP, route, weather, all imported NOTAMs, active navlog, fuel, charts, binder documents, and SimBrief Tools use the same active-flight record.
 5. **Fly** — MSFS/X-Plane telemetry supplies live data and simulator Zulu. OOOI can be captured automatically or with **NOW**.
-6. **Record** — actual OOOI values and computed block/airborne time flow into cloud logbook and duty drafts without duplicate entry.
+6. **Record** — actual OOOI values and computed block/airborne time flow into local-first logbook and duty drafts. Optional encrypted GitHub Gist sync keeps the ledger available across devices without a paid Render disk.
 
 The FAA aircraft-registry downloader/cache is not included. Airport lookup and IATA-to-ICAO conversion use `public/data/airports.dat`.
 
@@ -173,7 +173,7 @@ OOOI is the authoritative source of actual times:
 
 Scheduled STD/STA come from the selected flight and are replaced by the imported OFP. Simulator Zulu is used while linked; device UTC is the fallback. Automatic thresholds and debounce are saved locally.
 
-The records page uses grouped sections and dropdowns for crew role, operation, flight rules, regulation/scheme, and duty role. Synced identity/schedule/OOOI fields are read-only. Cloud records provide encrypted workspace vaults, append-only entries, typed-name attestation, chained SHA-256 audit hashes, and CSV/JSON export.
+The records page uses grouped sections and dropdowns for crew role, operation, flight rules, regulation/scheme, and duty role. Synced identity/schedule/OOOI fields are read-only. Entries are saved to the device first with typed-name attestation and per-device SHA-256 audit chains. Optional cloud sync encrypts the complete ledger in the browser with AES-256-GCM and PBKDF2 before writing it to a private GitHub Gist. The GitHub token and encryption passphrase are never sent to Render. CSV and encrypted-backup export are included.
 
 AeroSlate is **compliance-oriented, not regulator-certified**. The pilot/operator remains responsible for loggability, signatures/endorsements, retention, backups, and the applicable operator/authority rules.
 
@@ -221,14 +221,30 @@ node --check electron/preload.cjs
 python -m py_compile bridge/aeroslate_bridge.py
 ```
 
-## Deploy to Render
+## Deploy to Render for free
 
-1. Push the repository to GitHub.
+The included `render.yaml` requests one **free** Node web service and does not request a disk, database, or paid instance.
+
+1. Push this repository to GitHub.
 2. In Render choose **New → Blueprint**.
-3. Select this repository.
-4. Set `APP_BASE_URL` to the final HTTPS service URL.
-5. Use the generated `SIM_LINK_TOKEN` in the local bridge command.
-6. Keep `NAVIGRAPH_CHARTS_APPROVED=false` unless Navigraph has approved that separate API use case.
+3. Select the repository and deploy the Blueprint.
+4. Render generates `SESSION_SECRET` and `SIM_LINK_TOKEN` automatically.
+5. Copy the generated `SIM_LINK_TOKEN` into the simulator bridge command.
+6. Keep `NAVIGRAPH_CHARTS_APPROVED=false` unless Navigraph has separately approved direct Charts API access.
+
+Render automatically supplies the public service URL through `RENDER_EXTERNAL_URL`, so the Blueprint does not ask for `APP_BASE_URL`. A free service can sleep when idle, so the first request after inactivity can take longer. Simulator telemetry requests keep the service active while flying.
+
+### Free cloud logbook setup
+
+AeroSlate does not store records on Render's ephemeral filesystem. On the **Records** page:
+
+1. Create a GitHub fine-grained personal access token with **Gists: Read and write**.
+2. Enter the token and an encryption passphrase of at least 12 characters.
+3. Select **Create cloud vault**. AeroSlate creates a private Gist and stores its ID on the device.
+4. Keep **Sync after each saved entry** enabled for automatic synchronization.
+5. Use **Encrypted backup** periodically as an independent copy.
+
+The private Gist contains only encrypted ciphertext. Losing the encryption passphrase makes the cloud vault unrecoverable. The device-local ledger remains the primary copy until browser/app storage is cleared.
 
 ## Native desktop app
 
@@ -258,7 +274,7 @@ bridge/aeroslate_bridge.py               Local MSFS/X-Plane telemetry bridge
 electron/                                Native provider-webview shell
 public/data/airports.dat                 Airport database
 public/icons/                             AeroSlate PWA/installer identity
-server/index.mjs                         SimBrief proxy, OAuth, telemetry, encrypted records
+server/index.mjs                         SimBrief proxy, OAuth, and simulator telemetry
 src/App.tsx                              Responsive AeroSlate shell
 src/lib/ofp.ts                           OFP/FPL/block/NOTAM interpretation
 src/lib/flightTimes.ts                   Canonical OOOI propagation
@@ -267,7 +283,8 @@ src/pages/NavlogPage.tsx                 Planned and active navlog
 src/pages/WeatherPage.tsx                Weather and categorized NOTAMs
 src/pages/FuelPage.tsx                   Plan/checkpoint/trend fuel workflow
 src/pages/RunwayAnalysisPage.tsx         Embedded SimBrief Tools workflow
-src/pages/RecordsPage.tsx                Synced logbook and duty records
+src/pages/RecordsPage.tsx                Local-first logbook/duty and encrypted Gist sync
+src/lib/cloudLedger.ts                   Audit chains, encryption, merge, Gist synchronization
 src/components/ProviderPortal.tsx        SimBrief/Navigraph provider sessions
 src/components/ChartWorkspace.tsx        PDF/image annotation desk
 ```
