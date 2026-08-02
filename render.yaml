@@ -13,6 +13,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 20
+      - key: ELECTRON_SKIP_BINARY_DOWNLOAD
+        value: "1"
       - key: SESSION_SECRET
         generateValue: true
       - key: APP_BASE_URL

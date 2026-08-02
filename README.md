@@ -1,98 +1,98 @@
-# DispatchLink EFB
+# DispatchLink EFB 0.3
 
-A GitHub/Render-ready all-in-one electronic flight bag for flight simulation. DispatchLink combines real-world flight discovery, SimBrief dispatch and OFP import, chart/document annotation, simulator telemetry, TOLD worksheets, OOOI automation, a cloud logbook, duty records, weather, fuel, navlog, checklists, and scratchpads in one responsive PWA.
+A GitHub/Render-backed, Windows-native and browser EFB for **flight simulation**. The app treats SimBrief as the dispatch/OFP backend, Navigraph as the chart provider, and simulator telemetry as the source of actual flight events. DispatchLink presents the resulting information in one consistent workflow instead of making each page maintain a separate copy of the flight.
 
-> **Simulation and recordkeeping aid.** Do not use this repository as an approved real-world navigation source, AFM performance program, operational-control system, or substitute for an operator's manuals.
+> **Simulation and recordkeeping aid.** This is not an approved real-world navigation source, aircraft performance program, operational-control system, or operator-approved FTL compliance system.
 
-## New integrated workflow
+## The single-flight workflow
 
-1. Choose a country and large/medium/small airport from the bundled `public/data/airports.dat` file.
-2. Open that airport's FR24 page from DispatchLink.
-3. Paste an FR24 airport departures/arrivals table or aircraft-history table into Flight Finder.
-4. Parse and filter actual scheduled/operated flights, or randomize one.
-5. Press **Build in SimBrief**. The SimBrief custom-options page is prepared with route, type, registration, airline/flight number, UTC departure time, and an appropriate OFP layout.
-6. Keep DispatchLink open in its original tab. SimBrief is shown in the integrated frame when permitted and always has a reusable named dispatch-window fallback.
-7. Generate the plan, then import the latest OFP by SimBrief username or Pilot ID.
+1. **Choose flight** — search the bundled `airports.dat`, paste an FR24 airport or aircraft-history table, filter the parsed real-world flights, and select one.
+2. **Dispatch** — DispatchLink preloads SimBrief with the selected flight, UTC schedule, aircraft, registration and OFP preferences. Detailed navlog, NOTAMs, maps and SimBrief Runway Analysis (`tlr=1`) are enabled.
+3. **Generate and synchronize** — generate the flight in the in-app SimBrief session. A stable flight ID lets DispatchLink watch for the result and import it automatically. Manual synchronization remains available.
+4. **Brief** — the native pages present the imported route, schedule, weights, fuel, weather, NOTAMs, navlog, maps, OFP and runway-analysis material.
+5. **Fly** — the local MSFS/X-Plane bridge supplies simulator Zulu time and telemetry. OOOI events can be automatic or entered with **NOW**.
+6. **Record** — the cloud logbook and duty drafts mirror the active flight, scheduled times and OOOI times. Synced fields are deliberately read-only so conflicting copies cannot be created.
 
-The old FAA aircraft-registry download/cache path is not included. Airport lookup and IATA-to-ICAO conversion come directly from the supplied `airports.dat` file.
+The FAA registry download/cache system is not present. Airport lookup and IATA-to-ICAO conversion use the supplied `public/data/airports.dat` file.
 
-## Main capabilities
+## SimBrief-backed dispatch and TOLR/TLR
 
-### Flight Finder and SimBrief
+DispatchLink does not use a generic home-built takeoff/landing distance formula. Every generated flight requests SimBrief **Runway Analysis** and presents the returned TLR data or the TLR pages inside the complete OFP.
 
-- Parses the supplied OpenFlights-style airport rows, including airport name, city, country, IATA, ICAO, coordinates, elevation, UTC offset, and IANA timezone.
-- Country and estimated airport-size filters, airport search, and random airport selection.
-- FR24 airport-table and aircraft-history parsing based on the supplied DispatchLink behavior.
-- Preserves pasted FR24 clocks as UTC/Zulu and stores them as `HH:MMz`; no airport timezone conversion is applied.
-- Converts visible two-letter airline flight numbers to three-letter ICAO operators when the pasted page supplies `Code XX / YYY` data, with common regional-carrier fallbacks.
-- Aircraft aliases and regional/mainline SimBrief OFP-layout handling.
-- SimBrief latest-OFP import, OFP PDF, navlog, weather, NOTAM, fuel, schedule, route, and weights.
+The active OFP becomes the authoritative source for:
 
-### Charts and documents
+- Flight identity, aircraft, registration and route
+- Scheduled OUT/IN and planned block/air time
+- Departure/arrival runway selections
+- Weights, payload, fuel and fuel-flow figures
+- Weather, NOTAMs, navlog and maps
+- Runway-analysis/TLR material
 
-- Touch/mouse pen, highlighter, line, arrow, box, text, erase, color selection, undo/redo, zoom, night display, multipage PDF rendering, and annotated-image export.
-- SimBrief OFP PDFs and flight maps open directly in the chart desk.
-- User-supplied PDF/image charts work in standalone mode.
-- A reusable standalone window opens the official Navigraph Charts web application while DispatchLink remains running.
-- The direct Navigraph Charts API adapter remains protected by developer-approval and virtual-environment gates because Navigraph's current developer license does not permit an unapproved standalone third-party EFB to display Charts API content.
+The SimBrief workspace stays inside the Windows app. In a normal browser, DispatchLink uses one named provider window so the EFB itself remains open.
 
-### TOLD worksheet
+## Navigraph architecture
 
-- Pressure altitude, ISA deviation, density-altitude estimate, headwind/tailwind, and crosswind components.
-- Weight, altitude, temperature, wind, runway-slope, and wet-surface correction model.
-- Takeoff/landing distance and runway-margin output.
-- Saves the aircraft/profile inputs locally.
+The Windows edition presents the official Navigraph Charts web session inside the app using a persistent provider partition. You authenticate directly with Navigraph; DispatchLink does not receive the provider password or cache Navigraph chart images.
 
-Enter baseline distances and correction percentages from the applicable AFM/POH or an approved operator performance source. The included values are examples only.
+A second adapter remains in the project for a Navigraph-approved simulator-linked Charts API build. It is intentionally gated by `NAVIGRAPH_CHARTS_APPROVED=true` and an active simulator heartbeat.
 
-### MSFS and X-Plane bridge
+The document desk supports touch/mouse pen, highlighter, lines, arrows, boxes, text, erase, undo/redo, zoom, night display, multipage PDFs and annotated-image export for SimBrief documents, uploaded charts and approved direct-API images.
+
+## Time propagation
+
+There is one OOOI record per active flight:
+
+- Scheduled OUT/IN: selected FR24 flight, then replaced by the imported SimBrief OFP
+- Actual OUT/OFF/ON/IN: simulator Zulu or manual **NOW**
+- Block: OUT → IN
+- Airborne: OFF → ON
+- Logbook actuals: mirrored from OOOI
+- Report, duty-on and FDP start: optionally derived from scheduled OUT using a saved lead-time preset
+- FDP end: mirrored from actual IN
+- Duty-off: optionally derived from actual IN using a saved post-flight preset
+
+Times are stored as `HH:MMz`. Time inputs accept `1234`, `12:34`, or `12:34z` and normalize when committed.
+
+## MSFS and X-Plane bridge
 
 `bridge/dispatchlink_bridge.py` supports:
 
-- Microsoft Flight Simulator through Python-SimConnect.
-- X-Plane 11/12 through the native RREF UDP protocol.
-- Simulator Zulu time, latitude/longitude, heading, MSL/AGL altitude, ground speed, IAS, vertical speed, on-ground state, parking brake, engines, registration/title, and surface data where exposed.
-- The exact TCalc directory/file index math used by the supplied example.
-- Secure telemetry posting using `SIM_LINK_TOKEN`.
+- Microsoft Flight Simulator through Python-SimConnect
+- X-Plane 11/12 through native RREF UDP
+- Simulator Zulu, position, heading, MSL/AGL altitude, IAS, GS and vertical speed
+- On-ground, parking-brake and engine state
+- Aircraft title and registration
+- Total fuel and total weight where available
+- Surface type/condition where exposed
+- The supplied TCalc directory/file coordinate math
 
-Example:
+MSFS example:
 
 ```powershell
 py -m pip install SimConnect
 py bridge\dispatchlink_bridge.py --sim msfs --url https://YOUR-APP.onrender.com --token YOUR_SIM_LINK_TOKEN
 ```
 
-For X-Plane:
+X-Plane example:
 
 ```powershell
 py bridge\dispatchlink_bridge.py --sim xplane --url https://YOUR-APP.onrender.com --token YOUR_SIM_LINK_TOKEN
 ```
 
-### OOOI and simulator time
+## Cloud records
 
-- Every manual **NOW** capture uses simulator `HH:MMz` when the bridge is connected; device UTC is the fallback.
-- Device-saved automatic presets:
-  - OUT: parking brake released and GS over the chosen threshold.
-  - OFF: airborne or GS over the takeoff threshold.
-  - ON: on ground and GS below the landing threshold.
-  - IN: parking brake set and engines stopped.
-- Configurable sustained-condition delay prevents one-sample triggers.
-- Block and airborne time calculations.
+- AES-256-GCM encrypted workspace vaults on the Render persistent disk
+- Append-only flight and duty entries
+- Typed-name attestation before save
+- Chained SHA-256 audit hashes
+- CSV and JSON export
+- FAA/EASA-oriented record fields and user-selected rule/scheme fields
 
-### Cloud logbook and duty ledger
+DispatchLink is **compliance-oriented, not regulator-certified**. The pilot/operator remains responsible for loggability decisions, signatures/endorsements, retention, backups and the applicable company/authority FTL rules.
 
-- Private workspace key; each workspace is stored as an AES-256-GCM encrypted vault on the server disk.
-- Append-only flight and duty records.
-- Typed signer name and explicit attestation required before save.
-- SHA-256 chained audit hashes for tamper evidence.
-- CSV and JSON export endpoints.
-- FAA/EASA-oriented fields for aircraft, registration, route, OOOI, total/airborne time, PIC/SIC/co-pilot, dual, instructor, night, instrument, cross-country, landings, approaches, remarks, duty/FDP, sectors, standby, rest, and scheme notes.
+## Run locally
 
-No software can truthfully self-declare that a personal logbook is “FAA/EASA certified.” DispatchLink is designed to create a reliable electronic record aligned with the information pilots and operators commonly need under 14 CFR 61.51 and EASA FCL.050/associated AMC. The pilot/operator remains responsible for legal classification, instructor/examiner signatures, retention, backups, authority access, and compliance with the applicable operator-approved FTL scheme.
-
-## Local development
-
-Requirements: Node.js 20 or newer.
+Requirements: Node.js 20 or later.
 
 ```bash
 cp .env.example .env
@@ -100,31 +100,58 @@ npm install
 npm run dev
 ```
 
-- Vite UI: `http://localhost:5173`
-- API/server: `http://localhost:3000`
+- Web app: `http://localhost:5173`
+- API: `http://localhost:3000`
 
-Production test:
+Checks:
 
 ```bash
 npm run check
 npm run build
-npm start
+node --check server/index.mjs
+python -m py_compile bridge/dispatchlink_bridge.py
 ```
 
-## Deploy to GitHub and Render
+## Deploy the backend to Render
 
-1. Create a GitHub repository and push this project.
-2. In Render choose **New → Blueprint** and select the repository.
-3. `render.yaml` creates a Node service plus a 1 GB persistent disk at `/var/data` for encrypted logbook/duty vaults. Persistent disks require a paid Render service; change the plan only if you provide another durable database/storage backend.
-4. Set `APP_BASE_URL` to the final HTTPS Render URL.
-5. Copy Render's generated `SIM_LINK_TOKEN` into the bridge command.
-6. Keep `NAVIGRAPH_CHARTS_APPROVED=false` unless Navigraph approves the direct API architecture and issues credentials.
+1. Push this repository to GitHub.
+2. In Render select **New → Blueprint** and choose the repository.
+3. `render.yaml` creates the Node service and a persistent disk at `/var/data`.
+4. Set `APP_BASE_URL` to the final Render HTTPS URL.
+5. Copy the generated `SIM_LINK_TOKEN` into the bridge command.
+6. Leave `NAVIGRAPH_CHARTS_APPROVED=false` unless Navigraph approves the direct chart API implementation.
 
-## Navigraph setup
+## Windows native app
 
-Standalone users can open the official Navigraph Charts web app from the Charts or Connections page and authenticate there. Direct chart loading into DispatchLink's drawing canvas uses the Charts API and requires Navigraph developer approval.
+Development:
 
-After approval, configure:
+```bash
+npm install
+npm run native:dev
+```
+
+Build an installer and portable ZIP:
+
+```bash
+npm run native:dist
+```
+
+On first packaged launch, enter the HTTPS URL of your Render service. The URL is saved in the Electron user-data directory. It can later be changed from **Connections → Native app shell** or by launching with:
+
+```powershell
+DispatchLink.exe --app-url=https://YOUR-APP.onrender.com
+```
+
+The native shell keeps separate persistent sessions for:
+
+- DispatchLink itself
+- SimBrief and Navigraph provider pages
+
+Provider login popups are opened as child windows inside the app; unrelated links open in the system browser.
+
+## Navigraph direct API setup
+
+Only after approval:
 
 ```text
 NAVIGRAPH_CLIENT_ID=...
@@ -135,29 +162,21 @@ NAVIGRAPH_CHARTS_APPROVED=true
 
 See `docs/NAVIGRAPH_ACCESS_REQUEST.md`.
 
-## Project structure
+## Important files
 
 ```text
-bridge/dispatchlink_bridge.py       Local MSFS/X-Plane telemetry bridge
-public/data/airports.dat            Supplied airport database
-server/index.mjs                    API, SimBrief, OAuth, telemetry, encrypted records
-src/App.tsx                         Main shell and existing EFB pages
-src/pages/FlightFinderPage.tsx      Airport randomizer and FR24 parser
-src/pages/SimBriefDispatchPage.tsx  Integrated SimBrief handoff
-src/pages/ToldPage.tsx              Configurable TOLD worksheet
-src/pages/SimPage.tsx               TCalc/live simulator display
-src/pages/OOOIPage.tsx              Manual and automatic OOOI capture
-src/pages/RecordsPage.tsx           Cloud logbook and duty records
-src/components/ChartWorkspace.tsx   PDF/chart renderer and annotation engine
-render.yaml                         Render service and persistent disk
+bridge/dispatchlink_bridge.py           Local MSFS/X-Plane telemetry bridge
+public/data/airports.dat                Supplied airport database
+server/index.mjs                        SimBrief proxy, OAuth, telemetry, encrypted records
+src/App.tsx                             Main EFB shell and briefing pages
+src/lib/flightTimes.ts                  Canonical OOOI/time propagation
+src/pages/FlightFinderPage.tsx          Airport search and FR24 parser
+src/pages/SimBriefDispatchPage.tsx      Embedded dispatch and OFP watcher
+src/pages/RunwayAnalysisPage.tsx        SimBrief TLR presentation
+src/pages/OOOIPage.tsx                  Manual/automatic OOOI capture
+src/pages/RecordsPage.tsx               Synced logbook and duty records
+src/components/ProviderPortal.tsx       Native SimBrief/Navigraph sessions
+src/components/ChartWorkspace.tsx       PDF/chart annotation engine
+electron/                               Native Windows/macOS/Linux shell
+render.yaml                             Render service and persistent disk
 ```
-
-## Validation completed in this package
-
-- TypeScript strict project check passed.
-- Node server syntax check passed.
-- Python bridge byte-compilation passed.
-- `airports.dat` parser loaded 7,692 valid ICAO airport rows.
-- A representative FR24 aircraft-history sample parsed `IND`/`BWI` to `KIND`/`KBWI`, preserved `23:30z`/`01:05z`, calculated `1:35`, converted `WN1234` to `SWA1234`, and generated the expected SimBrief custom URL.
-
-The final Vite bundle could not be executed in this workspace because its internal npm mirror did not contain `@vitejs/plugin-react`. GitHub Actions and Render use their normal npm environment and run both `npm run check` and `npm run build`.

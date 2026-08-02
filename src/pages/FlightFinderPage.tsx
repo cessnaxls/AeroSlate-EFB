@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, MapPinned, Plane, RefreshCw, Search, Shuffle, Upload } from 'lucide-react';
-import { airportMap, buildSimbriefUrl, parseAirportsDat, parseFr24Paste, type Airport, type FlightCandidate } from '../lib/dispatchlink';
+import { airportMap, buildSimbriefDispatch, parseAirportsDat, parseFr24Paste, type Airport, type FlightCandidate } from '../lib/dispatchlink';
 import { loadLocal, saveLocal } from '../lib/storage';
 
 interface Props {
-  onDispatch: (url: string, flight: FlightCandidate) => void;
+  onDispatch: (url: string, flight: FlightCandidate, staticId: string) => void;
   notify: (message: string) => void;
 }
 
@@ -52,7 +52,7 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
     notify(rows.length ? `Parsed ${rows.length} real-world flight${rows.length === 1 ? '' : 's'}.` : 'No FR24 rows were recognized. Copy the full airport or aircraft-history table with FR24 set to UTC.');
   };
 
-  const dispatch = (flight: FlightCandidate) => onDispatch(buildSimbriefUrl(flight), flight);
+  const dispatch = (flight: FlightCandidate) => { const plan = buildSimbriefDispatch(flight); onDispatch(plan.url, flight, plan.staticId); };
 
   return <div className="finder-layout">
     <section className="card">

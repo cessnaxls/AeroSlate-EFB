@@ -1,16 +1,20 @@
 {
   "name": "dispatchlink-efb",
+  "productName": "DispatchLink EFB",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
+  "description": "Provider-backed all-in-one flight-simulation EFB using SimBrief, Navigraph, MSFS and X-Plane.",
+  "main": "electron/main.cjs",
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "scripts": {
     "dev": "concurrently \"vite\" \"node --watch server/index.mjs\"",
     "build": "tsc -b && vite build",
     "start": "node server/index.mjs",
-    "check": "tsc -b --pretty false"
+    "check": "tsc -b --pretty false",
+    "native:dev": "concurrently \"vite\" \"node --watch server/index.mjs\" \"wait-on http://localhost:5173 && electron .\"",
+    "native:start": "electron .",
+    "native:dist": "npm run build && electron-builder"
   },
   "dependencies": {
     "cookie-session": "^2.1.1",
@@ -24,7 +28,21 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12",
     "typescript": "^5.7.2",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "wait-on": "^8.0.2"
+  },
+  "build": {
+    "appId": "com.dispatchlink.efb",
+    "productName": "DispatchLink EFB",
+    "asar": true,
+    "files": ["electron/**/*", "dist/**/*", "package.json"],
+    "directories": { "output": "release" },
+    "win": { "target": ["nsis", "zip"] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true },
+    "mac": { "target": "dmg" },
+    "linux": { "target": "AppImage" }
   }
 }

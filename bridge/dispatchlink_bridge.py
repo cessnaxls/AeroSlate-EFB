@@ -102,6 +102,10 @@ class MsfsReader:
             "tcalcFile": file_number,
             "aircraftTitle": str(self.get("TITLE", "")),
             "registration": str(self.get("ATC_ID", "")),
+            "totalFuelLb": finite(self.get("FUEL_TOTAL_QUANTITY_WEIGHT")),
+            "totalFuelKg": finite(self.get("FUEL_TOTAL_QUANTITY_WEIGHT")) * 0.45359237,
+            "totalWeightLb": finite(self.get("TOTAL_WEIGHT")),
+            "totalWeightKg": finite(self.get("TOTAL_WEIGHT")) * 0.45359237,
         }
 
     def close(self) -> None:
@@ -134,6 +138,8 @@ class XPlaneReader:
         XPlaneRef(11, "sim/cockpit2/controls/parking_brake_ratio"),
         XPlaneRef(12, "sim/flightmodel/engine/ENGN_running[0]"),
         XPlaneRef(13, "sim/flightmodel/engine/ENGN_running[1]"),
+        XPlaneRef(14, "sim/flightmodel/weight/m_fuel_total"),
+        XPlaneRef(15, "sim/flightmodel/weight/m_total"),
     ]
 
     def __init__(self, host: str = "127.0.0.1", port: int = 49000) -> None:
@@ -191,6 +197,10 @@ class XPlaneReader:
             "tcalcFile": file_number,
             "aircraftTitle": "X-Plane aircraft",
             "registration": "",
+            "totalFuelKg": finite(self.values.get(14)),
+            "totalFuelLb": finite(self.values.get(14)) * 2.2046226218,
+            "totalWeightKg": finite(self.values.get(15)),
+            "totalWeightLb": finite(self.values.get(15)) * 2.2046226218,
         }
 
     def close(self) -> None:

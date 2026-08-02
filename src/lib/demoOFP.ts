@@ -1,6 +1,6 @@
 export const demoOFP = {
   fetch: { userid: 'DEMO', time: Math.floor(Date.now() / 1000) },
-  params: { units: 'LBS', orig: 'KIND', dest: 'KHPN', altn: 'KBDR', type: 'H25B', reg: 'N850DL', civalue: '45' },
+  params: { units: 'LBS', orig: 'KIND', dest: 'KHPN', altn: 'KBDR', type: 'H25B', reg: 'N850DL', civalue: '45', tlr: '1' },
   general: {
     release: '01', icao_airline: 'DLX', flight_number: '850', callsign: 'DELUXE850',
     route: 'KIND VHP VLA J24 DJB J60 PSB J64 HNK KHPN', initial_altitude: 'FL390', costindex: '45',
@@ -34,5 +34,5 @@ export const demoOFP = {
     destination: [{ notam: 'TWY K BTN K1 AND K3 CLSD.' }],
     alternate: []
   },
-  text: { atc: '(FPL-DLX850-IS-H25B/M-SDE2E3FGHIRWXY/LB1-KIND0130-N0440F390 DCT VHP VLA J24 DJB J60 PSB J64 HNK DCT-KHPN0142 KBDR-PBN/A1B1C1D1O1S2)' }
+  text: { atc: '(FPL-DLX850-IS-H25B/M-SDE2E3FGHIRWXY/LB1-KIND0130-N0440F390 DCT VHP VLA J24 DJB J60 PSB J64 HNK DCT-KHPN0142 KBDR-PBN/A1B1C1D1O1S2)', tlr: 'SIMBRIEF RUNWAY ANALYSIS (DEMO)\nTAKEOFF KIND RWY 23L  TOW 28435 LB  WIND 230/08  OAT 25C\nLANDING KHPN RWY 16  LDW 22735 LB  WIND 180/05  OAT 23C\nREFER TO THE GENERATED SIMBRIEF OFP FOR COMPLETE LIMITING-WEIGHT AND RUNWAY DATA.' }
 };

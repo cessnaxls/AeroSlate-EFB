@@ -128,7 +128,7 @@ app.post('/api/sim/heartbeat', (req, res) => {
 app.post('/api/sim/telemetry', (req, res) => {
   res.set('access-control-allow-origin', '*');
   if (!secureEqual(req.get('x-sim-link-token') || req.body?.token, simLinkToken)) return res.status(401).json({ error: 'Invalid simulator link token.' });
-  const allowed = ['simulator','simZulu','latitude','longitude','headingTrue','altitudeMslFt','altitudeAglFt','groundAltitudeM','groundSpeedKt','indicatedAirspeedKt','verticalSpeedFpm','onGround','parkingBrake','enginesRunning','surfaceType','surfaceCondition','tcalcDirectory','tcalcFile','aircraftTitle','registration'];
+  const allowed = ['simulator','simZulu','latitude','longitude','headingTrue','altitudeMslFt','altitudeAglFt','groundAltitudeM','groundSpeedKt','indicatedAirspeedKt','verticalSpeedFpm','onGround','parkingBrake','enginesRunning','surfaceType','surfaceCondition','tcalcDirectory','tcalcFile','aircraftTitle','registration','totalFuelLb','totalFuelKg','totalWeightLb','totalWeightKg'];
   const telemetry = {};
   for (const key of allowed) if (Object.hasOwn(req.body || {}, key)) telemetry[key] = req.body[key];
   latestTelemetry = { ...telemetry, receivedAt: new Date().toISOString() }; lastSimHeartbeat = Date.now();
@@ -163,10 +163,13 @@ app.get('/api/simbrief', async (req, res) => {
   if (!username && !userid) return res.status(400).json({ error: 'Enter a SimBrief username or Pilot ID.' });
   if (username && !/^[A-Za-z0-9_.-]{1,64}$/.test(username)) return res.status(400).json({ error: 'Invalid SimBrief username.' });
   if (userid && !/^\d{1,12}$/.test(userid)) return res.status(400).json({ error: 'Invalid SimBrief Pilot ID.' });
+  const staticId = typeof req.query.static_id === 'string' ? req.query.static_id.trim() : '';
+  if (staticId && !/^[A-Za-z0-9_]{1,96}$/.test(staticId)) return res.status(400).json({ error: 'Invalid SimBrief static flight ID.' });
   const key = userid ? `userid=${encodeURIComponent(userid)}` : `username=${encodeURIComponent(username)}`;
+  const staticQuery = staticId ? `&static_id=${encodeURIComponent(staticId)}` : '';
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 15_000);
   try {
-    const response = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?${key}&json=1`, { signal: controller.signal, headers: { 'user-agent': 'DispatchLink-EFB/0.2' } });
+    const response = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?${key}${staticQuery}&json=1`, { signal: controller.signal, headers: { 'user-agent': 'DispatchLink-EFB/0.3' } });
     const text = await response.text();
     if (!response.ok) return res.status(response.status).json({ error: 'SimBrief did not return an OFP.', details: text.slice(0, 300) });
     res.set('cache-control', 'no-store').json(JSON.parse(text));

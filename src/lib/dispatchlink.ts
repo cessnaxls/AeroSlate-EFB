@@ -265,19 +265,74 @@ export function pickOFPLayout(flightNumber: string): string {
   return randomItem(FALLBACK_LAYOUTS).replace(/^UAL$/, randomItem(['UAL 2012', 'UAL 2018']));
 }
 
-export function buildSimbriefUrl(flight: FlightCandidate, extras: { pax?: number; cargo?: number; remarks?: string } = {}): string {
+export interface SimbriefDispatch {
+  url: string;
+  staticId: string;
+}
+
+function simbriefDate(value: string): string {
+  const direct = value.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  if (direct) return `${direct[1].padStart(2, '0')}${direct[2].toUpperCase()}${direct[3].slice(-2)}`;
+  const parsed = new Date(value);
+  const date = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  return `${String(date.getUTCDate()).padStart(2, '0')}${date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase()}${String(date.getUTCFullYear()).slice(-2)}`;
+}
+
+function stableId(value: string): string {
+  let hash = 2166136261;
+  for (const char of value) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `DISPATCHLINK_${Math.abs(hash >>> 0).toString(36).toUpperCase()}`;
+}
+
+function durationParts(value: string): [string, string] {
+  const match = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+  return match ? [match[1], match[2]] : ['', ''];
+}
+
+export function buildSimbriefDispatch(flight: FlightCandidate, extras: { pax?: number; cargo?: number; remarks?: string; pilotId?: string } = {}): SimbriefDispatch {
   const flightMatch = flight.flightNumber.match(/^([A-Z]{3})(\d+[A-Z]?)$/);
   const clock = flight.std.replace(/[^0-9]/g, '').padStart(4, '0');
+  const [steh, stem] = durationParts(flight.ete);
   const layout = pickOFPLayout(flight.flightNumber);
+  const staticId = stableId(`${flight.id}|${flight.flightNumber}|${flight.departure}|${flight.arrival}`);
   const params = new URLSearchParams({
-    orig: flight.departure, dest: flight.arrival, type: normalizeSimbriefType(flight.aircraft), reg: flight.registration === '—' ? '' : flight.registration,
-    airline: flightMatch?.[1] || '', fltnum: flightMatch?.[2] || '', date: new Date().toISOString().slice(0, 10),
-    deph: clock.slice(0, 2), depm: clock.slice(2, 4), utc: '1', static_id: `DISPATCHLINK_${Date.now()}`,
-    planformat: layout, ofp: layout, ofp_layout: layout, layout
+    orig: flight.departure,
+    dest: flight.arrival,
+    type: normalizeSimbriefType(flight.aircraft),
+    reg: flight.registration === '—' ? '' : flight.registration,
+    airline: flightMatch?.[1] || '',
+    fltnum: flightMatch?.[2] || '',
+    date: simbriefDate(flight.date),
+    deph: clock.slice(0, 2),
+    depm: clock.slice(2, 4),
+    utc: '1',
+    static_id: staticId,
+    planformat: layout,
+    ofp: layout,
+    ofp_layout: layout,
+    layout,
+    units: 'LBS',
+    navlog: '1',
+    tlr: '1',
+    notams: '1',
+    firnot: '1',
+    maps: 'detail',
+    stepclimbs: '1',
+    find_sidstar: 'R'
   });
+  if (steh) params.set('steh', steh);
+  if (stem) params.set('stem', stem);
   if (!flightMatch && flight.flightNumber !== '—') params.set('callsign', flight.flightNumber);
   if (extras.pax) params.set('pax', String(extras.pax));
   if (extras.cargo) params.set('cargo', String(extras.cargo));
   if (extras.remarks) params.set('manualrmk', extras.remarks);
-  return `https://dispatch.simbrief.com/options/custom?${params.toString()}`;
+  if (extras.pilotId && /^\d+$/.test(extras.pilotId)) params.set('pid', extras.pilotId);
+  return { url: `https://dispatch.simbrief.com/options/custom?${params.toString()}`, staticId };
+}
+
+export function buildSimbriefUrl(flight: FlightCandidate, extras: { pax?: number; cargo?: number; remarks?: string; pilotId?: string } = {}): string {
+  return buildSimbriefDispatch(flight, extras).url;
 }

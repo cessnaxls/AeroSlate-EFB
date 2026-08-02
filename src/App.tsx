@@ -8,18 +8,19 @@ import { ChartWorkspace, type ChartSource } from './components/ChartWorkspace';
 import { demoOFP } from './lib/demoOFP';
 import {
   asArray, dig, duration, getFlightMaps, getNavlog, getNotams, getOFPDocument,
-  getWeather, numberText, summary, weight, zuluFromEpoch, type AnyRecord
+  getWeather, getRunwayAnalysis, numberText, summary, weight, zuluFromEpoch, type AnyRecord
 } from './lib/ofp';
 import { loadLocal, saveLocal } from './lib/storage';
 import type { FlightCandidate } from './lib/dispatchlink';
 import { FlightFinderPage } from './pages/FlightFinderPage';
 import { SimBriefDispatchPage } from './pages/SimBriefDispatchPage';
-import { ToldPage } from './pages/ToldPage';
+import { RunwayAnalysisPage } from './pages/RunwayAnalysisPage';
+import { ProviderPortal, isNativeApp } from './components/ProviderPortal';
 import { SimPage } from './pages/SimPage';
 import { OOOIPage } from './pages/OOOIPage';
 import { RecordsPage } from './pages/RecordsPage';
 
-type Page = 'dashboard' | 'finder' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'told' | 'sim' | 'times' | 'records' | 'checklists' | 'scratchpad' | 'settings';
+type Page = 'dashboard' | 'finder' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'sim' | 'times' | 'records' | 'checklists' | 'scratchpad' | 'settings';
 interface RuntimeStatus {
   simLinked: boolean;
   chartsApproved: boolean;
@@ -51,7 +52,7 @@ const NAV_ITEMS: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'navlog', label: 'Navlog', icon: Route },
   { id: 'weather', label: 'Weather & NOTAMs', icon: CloudSun },
   { id: 'fuel', label: 'Fuel monitor', icon: Fuel },
-  { id: 'told', label: 'TOLD worksheet', icon: Calculator },
+  { id: 'performance', label: 'TOLR / runway analysis', icon: Calculator },
   { id: 'sim', label: 'Simulator data', icon: Activity },
   { id: 'times', label: 'OOOI & schedule', icon: Timer },
   { id: 'records', label: 'Logbook & duty', icon: BookOpenCheck },
@@ -79,14 +80,19 @@ function formatWeight(value: number, units: string) {
   return value ? `${value.toLocaleString()} ${units}` : '—';
 }
 
-function hhmmNow() { return new Date().toISOString().slice(11, 16); }
-function minutesBetween(a: string, b: string) {
-  if (!/^\d{2}:\d{2}$/.test(a) || !/^\d{2}:\d{2}$/.test(b)) return null;
-  const [ah, am] = a.split(':').map(Number); const [bh, bm] = b.split(':').map(Number);
-  let diff = bh * 60 + bm - (ah * 60 + am);
-  if (diff < -720) diff += 1440;
-  if (diff > 720) diff -= 1440;
-  return diff;
+function flightLocalSuffix(flight: ReturnType<typeof summary>) {
+  return `${flight.release}.${flight.origin}${flight.destination}`;
+}
+
+function migrateFlightLocalData(previous: ReturnType<typeof summary>, next: ReturnType<typeof summary>) {
+  const from = flightLocalSuffix(previous); const to = flightLocalSuffix(next);
+  if (from === to || previous.source === 'none') return;
+  const prefixes = ['dispatchlink.times.', 'dispatchlink.checklists.', 'dispatchlink.scratch.', 'dispatchlink.fuel.', 'dispatchlink.records.draft.', 'dispatchlink.duty.draft.'];
+  for (const prefix of prefixes) {
+    const sourceKey = `${prefix}${from}`; const targetKey = `${prefix}${to}`;
+    const source = window.localStorage.getItem(sourceKey);
+    if (source !== null && window.localStorage.getItem(targetKey) === null) window.localStorage.setItem(targetKey, source);
+  }
 }
 
 export default function App() {
@@ -102,8 +108,9 @@ export default function App() {
   const [chartSource, setChartSource] = useState<ChartSource | null>(null);
   const [dispatchUrl, setDispatchUrl] = useState(() => loadLocal('dispatchlink.dispatch.url', ''));
   const [dispatchFlight, setDispatchFlight] = useState<FlightCandidate | null>(() => loadLocal<FlightCandidate | null>('dispatchlink.dispatch.flight', null));
+  const [dispatchStaticId, setDispatchStaticId] = useState(() => loadLocal('dispatchlink.dispatch.staticId', ''));
 
-  const flight = useMemo(() => summary(ofp), [ofp]);
+  const flight = useMemo(() => summary(ofp, dispatchFlight), [ofp, dispatchFlight]);
 
   const refreshRuntime = useCallback(async () => {
     try {
@@ -120,33 +127,50 @@ export default function App() {
     return () => { clearInterval(runtimeTimer); clearInterval(clockTimer); };
   }, [refreshRuntime]);
 
-  const importOFP = async () => {
-    if (!simbriefKey.trim()) { setMessage('Enter your SimBrief username or Pilot ID.'); return; }
-    setLoadingOFP(true); setMessage('');
+  const importOFP = useCallback(async (staticId = '', options: { stayOnPage?: boolean; silent?: boolean } = {}): Promise<boolean> => {
+    if (!simbriefKey.trim()) { if (!options.silent) setMessage('Enter your SimBrief username or Pilot ID in Connections.'); return false; }
+    setLoadingOFP(true); if (!options.silent) setMessage('');
     try {
       const query = new URLSearchParams({ [simbriefMode]: simbriefKey.trim() });
+      if (staticId) query.set('static_id', staticId);
       const response = await fetch(`/api/simbrief?${query}`, { cache: 'no-store' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to import OFP.');
+      const returnedOrigin = String(dig(data, 'origin.icao_code') || '');
+      const returnedDestination = String(dig(data, 'destination.icao_code') || '');
+      if (!returnedOrigin || !returnedDestination || /error|failed/i.test(String(dig(data, 'fetch.status') || ''))) throw new Error(String(dig(data, 'fetch.message') || 'The selected SimBrief flight has not been generated yet.'));
+      const previousFlight = summary(ofp, dispatchFlight);
+      const nextFlight = summary(data, dispatchFlight);
+      migrateFlightLocalData(previousFlight, nextFlight);
       setOfp(data);
       saveLocal('dispatchlink.lastOFP', data);
       saveLocal('dispatchlink.simbriefKey', simbriefKey.trim());
       saveLocal('dispatchlink.simbriefMode', simbriefMode);
-      setMessage(`Loaded ${dig(data, 'origin.icao_code') || 'flight'}–${dig(data, 'destination.icao_code') || ''}.`);
-      setPage('dashboard');
+      const loadedOrigin = String(dig(data, 'origin.icao_code') || '');
+      const loadedDestination = String(dig(data, 'destination.icao_code') || '');
+      const mismatch = dispatchFlight && (loadedOrigin !== dispatchFlight.departure || loadedDestination !== dispatchFlight.arrival);
+      if (mismatch) {
+        setDispatchFlight(null); setDispatchUrl(''); setDispatchStaticId('');
+        saveLocal('dispatchlink.dispatch.flight', null); saveLocal('dispatchlink.dispatch.url', ''); saveLocal('dispatchlink.dispatch.staticId', '');
+      }
+      if (!options.silent) setMessage(mismatch ? `Loaded ${loadedOrigin}–${loadedDestination}. It did not match the selected flight, so DispatchLink made the imported OFP the active flight and cleared the stale selection.` : `Loaded ${loadedOrigin || 'flight'}–${loadedDestination}. Every flight module was synchronized.`);
+      if (!options.stayOnPage) setPage('dashboard');
+      return true;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to import OFP.');
+      if (!options.silent) setMessage(error instanceof Error ? error.message : 'Unable to import OFP.');
+      return false;
     } finally { setLoadingOFP(false); }
-  };
+  }, [simbriefKey, simbriefMode, dispatchFlight, ofp]);
 
   const loadDemo = () => {
     setOfp(demoOFP); saveLocal('dispatchlink.lastOFP', demoOFP); setMessage('Demo Hawker OFP loaded.'); setPage('dashboard');
   };
 
-  const openDispatch = (url: string, selected: FlightCandidate) => {
-    setDispatchUrl(url); setDispatchFlight(selected);
-    saveLocal('dispatchlink.dispatch.url', url); saveLocal('dispatchlink.dispatch.flight', selected);
-    setPage('simbrief'); setMessage(`Prepared ${selected.flightNumber} in SimBrief.`);
+  const openDispatch = (url: string, selected: FlightCandidate, staticId: string) => {
+    setDispatchUrl(url); setDispatchFlight(selected); setDispatchStaticId(staticId);
+    if (ofp && (flight.origin !== selected.departure || flight.destination !== selected.arrival)) { setOfp(null); saveLocal('dispatchlink.lastOFP', null); }
+    saveLocal('dispatchlink.dispatch.url', url); saveLocal('dispatchlink.dispatch.flight', selected); saveLocal('dispatchlink.dispatch.staticId', staticId);
+    setPage('simbrief'); setMessage(`Prepared ${selected.flightNumber}. Runway analysis, navlog, maps and NOTAMs are enabled.`);
   };
 
   const openOFPChart = () => {
@@ -162,7 +186,7 @@ export default function App() {
       <nav>{NAV_ITEMS.map(item => <button key={item.id} className={page === item.id ? 'active' : ''} onClick={() => { setPage(item.id); setMenuOpen(false); }}><item.icon size={19} /><span>{item.label}</span>{page === item.id && <ChevronRight size={16} />}</button>)}</nav>
       <div className="sidebar-status">
         <div><span className={`status-dot ${runtime.simLinked ? 'online' : ''}`} />{runtime.simLinked ? 'Simulator linked' : 'Standalone mode'}</div>
-        <div><span className={`status-dot ${runtime.navigraphSignedIn ? 'online' : ''}`} />{runtime.navigraphSignedIn ? 'Navigraph connected' : 'Navigraph offline'}</div>
+        <div><span className={`status-dot ${runtime.navigraphSignedIn ? 'online' : ''}`} />{runtime.navigraphSignedIn ? 'Navigraph API connected' : 'Navigraph portal ready'}</div>
       </div>
     </aside>
 
@@ -181,24 +205,37 @@ export default function App() {
       </header>
       {message && <div className="toast" onClick={() => setMessage('')}>{message}<X size={15} /></div>}
       <div className="page-content">
+        <FlightWorkflow page={page} setPage={setPage} hasCandidate={Boolean(dispatchFlight)} hasOFP={Boolean(ofp)} flight={flight} />
         {page === 'dashboard' && <Dashboard ofp={ofp} flight={flight} setPage={setPage} openOFP={openOFPChart} />}
         {page === 'finder' && <FlightFinderPage onDispatch={openDispatch} notify={setMessage} />}
-        {page === 'simbrief' && <SimBriefDispatchPage url={dispatchUrl} flight={dispatchFlight} />}
+        {page === 'simbrief' && <SimBriefDispatchPage url={dispatchUrl} flight={dispatchFlight} staticId={dispatchStaticId} loading={loadingOFP} onImport={importOFP} />}
         {page === 'charts' && <ChartsPage ofp={ofp} flight={flight} runtime={runtime} source={chartSource} setSource={setChartSource} refreshRuntime={refreshRuntime} />}
         {page === 'ofp' && <OFPPage ofp={ofp} flight={flight} openOFP={openOFPChart} />}
         {page === 'navlog' && <NavlogPage ofp={ofp} flight={flight} />}
         {page === 'weather' && <WeatherPage ofp={ofp} flight={flight} />}
         {page === 'fuel' && <FuelPage ofp={ofp} flight={flight} />}
-        {page === 'told' && <ToldPage />}
+        {page === 'performance' && <RunwayAnalysisPage ofp={ofp} flight={flight} onOpenOFP={openOFPChart} onOpenSimBrief={() => setPage('simbrief')} />}
         {page === 'sim' && <SimPage />}
         {page === 'times' && <OOOIPage release={flight.release} origin={flight.origin} destination={flight.destination} schedOut={flight.schedOut} schedIn={flight.schedIn} />}
         {page === 'records' && <RecordsPage flight={flight} />}
         {page === 'checklists' && <ChecklistPage flight={flight} />}
         {page === 'scratchpad' && <ScratchpadPage flight={flight} />}
-        {page === 'settings' && <SettingsPage simbriefKey={simbriefKey} setSimbriefKey={setSimbriefKey} mode={simbriefMode} setMode={setSimbriefMode} loading={loadingOFP} importOFP={importOFP} loadDemo={loadDemo} runtime={runtime} refreshRuntime={refreshRuntime} />}
+        {page === 'settings' && <SettingsPage simbriefKey={simbriefKey} setSimbriefKey={setSimbriefKey} mode={simbriefMode} setMode={setSimbriefMode} loading={loadingOFP} importOFP={async () => { await importOFP(); }} loadDemo={loadDemo} runtime={runtime} refreshRuntime={refreshRuntime} />}
       </div>
     </main>
   </div>;
+}
+
+
+function FlightWorkflow({ page, setPage, hasCandidate, hasOFP, flight }: { page: Page; setPage: (page: Page) => void; hasCandidate: boolean; hasOFP: boolean; flight: ReturnType<typeof summary> }) {
+  const steps: { label: string; page: Page; complete: boolean; detail: string }[] = [
+    { label: 'Choose flight', page: 'finder', complete: hasCandidate || hasOFP, detail: hasCandidate || hasOFP ? `${flight.origin}–${flight.destination}` : 'Find a real-world flight' },
+    { label: 'Dispatch', page: 'simbrief', complete: hasOFP, detail: hasOFP ? 'OFP imported' : hasCandidate ? 'Generate in SimBrief' : 'Waiting for flight' },
+    { label: 'Brief', page: 'dashboard', complete: hasOFP, detail: hasOFP ? 'Weather, charts, fuel and TLR ready' : 'Import OFP first' },
+    { label: 'Fly', page: 'times', complete: false, detail: 'Simulator link and OOOI' },
+    { label: 'Record', page: 'records', complete: false, detail: 'Logbook and duty' }
+  ];
+  return <div className="flight-workflow">{steps.map((step, index) => <button key={step.label} className={`${step.complete ? 'complete' : ''} ${page === step.page ? 'active' : ''}`} onClick={() => setPage(step.page)}><span>{step.complete ? <Check size={14} /> : index + 1}</span><div><strong>{step.label}</strong><small>{step.detail}</small></div></button>)}</div>;
 }
 
 function Dashboard({ ofp, flight, setPage, openOFP }: { ofp: AnyRecord | null; flight: ReturnType<typeof summary>; setPage: (p: Page) => void; openOFP: () => void }) {
@@ -208,10 +245,12 @@ function Dashboard({ ofp, flight, setPage, openOFP }: { ofp: AnyRecord | null; f
   const ramp = weight(ofp, 'fuel.plan_ramp'); const landing = weight(ofp, 'fuel.plan_landing');
   const originWx = getWeather(ofp, 'origin').metar; const destWx = getWeather(ofp, 'destination').metar;
   const overweight = mtow > 0 && tow > mtow;
+  const tlr = getRunwayAnalysis(ofp);
   return <>
-    {!ofp && <div className="hero-empty"><Plane size={54} /><div><h1>Your entire simulated flight in one place</h1><p>Import a SimBrief OFP to populate the route, fuel, weather, navlog, schedule, charts, checklists, and briefing tools.</p><button className="primary" onClick={() => setPage('settings')}><Import /> Connect SimBrief</button></div></div>}
+    {flight.source === 'none' && <div className="hero-empty"><Plane size={54} /><div><h1>Start with one flight, not five separate apps</h1><p>Choose a real-world flight, generate it in SimBrief, then DispatchLink carries the same route, schedule, weather, fuel, runway analysis and times through the entire flight.</p><button className="primary" onClick={() => setPage('finder')}><Search /> Find a flight</button></div></div>}
+    {flight.source === 'candidate' && <div className="hero-empty active-draft"><Plane size={54} /><div><h1>{flight.origin} → {flight.destination} is selected</h1><p>{flight.airline}{flight.flightNumber} · {flight.aircraft} {flight.registration} · STD {flight.schedOut}. Continue to SimBrief; Runway Analysis, detailed navlog, maps and NOTAMs are already enabled.</p><button className="primary" onClick={() => setPage('simbrief')}><Plane /> Continue dispatch</button></div></div>}
     <div className="metric-strip">
-      <Metric label="Scheduled out" value={flight.schedOut} sub="SimBrief schedule" />
+      <Metric label="Scheduled out" value={flight.schedOut} sub={flight.source === 'simbrief' ? 'SimBrief schedule' : flight.source === 'candidate' ? 'FR24 selected flight' : 'No flight'} />
       <Metric label="Block" value={flight.blockTime} sub={`${flight.distance} planned`} />
       <Metric label="Cruise" value={flight.cruiseAltitude} sub={`CI ${flight.costIndex}`} />
       <Metric label="Ramp fuel" value={formatWeight(ramp, units)} sub={`Landing ${formatWeight(landing, units)}`} />
@@ -221,7 +260,7 @@ function Dashboard({ ofp, flight, setPage, openOFP }: { ofp: AnyRecord | null; f
       <Card title="Flight briefing" icon={Plane} className="span-2">
         <div className="route-display"><div><span>{flight.origin}</span><small>{flight.originName}</small></div><div className="route-line"><Plane /><span>{flight.distance}</span></div><div><span>{flight.destination}</span><small>{flight.destinationName}</small></div></div>
         <div className="route-string">{flight.route}</div>
-        <div className="button-row"><button className="primary" onClick={openOFP}><FileText size={17} /> Open OFP</button><button onClick={() => setPage('charts')}><Map size={17} /> Charts</button><button onClick={() => setPage('navlog')}><Route size={17} /> Navlog</button></div>
+        <div className="button-row">{ofp ? <button className="primary" onClick={openOFP}><FileText size={17} /> Open OFP</button> : <button className="primary" onClick={() => setPage('simbrief')}><Plane size={17} /> Generate OFP</button>}<button onClick={() => setPage('charts')}><Map size={17} /> Charts</button><button onClick={() => setPage('navlog')}><Route size={17} /> Navlog</button></div>
       </Card>
       <Card title="Dispatch status" icon={Activity}>
         <div className="status-list">
@@ -229,7 +268,7 @@ function Dashboard({ ofp, flight, setPage, openOFP }: { ofp: AnyRecord | null; f
           <div><span>Alternate</span><strong>{flight.alternate}</strong></div>
           <div><span>TOW</span><Pill tone={overweight ? 'bad' : tow ? 'good' : 'neutral'}>{overweight ? 'OVER LIMIT' : tow ? 'WITHIN LIMIT' : 'NO DATA'}</Pill></div>
           <div><span>LDW margin</span><strong>{mldw && ldw ? formatWeight(mldw - ldw, units) : '—'}</strong></div>
-          <div><span>ETOPS</span><strong>{String(dig(ofp, 'general.is_etops') || '0') === '1' ? 'YES' : 'NO'}</strong></div>
+          <div><span>Runway analysis</span><Pill tone={tlr.available ? 'good' : ofp ? 'warn' : 'neutral'}>{tlr.available ? 'LOADED' : ofp ? 'IN OFP / CHECK PDF' : 'PENDING'}</Pill></div><div><span>ETOPS</span><strong>{String(dig(ofp, 'general.is_etops') || '0') === '1' ? 'YES' : 'NO'}</strong></div>
         </div>
       </Card>
       <Card title="Weather snapshot" icon={CloudSun} className="span-2">
@@ -247,7 +286,7 @@ function Dashboard({ ofp, flight, setPage, openOFP }: { ofp: AnyRecord | null; f
       </Card>
       <Card title="Quick cockpit" icon={BookOpenCheck} className="span-3">
         <div className="quick-grid">
-          {[['Flight finder', Search, 'finder'], ['Charts', Map, 'charts'], ['TOLD', Calculator, 'told'], ['OOOI times', Timer, 'times'], ['Logbook', BookOpenCheck, 'records'], ['Connections', Link2, 'settings']].map(([label, Icon, id]) => <button key={String(id)} onClick={() => setPage(id as Page)}><Icon size={23} /><span>{String(label)}</span></button>)}
+          {[['Flight finder', Search, 'finder'], ['SimBrief', Plane, 'simbrief'], ['Runway analysis', Calculator, 'performance'], ['OOOI times', Timer, 'times'], ['Logbook', BookOpenCheck, 'records'], ['Connections', Link2, 'settings']].map(([label, Icon, id]) => <button key={String(id)} onClick={() => setPage(id as Page)}><Icon size={23} /><span>{String(label)}</span></button>)}
         </div>
       </Card>
     </div>
@@ -255,6 +294,7 @@ function Dashboard({ ofp, flight, setPage, openOFP }: { ofp: AnyRecord | null; f
 }
 
 function ChartsPage({ ofp, flight, runtime, source, setSource, refreshRuntime }: { ofp: AnyRecord | null; flight: ReturnType<typeof summary>; runtime: RuntimeStatus; source: ChartSource | null; setSource: (s: ChartSource | null) => void; refreshRuntime: () => Promise<void> }) {
+  const [view, setView] = useState<'navigraph' | 'binder'>('navigraph');
   const [airport, setAirport] = useState(flight.origin !== '----' ? flight.origin : 'KIND');
   const [category, setCategory] = useState('ALL');
   const [query, setQuery] = useState('');
@@ -282,44 +322,38 @@ function ChartsPage({ ofp, flight, runtime, source, setSource, refreshRuntime }:
     if (!file) return;
     const url = URL.createObjectURL(file);
     setSource({ id: `local-${file.name}-${file.lastModified}`, title: file.name, url, kind: file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image' });
+    setView('binder');
   };
-  const selectChart = (chart: NavigraphChart) => setSource({ id: `navigraph-${chart.id}-${chart.revision_date}`, title: `${airport} ${chart.index_number} ${chart.name}`, url: `/api/navigraph/chart-image?url=${encodeURIComponent(chart.image_day_url)}`, kind: 'image', navigraph: true });
+  const selectChart = (chart: NavigraphChart) => { setSource({ id: `navigraph-${chart.id}-${chart.revision_date}`, title: `${airport} ${chart.index_number} ${chart.name}`, url: `/api/navigraph/chart-image?url=${encodeURIComponent(chart.image_day_url)}`, kind: 'image', navigraph: true }); setView('binder'); };
   const ofpPdf = getOFPDocument(ofp);
   const maps = getFlightMaps(ofp);
 
-  return <div className="charts-layout">
-    <aside className="chart-catalog">
-      <div className="catalog-header"><div><h2>Chart binder</h2><p>Flight-linked terminal charts and documents</p></div><label className="icon-upload"><Upload size={18} /><input type="file" accept="image/*,.pdf,application/pdf" onChange={e => upload(e.target.files?.[0])} /></label></div>
-      <div className="airport-switcher">
-        {[flight.origin, flight.destination, flight.alternate].filter(code => code && code !== '----').map(code => <button key={code} className={airport === code ? 'active' : ''} onClick={() => setAirport(code)}>{code}</button>)}
-        <input value={airport} maxLength={4} onChange={e => setAirport(e.target.value.toUpperCase())} aria-label="Airport ICAO" />
-      </div>
-      <div className="connection-panel">
-        <div><span className={`status-dot ${runtime.simLinked ? 'online' : ''}`} /><strong>{runtime.simLinked ? 'Simulator link active' : 'Simulator link required'}</strong></div>
-        <div><span className={`status-dot ${runtime.navigraphSignedIn ? 'online' : ''}`} /><strong>{runtime.navigraphSignedIn ? 'Navigraph signed in' : 'Navigraph not signed in'}</strong></div>
-        {!runtime.chartsApproved && <p>The third-party Charts API remains disabled until Navigraph approves this virtual-environment implementation.</p>}
-        {runtime.chartsApproved && runtime.simLinked && !runtime.navigraphSignedIn && runtime.navigraphConfigured && <a className="primary button-link" href="/api/navigraph/login" target="_blank" rel="noreferrer">Sign in to approved Charts API</a>}
-        <button onClick={() => window.open('https://charts.navigraph.com/', 'dispatchlink-navigraph', 'popup=yes,width=1500,height=1000')}><Map size={15} /> Open standalone Navigraph Charts</button>
-        <button className="text-button" onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh connection</button>
-      </div>
-      <div className="document-list">
-        <h4>SimBrief documents</h4>
-        {ofpPdf && <button onClick={() => setSource({ id: `ofp-${flight.release}`, title: `${flight.origin}-${flight.destination} OFP`, url: `/api/document?url=${encodeURIComponent(ofpPdf)}`, kind: 'pdf' })}><FileText size={17} /><span>Operational flight plan</span></button>}
-        {maps.map(map => <button key={map.url} onClick={() => setSource({ id: `map-${map.url}`, title: map.title, url: `/api/document?url=${encodeURIComponent(map.url)}`, kind: map.url.toLowerCase().includes('.pdf') ? 'pdf' : 'image' })}><MapPinned size={17} /><span>{map.title}</span></button>)}
-        {!ofpPdf && !maps.length && <p className="muted">Import an OFP to attach SimBrief documents.</p>}
-      </div>
-      <div className="chart-filter">
-        <div className="search-box"><Search size={16} /><input placeholder="Search charts" value={query} onChange={e => setQuery(e.target.value)} /></div>
-        <div className="category-tabs">{['ALL', 'APT', 'DEP', 'ARR', 'APP', 'REF'].map(item => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div>
-      </div>
-      <div className="chart-list">
-        {loading && <p className="muted">Loading {airport} charts…</p>}
-        {error && <p className="error-text">{error}</p>}
-        {filtered.map(chart => <button key={chart.id} onClick={() => selectChart(chart)} className={source?.id.includes(chart.id) ? 'active' : ''}><span className="chart-index">{chart.index_number}</span><span><strong>{chart.name}</strong><small>{chart.category} · {chart.type_code}{chart.is_georeferenced ? ' · GEO' : ''}</small></span></button>)}
-        {!loading && !error && !filtered.length && <p className="muted">No Navigraph chart list is available in the current mode. Local files and SimBrief documents still work.</p>}
-      </div>
-    </aside>
-    <ChartWorkspace source={source} watermark={runtime.navigraphUsername ? `This chart is linked to Navigraph account ${runtime.navigraphUsername}` : undefined} />
+  return <div className="charts-page">
+    <div className="provider-tabs"><button className={view === 'navigraph' ? 'active' : ''} onClick={() => setView('navigraph')}><Map size={17} /> Navigraph live</button><button className={view === 'binder' ? 'active' : ''} onClick={() => setView('binder')}><NotebookPen size={17} /> Document markup</button><label className="upload-button"><Upload size={16} /> Add chart/PDF<input type="file" accept="image/*,.pdf,application/pdf" onChange={e => upload(e.target.files?.[0])} /></label></div>
+    {view === 'navigraph' ? <section className="card provider-card charts-provider"><ProviderPortal title="Navigraph Charts" url="https://charts.navigraph.com/" windowName="dispatchlink-navigraph" description="The native app presents the official Navigraph Charts session directly inside DispatchLink. Login and subscription handling remain with Navigraph; chart data is not copied or cached by DispatchLink." /></section> : <div className="charts-layout">
+      <aside className="chart-catalog">
+        <div className="catalog-header"><div><h2>Flight document binder</h2><p>SimBrief documents, uploads and approved in-sim chart API</p></div></div>
+        <div className="airport-switcher">
+          {[flight.origin, flight.destination, flight.alternate].filter(code => code && code !== '----').map(code => <button key={code} className={airport === code ? 'active' : ''} onClick={() => setAirport(code)}>{code}</button>)}
+          <input value={airport} maxLength={4} onChange={e => setAirport(e.target.value.toUpperCase())} aria-label="Airport ICAO" />
+        </div>
+        <div className="connection-panel">
+          <div><span className={`status-dot ${runtime.simLinked ? 'online' : ''}`} /><strong>{runtime.simLinked ? 'Simulator link active' : 'Standalone provider mode'}</strong></div>
+          <div><span className={`status-dot ${runtime.navigraphSignedIn ? 'online' : ''}`} /><strong>{runtime.navigraphSignedIn ? 'Approved chart API signed in' : 'Official Charts portal available above'}</strong></div>
+          {!runtime.chartsApproved && <p>Direct third-party chart images stay disabled in standalone mode. The official Navigraph portal remains available inside the native app.</p>}
+          {runtime.chartsApproved && runtime.simLinked && !runtime.navigraphSignedIn && runtime.navigraphConfigured && <a className="primary button-link" href="/api/navigraph/login" target="_blank" rel="noreferrer">Sign in to approved Charts API</a>}
+          <button className="text-button" onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh connection</button>
+        </div>
+        <div className="document-list">
+          <h4>SimBrief documents</h4>
+          {ofpPdf && <button onClick={() => setSource({ id: `ofp-${flight.release}`, title: `${flight.origin}-${flight.destination} OFP`, url: `/api/document?url=${encodeURIComponent(ofpPdf)}`, kind: 'pdf' })}><FileText size={17} /><span>Operational flight plan</span></button>}
+          {maps.map(map => <button key={map.url} onClick={() => setSource({ id: `map-${map.url}`, title: map.title, url: `/api/document?url=${encodeURIComponent(map.url)}`, kind: map.url.toLowerCase().includes('.pdf') ? 'pdf' : 'image' })}><MapPinned size={17} /><span>{map.title}</span></button>)}
+          {!ofpPdf && !maps.length && <p className="muted">Import an OFP to attach SimBrief documents.</p>}
+        </div>
+        {runtime.chartsApproved && runtime.simLinked && <><div className="chart-filter"><div className="search-box"><Search size={16} /><input placeholder="Search API charts" value={query} onChange={e => setQuery(e.target.value)} /></div><div className="category-tabs">{['ALL', 'APT', 'DEP', 'ARR', 'APP', 'REF'].map(item => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div></div><div className="chart-list">{loading && <p className="muted">Loading {airport} charts…</p>}{error && <p className="error-text">{error}</p>}{filtered.map(chart => <button key={chart.id} onClick={() => selectChart(chart)} className={source?.id.includes(chart.id) ? 'active' : ''}><span className="chart-index">{chart.index_number}</span><span><strong>{chart.name}</strong><small>{chart.category} · {chart.type_code}{chart.is_georeferenced ? ' · GEO' : ''}</small></span></button>)}</div></>}
+      </aside>
+      <ChartWorkspace source={source} watermark={runtime.navigraphUsername ? `This chart is linked to Navigraph account ${runtime.navigraphUsername}` : undefined} />
+    </div>}
   </div>;
 }
 
@@ -401,27 +435,6 @@ function FuelPage({ ofp, flight }: { ofp: AnyRecord | null; flight: ReturnType<t
   </div>;
 }
 
-function TimesPage({ ofp, flight }: { ofp: AnyRecord | null; flight: ReturnType<typeof summary> }) {
-  const key = `dispatchlink.times.${flight.release}.${flight.origin}${flight.destination}`;
-  const [times, setTimes] = useState(() => loadLocal(key, { out: '', off: '', on: '', in: '' }));
-  useEffect(() => saveLocal(key, times), [key, times]);
-  const schedOut = zuluFromEpoch(dig(ofp, 'times.sched_out')).replace('Z', '');
-  const schedIn = zuluFromEpoch(dig(ofp, 'times.sched_in')).replace('Z', '');
-  const outDelay = minutesBetween(schedOut, times.out); const inDelay = minutesBetween(schedIn, times.in);
-  const block = times.out && times.in ? minutesBetween(times.out, times.in) : null;
-  const flightTime = times.off && times.on ? minutesBetween(times.off, times.on) : null;
-  return <div className="content-grid two">
-    <Card title="Schedule" icon={Timer}>
-      <div className="metric-strip mini"><Metric label="STD" value={flight.schedOut} /><Metric label="STA" value={flight.schedIn} /><Metric label="Planned block" value={flight.blockTime} /></div>
-      <div className="delay-display"><span>Departure</span><Pill tone={outDelay === null ? 'neutral' : outDelay <= 0 ? 'good' : outDelay <= 15 ? 'warn' : 'bad'}>{outDelay === null ? 'PENDING' : `${outDelay > 0 ? '+' : ''}${outDelay} MIN`}</Pill><span>Arrival</span><Pill tone={inDelay === null ? 'neutral' : inDelay <= 0 ? 'good' : inDelay <= 15 ? 'warn' : 'bad'}>{inDelay === null ? 'PENDING' : `${inDelay > 0 ? '+' : ''}${inDelay} MIN`}</Pill></div>
-    </Card>
-    <Card title="OOOI times" icon={Plane}>
-      <div className="oooi-grid">{(['out', 'off', 'on', 'in'] as const).map(field => <label key={field}><span>{field.toUpperCase()}</span><input value={times[field]} placeholder="HH:MMZ" maxLength={5} onChange={e => setTimes({ ...times, [field]: e.target.value.replace(/[^0-9:]/g, '').slice(0, 5) })} /><button onClick={() => setTimes({ ...times, [field]: hhmmNow() })}>NOW</button></label>)}</div>
-    </Card>
-    <Card title="Actual time summary" icon={Calculator} className="span-2"><div className="metric-strip mini"><Metric label="Block time" value={block === null ? '--:--' : `${Math.floor(block / 60).toString().padStart(2, '0')}:${String(block % 60).padStart(2, '0')}`} /><Metric label="Flight time" value={flightTime === null ? '--:--' : `${Math.floor(flightTime / 60).toString().padStart(2, '0')}:${String(flightTime % 60).padStart(2, '0')}`} /><Metric label="Turn time" value="—" sub="Available after next flight" /></div></Card>
-  </div>;
-}
-
 const DEFAULT_CHECKLISTS = {
   'Preflight setup': ['SimBrief OFP imported', 'AIRAC cycle checked', 'Charts selected', 'Weather and NOTAMs reviewed', 'Fuel and payload verified'],
   'Before start': ['Clearance copied', 'Performance complete', 'Doors closed', 'Beacon on', 'Before start checklist complete'],
@@ -458,30 +471,38 @@ function ScratchpadPage({ flight }: { flight: ReturnType<typeof summary> }) {
 }
 
 function SettingsPage({ simbriefKey, setSimbriefKey, mode, setMode, loading, importOFP, loadDemo, runtime, refreshRuntime }: { simbriefKey: string; setSimbriefKey: (s: string) => void; mode: 'username' | 'userid'; setMode: (m: 'username' | 'userid') => void; loading: boolean; importOFP: () => Promise<void>; loadDemo: () => void; runtime: RuntimeStatus; refreshRuntime: () => Promise<void> }) {
+  const native = isNativeApp();
   const install = async () => {
     const prompt = (window as any).deferredPrompt;
     if (prompt) await prompt.prompt(); else alert('Use your browser menu and choose “Install app” or “Add to Home Screen.”');
   };
+  const changeBackend = async () => {
+    const api = (window as any).dispatchlinkNative;
+    if (!api?.setAppUrl) return;
+    const current = await api.getAppUrl?.();
+    const next = window.prompt('Render service URL', current || 'https://your-dispatchlink.onrender.com');
+    if (next) await api.setAppUrl(next);
+  };
   return <div className="content-grid two">
-    <Card title="SimBrief connection" icon={Plane}>
-      <p>Import the latest OFP using the public SimBrief fetcher.</p>
+    <Card title="SimBrief account" icon={Plane}>
+      <p>Your SimBrief identity is used to synchronize the generated OFP. The active flight’s route, schedule, aircraft, fuel, weather, NOTAMs, maps and TLR then become DispatchLink’s single flight record.</p>
       <div className="segmented"><button className={mode === 'username' ? 'active' : ''} onClick={() => setMode('username')}>Username</button><button className={mode === 'userid' ? 'active' : ''} onClick={() => setMode('userid')}>Pilot ID</button></div>
       <label className="stacked-input"><span>{mode === 'username' ? 'SimBrief username' : 'Numeric Pilot ID'}</span><input value={simbriefKey} onChange={e => setSimbriefKey(e.target.value)} placeholder={mode === 'username' ? 'Your username' : '123456'} onKeyDown={e => { if (e.key === 'Enter') void importOFP(); }} /></label>
-      <div className="button-row"><button className="primary" onClick={() => void importOFP()} disabled={loading}>{loading ? <RefreshCw className="spin" /> : <Import />} {loading ? 'Importing…' : 'Import latest OFP'}</button><button onClick={loadDemo}>Load demo flight</button></div>
+      <div className="button-row"><button className="primary" onClick={() => void importOFP()} disabled={loading}>{loading ? <RefreshCw className="spin" /> : <Import />} {loading ? 'Synchronizing…' : 'Import latest OFP'}</button><button onClick={loadDemo}>Load demo flight</button></div>
     </Card>
-    <Card title="Navigraph connection" icon={Map}>
-      <div className="connection-cards"><div className={runtime.chartsApproved ? 'ok' : 'blocked'}>{runtime.chartsApproved ? <Check /> : <X />}<span><strong>Developer approval</strong><small>{runtime.chartsApproved ? 'Enabled' : 'Required'}</small></span></div><div className={runtime.simLinked ? 'ok' : 'blocked'}>{runtime.simLinked ? <Wifi /> : <WifiOff />}<span><strong>Simulator link</strong><small>{runtime.simLinked ? 'Active' : 'Inactive'}</small></span></div><div className={runtime.navigraphSignedIn ? 'ok' : 'blocked'}>{runtime.navigraphSignedIn ? <Check /> : <X />}<span><strong>Navigraph account</strong><small>{runtime.navigraphSignedIn ? 'Signed in' : 'Not connected'}</small></span></div></div>
-      {!runtime.chartsApproved && <div className="notice warn"><strong>Navigraph licensing boundary</strong><p>The Navigraph Charts API cannot be enabled as an unapproved standalone EFB. DispatchLink therefore offers the official standalone Charts portal in a reusable app window, while the drawing workspace supports SimBrief PDFs and user-supplied charts. The direct API adapter stays gated for an approved virtual-environment build.</p></div>}
-      <button onClick={() => window.open('https://charts.navigraph.com/', 'dispatchlink-navigraph', 'popup=yes,width=1500,height=1000')}><Map size={16} /> Open Navigraph Charts portal</button>
+    <Card title="Navigraph provider" icon={Map}>
+      <div className="connection-cards"><div className="ok"><Check /><span><strong>Official Charts session</strong><small>Presented inside native app</small></span></div><div className={runtime.chartsApproved ? 'ok' : 'blocked'}>{runtime.chartsApproved ? <Check /> : <X />}<span><strong>Third-party Charts API</strong><small>{runtime.chartsApproved ? 'Approved build enabled' : 'Approval required'}</small></span></div><div className={runtime.simLinked ? 'ok' : 'blocked'}>{runtime.simLinked ? <Wifi /> : <WifiOff />}<span><strong>Simulator link</strong><small>{runtime.simLinked ? 'Active' : 'Optional for provider portal'}</small></span></div></div>
+      <div className="notice"><strong>How chart access works</strong><p>The native app displays the official Navigraph Charts web session in its Charts page, so you stay inside DispatchLink and authenticate directly with Navigraph. The separate direct chart-image API remains available only for an approved simulator-linked build.</p></div>
+      <button onClick={() => window.open('https://charts.navigraph.com/', 'dispatchlink-navigraph', 'popup=yes,width=1500,height=1000')}><Map size={16} /> Open Charts workspace</button>
       {runtime.chartsApproved && runtime.simLinked && !runtime.navigraphSignedIn && runtime.navigraphConfigured && <a href="/api/navigraph/login" target="_blank" rel="noreferrer" className="primary button-link">Sign in to approved API mode</a>}
-      {runtime.navigraphSignedIn && <button onClick={async () => { await fetch('/api/navigraph/logout', { method: 'POST' }); await refreshRuntime(); }}>Disconnect Navigraph</button>}
-      <button className="text-button" onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh status</button>
+      {runtime.navigraphSignedIn && <button onClick={async () => { await fetch('/api/navigraph/logout', { method: 'POST' }); await refreshRuntime(); }}>Disconnect direct API</button>}
+      <button className="text-button" onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh API status</button>
     </Card>
-    <Card title="Install as an app" icon={LayoutDashboard}>
-      <p>DispatchLink EFB is a progressive web app. Install it for a full-screen tablet or desktop experience.</p><button onClick={() => void install()}>Install / Add to Home Screen</button>
+    <Card title={native ? 'Native app shell' : 'Install as an app'} icon={LayoutDashboard}>
+      {native ? <><p>You are running the Electron edition. SimBrief and Navigraph use persistent in-app provider sessions; the Render service remains the secure backend for OFP synchronization, records and simulator-link traffic.</p><button onClick={() => void changeBackend()}><Settings size={16} /> Change Render backend</button></> : <><p>Install the progressive web app for a full-screen tablet experience. The Windows native edition adds embedded provider sessions.</p><button onClick={() => void install()}>Install / Add to Home Screen</button></>}
     </Card>
-    <Card title="Data behavior" icon={Settings}>
-      <div className="status-list"><div><span>OFP cache</span><strong>Local device</strong></div><div><span>Annotations</span><strong>Local device</strong></div><div><span>Navigraph chart images</span><strong>Never stored</strong></div><div><span>Purpose</span><strong>Flight simulation only</strong></div></div>
+    <Card title="Single-source data flow" icon={Link2}>
+      <div className="status-list"><div><span>Flight plan</span><strong>SimBrief OFP</strong></div><div><span>Charts</span><strong>Navigraph session</strong></div><div><span>Scheduled times</span><strong>FR24 → SimBrief</strong></div><div><span>Actual OOOI</span><strong>Simulator Zulu / NOW</strong></div><div><span>Logbook & duty drafts</span><strong>Automatic copy</strong></div><div><span>Navigraph chart images</span><strong>Never cached</strong></div></div>
     </Card>
   </div>;
 }

@@ -23,6 +23,10 @@ export interface SimTelemetry {
   tcalcFile?: string;
   aircraftTitle?: string;
   registration?: string;
+  totalFuelLb?: number;
+  totalFuelKg?: number;
+  totalWeightLb?: number;
+  totalWeightKg?: number;
 }
 
 export function useSimTelemetry() {
@@ -54,6 +58,6 @@ export function SimPage() {
 
     <section className="card"><header><div><Gauge size={18} /><h3>TCalc-compatible position</h3></div></header><div className="card-body"><div className="metric-strip mini"><div className="metric"><span>Latitude</span><strong>{value(telemetry?.latitude, '', 6)}</strong></div><div className="metric"><span>Longitude</span><strong>{value(telemetry?.longitude, '', 6)}</strong></div><div className="metric"><span>True heading</span><strong>{value(telemetry?.headingTrue, '°', 1)}</strong></div><div className="metric"><span>Ground altitude</span><strong>{value(telemetry?.groundAltitudeM, ' m', 1)}</strong></div></div><div className="tcalc-grid"><div><span>Directory number</span><strong>{telemetry?.tcalcDirectory || '—'}</strong></div><div><span>File number</span><strong>{telemetry?.tcalcFile || '—'}</strong></div><div><span>Surface</span><strong>{telemetry?.surfaceType || 'Unknown'}</strong></div><div><span>Condition</span><strong>{telemetry?.surfaceCondition || 'Unknown'}</strong></div></div></div></section>
 
-    <section className="card span-2"><header><div><Activity size={18} /><h3>Live flight data</h3></div></header><div className="card-body"><div className="metric-strip"><div className="metric"><span>Altitude MSL</span><strong>{value(telemetry?.altitudeMslFt, ' ft', 0)}</strong></div><div className="metric"><span>Altitude AGL</span><strong>{value(telemetry?.altitudeAglFt, ' ft', 0)}</strong></div><div className="metric"><span>Ground speed</span><strong>{value(telemetry?.groundSpeedKt, ' kt', 1)}</strong></div><div className="metric"><span>Indicated airspeed</span><strong>{value(telemetry?.indicatedAirspeedKt, ' kt', 1)}</strong></div><div className="metric"><span>Vertical speed</span><strong>{value(telemetry?.verticalSpeedFpm, ' fpm', 0)}</strong></div></div></div></section>
+    <section className="card span-2"><header><div><Activity size={18} /><h3>Live flight data</h3></div></header><div className="card-body"><div className="metric-strip"><div className="metric"><span>Altitude MSL</span><strong>{value(telemetry?.altitudeMslFt, ' ft', 0)}</strong></div><div className="metric"><span>Altitude AGL</span><strong>{value(telemetry?.altitudeAglFt, ' ft', 0)}</strong></div><div className="metric"><span>Ground speed</span><strong>{value(telemetry?.groundSpeedKt, ' kt', 1)}</strong></div><div className="metric"><span>Indicated airspeed</span><strong>{value(telemetry?.indicatedAirspeedKt, ' kt', 1)}</strong></div><div className="metric"><span>Vertical speed</span><strong>{value(telemetry?.verticalSpeedFpm, ' fpm', 0)}</strong></div><div className="metric"><span>Total fuel</span><strong>{value(telemetry?.totalFuelLb, ' lb', 0)}</strong></div><div className="metric"><span>Total weight</span><strong>{value(telemetry?.totalWeightLb, ' lb', 0)}</strong></div></div></div></section>
   </div>;
 }
