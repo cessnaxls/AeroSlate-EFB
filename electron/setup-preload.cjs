@@ -1,4 +1,4 @@
 const { contextBridge, ipcRenderer } = require('electron');
-contextBridge.exposeInMainWorld('dispatchlinkSetup', {
-  complete: (url) => ipcRenderer.invoke('dispatchlink:setup-complete', url)
-});
+const api = { complete: (url) => ipcRenderer.invoke('aeroslate:setup-complete', url) };
+contextBridge.exposeInMainWorld('aeroslateSetup', api);
+contextBridge.exposeInMainWorld('dispatchlinkSetup', api);

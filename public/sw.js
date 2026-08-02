@@ -1,4 +1,4 @@
-const CACHE = 'dispatchlink-efb-shell-v2';
+const CACHE = 'aeroslate-efb-shell-v4';
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/']))));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', event => {

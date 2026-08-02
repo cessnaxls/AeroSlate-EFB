@@ -1,5 +1,7 @@
 declare namespace React {
   type ReactNode = any;
+  type SetStateAction<T> = T | ((prev: T) => T);
+  type Dispatch<T> = (value: T) => void;
   interface PointerEvent<T = Element> extends globalThis.PointerEvent { currentTarget: T; clientX: number; clientY: number; pointerId: number; }
 }
 declare module 'react' {
@@ -16,12 +18,12 @@ declare module 'react/jsx-runtime' { export const jsx: any; export const jsxs: a
 declare module 'lucide-react' {
   export type LucideIcon = any;
   export const Activity: any; export const ArrowUpRight: any; export const BookOpenCheck: any; export const Calculator: any;
-  export const Check: any; export const ChevronRight: any; export const ClipboardCheck: any; export const CloudSun: any;
-  export const Download: any; export const ExternalLink: any; export const FileCheck2: any; export const Eraser: any; export const FileText: any; export const Fuel: any; export const Gauge: any;
+  export const AlertTriangle: any; export const Check: any; export const ChevronDown: any; export const ChevronRight: any; export const ChevronUp: any; export const Clipboard: any; export const ClipboardCheck: any; export const Clock3: any; export const CloudSun: any;
+  export const Download: any; export const ExternalLink: any; export const FileCheck2: any; export const Eraser: any; export const FileText: any; export const Filter: any; export const Fuel: any; export const Gauge: any; export const HelpCircle: any;
   export const Highlighter: any; export const Import: any; export const LayoutDashboard: any; export const Link2: any; export const Map: any;
   export const MapPinned: any; export const Menu: any; export const Minus: any; export const MousePointer2: any; export const NotebookPen: any;
   export const PenLine: any; export const Plane: any; export const Redo2: any; export const RefreshCw: any; export const RotateCcw: any;
-  export const Route: any; export const Save: any; export const ShieldCheck: any; export const Shuffle: any; export const Search: any; export const Settings: any; export const Square: any; export const Timer: any;
+  export const Route: any; export const Save: any; export const ShieldCheck: any; export const Shuffle: any; export const Search: any; export const Settings: any; export const Settings2: any; export const Square: any; export const Timer: any;
   export const Type: any; export const Undo2: any; export const Upload: any; export const Wifi: any; export const WifiOff: any; export const X: any;
   export const Wind: any; export const ZoomIn: any; export const ZoomOut: any;
 }

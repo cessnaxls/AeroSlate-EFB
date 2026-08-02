@@ -1,13 +1,13 @@
 services:
   - type: web
-    name: dispatchlink-efb
+    name: aeroslate-efb
     runtime: node
     plan: starter
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     disk:
-      name: dispatchlink-records
+      name: aeroslate-records
       mountPath: /var/data
       sizeGB: 1
     envVars:

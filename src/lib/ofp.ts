@@ -36,6 +36,14 @@ export interface RunwayAnalysisData {
   documents: { title: string; url: string }[];
 }
 
+export interface ParsedNotam {
+  id: string;
+  station: string;
+  text: string;
+  important: boolean;
+  category: 'runway' | 'procedure' | 'airport' | 'airspace' | 'navaid' | 'other';
+}
+
 export function dig<T = any>(obj: any, ...paths: string[]): T | undefined {
   for (const path of paths) {
     const value = path.split('.').reduce((acc, key) => acc?.[key], obj);
@@ -72,6 +80,17 @@ export function duration(value: unknown): string {
   return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
 }
 
+export function durationBetweenZulu(start: string, end: string): string {
+  const parse = (value: string) => {
+    const match = normalizeZulu(value).match(/^(\d{2}):(\d{2})z$/);
+    return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+  };
+  const a = parse(start); const b = parse(end);
+  if (a === null || b === null) return '--:--';
+  const minutes = (b - a + 1440) % 1440;
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
 export function numberText(value: unknown, suffix = '', digits = 0): string {
   const n = Number(value);
   if (!Number.isFinite(n)) return '—';
@@ -81,6 +100,8 @@ export function numberText(value: unknown, suffix = '', digits = 0): string {
 function candidateSummary(candidate: FlightCandidate | null): FlightSummary | null {
   if (!candidate) return null;
   const match = candidate.flightNumber.match(/^([A-Z]{3})(\d+[A-Z]?)$/);
+  const schedOut = normalizeZulu(candidate.std);
+  const schedIn = normalizeZulu(candidate.sta);
   return {
     release: `DRAFT-${candidate.id.replace(/[^A-Za-z0-9]/g, '').slice(-8) || 'FLIGHT'}`,
     source: 'candidate',
@@ -97,9 +118,9 @@ function candidateSummary(candidate: FlightCandidate | null): FlightSummary | nu
     route: 'Generate and import the SimBrief OFP to load the route.',
     cruiseAltitude: '—',
     costIndex: '—',
-    schedOut: normalizeZulu(candidate.std),
-    schedIn: normalizeZulu(candidate.sta),
-    blockTime: candidate.ete && candidate.ete !== '—' ? candidate.ete.padStart(5, '0') : '--:--',
+    schedOut,
+    schedIn,
+    blockTime: schedOut !== '--:--' && schedIn !== '--:--' ? durationBetweenZulu(schedOut, schedIn) : (candidate.ete && candidate.ete !== '—' ? candidate.ete.padStart(5, '0') : '--:--'),
     ete: candidate.ete && candidate.ete !== '—' ? candidate.ete.padStart(5, '0') : '--:--',
     distance: '—',
     units: 'LBS',
@@ -120,6 +141,13 @@ export function summary(ofp: AnyRecord | null, fallback: FlightCandidate | null 
   }
   const units = String(dig(ofp, 'params.units', 'general.units') || 'LBS').toUpperCase();
   const fallbackData = candidateSummary(fallback);
+  const schedOut = zuluFromEpoch(dig(ofp, 'times.sched_out', 'times.est_out')) !== '--:--'
+    ? zuluFromEpoch(dig(ofp, 'times.sched_out', 'times.est_out'))
+    : (fallbackData?.schedOut || normalizeZulu(dig(ofp, 'times.sched_out_time', 'params.dephour')) || '--:--');
+  const schedIn = zuluFromEpoch(dig(ofp, 'times.sched_in', 'times.est_in')) !== '--:--'
+    ? zuluFromEpoch(dig(ofp, 'times.sched_in', 'times.est_in'))
+    : (fallbackData?.schedIn || normalizeZulu(dig(ofp, 'times.sched_in_time')) || '--:--');
+  const calculatedBlock = schedOut !== '--:--' && schedIn !== '--:--' ? durationBetweenZulu(schedOut, schedIn) : '--:--';
   return {
     release: String(dig(ofp, 'general.release', 'fetch.time') || fallbackData?.release || '—'),
     source: 'simbrief',
@@ -136,9 +164,9 @@ export function summary(ofp: AnyRecord | null, fallback: FlightCandidate | null 
     route: String(dig(ofp, 'general.route', 'atc.route', 'params.route') || fallbackData?.route || '—'),
     cruiseAltitude: String(dig(ofp, 'general.initial_altitude', 'params.fl') || '—'),
     costIndex: String(dig(ofp, 'general.costindex', 'params.civalue') || '—'),
-    schedOut: zuluFromEpoch(dig(ofp, 'times.sched_out', 'times.est_out')) !== '--:--' ? zuluFromEpoch(dig(ofp, 'times.sched_out', 'times.est_out')) : (fallbackData?.schedOut || '--:--'),
-    schedIn: zuluFromEpoch(dig(ofp, 'times.sched_in', 'times.est_in')) !== '--:--' ? zuluFromEpoch(dig(ofp, 'times.sched_in', 'times.est_in')) : (fallbackData?.schedIn || '--:--'),
-    blockTime: duration(dig(ofp, 'times.block_time')) !== '--:--' ? duration(dig(ofp, 'times.block_time')) : (fallbackData?.blockTime || '--:--'),
+    schedOut,
+    schedIn,
+    blockTime: calculatedBlock !== '--:--' ? calculatedBlock : (duration(dig(ofp, 'times.block_time')) !== '--:--' ? duration(dig(ofp, 'times.block_time')) : (fallbackData?.blockTime || '--:--')),
     ete: duration(dig(ofp, 'times.est_time_enroute')) !== '--:--' ? duration(dig(ofp, 'times.est_time_enroute')) : (fallbackData?.ete || '--:--'),
     distance: numberText(dig(ofp, 'general.route_distance', 'general.gc_distance'), ' NM'),
     units,
@@ -149,11 +177,130 @@ export function summary(ofp: AnyRecord | null, fallback: FlightCandidate | null 
 }
 
 export function getNavlog(ofp: AnyRecord | null): AnyRecord[] {
-  return asArray(dig(ofp, 'navlog.fix'));
+  return asArray(dig(ofp, 'navlog.fix', 'navlog.fixes', 'navlog'));
 }
 
-export function getNotams(ofp: AnyRecord | null, key: 'origin' | 'destination' | 'alternate'): AnyRecord[] {
-  return asArray(dig(ofp, `notams.${key}`, `${key}.notams`, `notams.${key}.notam`));
+function htmlDecode(value: string): string {
+  if (typeof document !== 'undefined') {
+    const area = document.createElement('textarea');
+    area.innerHTML = value;
+    return area.value;
+  }
+  return value.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&#40;/g, '(').replace(/&#41;/g, ')');
+}
+
+function cleanText(value: string): string {
+  return htmlDecode(value)
+    .replace(/<br\s*\/?\s*>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\\r\\n|\\n/g, '\n')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .trim();
+}
+
+function stringLeaves(value: unknown, depth = 0): string[] {
+  if (depth > 8 || value === null || value === undefined) return [];
+  if (typeof value === 'string' || typeof value === 'number') return [String(value)];
+  if (Array.isArray(value)) return value.flatMap(item => stringLeaves(item, depth + 1));
+  if (typeof value === 'object') return Object.values(value as Record<string, unknown>).flatMap(item => stringLeaves(item, depth + 1));
+  return [];
+}
+
+export function getICAOFlightPlan(ofp: AnyRecord | null): string {
+  if (!ofp) return '';
+  const candidates: unknown[] = [
+    dig(ofp, 'text.atc'), dig(ofp, 'text.atc_text'), dig(ofp, 'text.icao_fpl'),
+    dig(ofp, 'atc.flight_plan'), dig(ofp, 'atc.fpl'), dig(ofp, 'general.atc_flight_plan'), dig(ofp, 'files.atc')
+  ];
+  const all = [...candidates.flatMap(value => stringLeaves(value)), ...stringLeaves(dig(ofp, 'text'))];
+  const cleaned = all.map(cleanText).filter(Boolean);
+  const exact = cleaned.find(value => /\(FPL-[\s\S]*\)/i.test(value));
+  if (exact) return exact.match(/\(FPL-[\s\S]*?\)(?:\s|$)/i)?.[0]?.trim() || exact.trim();
+  const fpl = cleaned.find(value => /^FPL-|\bFPL-/i.test(value));
+  return (fpl || '').replace(/^.*?(?=\(?FPL-)/is, '').trim();
+}
+
+function notamText(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number') return cleanText(String(value));
+  if (!value || typeof value !== 'object') return '';
+  const object = value as Record<string, unknown>;
+  for (const key of ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text']) {
+    if (object[key]) {
+      const candidate = stringLeaves(object[key]).join(' ');
+      if (candidate) return cleanText(candidate);
+    }
+  }
+  const joined = stringLeaves(value).join(' ');
+  return /\b(?:RWY|TWY|NOTAM|SID|STAR|ILS|VOR|DME|AIRSPACE|APCH)\b/i.test(joined) ? cleanText(joined) : '';
+}
+
+function classifyNotam(text: string): Pick<ParsedNotam, 'important' | 'category'> {
+  const runway = /\bRWY\b|RUNWAY|DECLARED DISTANCE|TORA|TODA|ASDA|LDA/i.test(text);
+  const closure = /\bCLSD\b|CLOSED|UNSERVICEABLE|U\/S|NOT AVBL|SUSPENDED|WORK IN PROGRESS/i.test(text);
+  const procedure = /\bAPCH\b|APPROACH|\bSID\b|\bSTAR\b|IAP|ILS|LOC|RNAV|RNP|MINIMA|MISSED APPROACH|PROCEDURE/i.test(text);
+  const navaid = /\bVOR\b|\bDME\b|\bNDB\b|GLIDESLOPE|LOCALIZER|NAVAID/i.test(text);
+  const airport = /AD CLSD|AERODROME|APRON|\bTWY\b|TAXIWAY|LIGHTING/i.test(text);
+  const airspace = /AIRSPACE|TFR|RESTRICTED|PROHIBITED|DANGER AREA/i.test(text);
+  const category: ParsedNotam['category'] = procedure ? 'procedure' : runway ? 'runway' : navaid ? 'navaid' : airport ? 'airport' : airspace ? 'airspace' : 'other';
+  return { category, important: (runway && closure) || procedure || (navaid && closure) || /AD CLSD|AERODROME CLOSED|TFR|CRANE|OBST/i.test(text) };
+}
+
+export function getAllNotams(ofp: AnyRecord | null): ParsedNotam[] {
+  if (!ofp) return [];
+  const stationHints: Record<string, string> = {
+    origin: String(dig(ofp, 'origin.icao_code') || 'ORIGIN'),
+    destination: String(dig(ofp, 'destination.icao_code') || 'DEST'),
+    alternate: String(dig(ofp, 'alternate.icao_code') || 'ALTN'),
+    fir: 'FIR', enroute: 'ENROUTE', general: 'GENERAL'
+  };
+  const results: ParsedNotam[] = [];
+  const seen = new Set<string>();
+  const visit = (value: unknown, station: string, path: string, depth = 0) => {
+    if (depth > 9 || value === null || value === undefined) return;
+    if (Array.isArray(value)) { value.forEach((item, index) => visit(item, station, `${path}.${index}`, depth + 1)); return; }
+    if (typeof value === 'object') {
+      const object = value as Record<string, unknown>;
+      const directKeys = ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text'];
+      const hasDirectText = directKeys.some(key => object[key] !== undefined && object[key] !== null && object[key] !== '');
+      const text = hasDirectText ? notamText(object) : '';
+      if (text && text.length > 7 && /\b(?:RWY|TWY|NOTAM|CLSD|APCH|SID|STAR|ILS|VOR|DME|AIRSPACE|AD |AERODROME|TFR|OBST|CRANE|NAV)\b/i.test(text)) {
+        const normalized = text.replace(/\s+/g, ' ').trim();
+        if (!seen.has(normalized)) {
+          seen.add(normalized);
+          const classification = classifyNotam(normalized);
+          results.push({ id: `${station}-${results.length}-${path}`, station, text: normalized, ...classification });
+        }
+        return;
+      }
+      Object.entries(object).forEach(([key, child]) => {
+        const nextStation = stationHints[key.toLowerCase()] || (/^[A-Z]{4}$/.test(key) ? key : station);
+        visit(child, nextStation, `${path}.${key}`, depth + 1);
+      });
+      return;
+    }
+    const text = notamText(value);
+    if (text && text.length > 7 && /\b(?:RWY|TWY|NOTAM|CLSD|APCH|SID|STAR|ILS|VOR|DME|AIRSPACE|AD |AERODROME|TFR|OBST|CRANE|NAV)\b/i.test(text)) {
+      const normalized = text.replace(/\s+/g, ' ').trim();
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        const classification = classifyNotam(normalized);
+        results.push({ id: `${station}-${results.length}-${path}`, station, text: normalized, ...classification });
+      }
+    }
+  };
+
+  visit(dig(ofp, 'notams'), 'GENERAL', 'notams');
+  for (const key of ['origin', 'destination', 'alternate'] as const) {
+    visit(dig(ofp, `${key}.notams`, `${key}.notam`), stationHints[key], key);
+  }
+  return results;
+}
+
+export function getNotams(ofp: AnyRecord | null, key: 'origin' | 'destination' | 'alternate'): ParsedNotam[] {
+  const station = String(dig(ofp, `${key}.icao_code`) || '').toUpperCase();
+  return getAllNotams(ofp).filter(item => item.station === station || item.station === key.toUpperCase());
 }
 
 export function getWeather(ofp: AnyRecord | null, key: 'origin' | 'destination' | 'alternate') {
@@ -164,11 +311,12 @@ export function getWeather(ofp: AnyRecord | null, key: 'origin' | 'destination' 
 }
 
 export function getOFPDocument(ofp: AnyRecord | null): string | null {
-  const candidate = dig<string>(ofp, 'files.pdf.link', 'files.pdf', 'links.pdf', 'general.ofp_pdf');
-  if (!candidate || typeof candidate !== 'string') return null;
-  if (candidate.startsWith('http')) return candidate;
-  if (candidate.startsWith('/')) return `https://www.simbrief.com${candidate}`;
-  return `https://www.simbrief.com/${candidate}`;
+  const candidate = dig<any>(ofp, 'files.pdf.link', 'files.pdf', 'links.pdf', 'general.ofp_pdf');
+  const value = typeof candidate === 'string' ? candidate : candidate?.link || candidate?.url;
+  if (!value || typeof value !== 'string') return null;
+  if (value.startsWith('http')) return value;
+  if (value.startsWith('/')) return `https://www.simbrief.com${value}`;
+  return `https://www.simbrief.com/${value}`;
 }
 
 function normalizeDocumentUrl(link: unknown): string | null {
@@ -237,7 +385,7 @@ export function getRunwayAnalysis(ofp: AnyRecord | null): RunwayAnalysisData {
   const largeText = String(dig(ofp, 'text.plan_html', 'text.plan_text', 'text.ofp', 'general.ofp_text') || '');
   const marker = largeText.search(/RUNWAY\s+ANALYSIS|TAKEOFF\s+AND\s+LANDING|\bTLR\b/i);
   if (marker >= 0) {
-    const excerpt = largeText.slice(marker, marker + 16000).replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+\n/g, '\n').trim();
+    const excerpt = cleanText(largeText.slice(marker, marker + 16000));
     return { available: true, text: excerpt, source: 'OFP text section', documents };
   }
   return { available: documents.length > 0, text: '', source: documents.length ? 'SimBrief document' : '', documents };

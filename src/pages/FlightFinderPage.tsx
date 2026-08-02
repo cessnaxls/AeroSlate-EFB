@@ -29,23 +29,23 @@ function timeModeLabel(mode?: FlightCandidate['timeMode']) {
 export function FlightFinderPage({ onDispatch, notify }: Props) {
   const [airports, setAirports] = useState<Airport[]>([]);
   const [loadingAirports, setLoadingAirports] = useState(true);
-  const [country, setCountry] = useState(() => loadLocal('dispatchlink.finder.country', 'United States'));
-  const [size, setSize] = useState<'large' | 'medium' | 'small'>(() => loadLocal('dispatchlink.finder.size', 'large'));
+  const [country, setCountry] = useState(() => loadLocal('aeroslate.finder.country', loadLocal('dispatchlink.finder.country', 'United States')));
+  const [size, setSize] = useState<'large' | 'medium' | 'small'>(() => loadLocal('aeroslate.finder.size', loadLocal('dispatchlink.finder.size', 'large')));
   const [airportQuery, setAirportQuery] = useState('');
-  const [selectedAirport, setSelectedAirport] = useState<Airport | null>(() => loadLocal<Airport | null>('dispatchlink.finder.airport', null));
-  const [paste, setPaste] = useState(() => loadLocal('dispatchlink.finder.paste', ''));
-  const [flights, setFlights] = useState<FlightCandidate[]>(() => loadLocal('dispatchlink.finder.flights', []));
-  const [selectedFlight, setSelectedFlight] = useState<FlightCandidate | null>(() => loadLocal<FlightCandidate | null>('dispatchlink.finder.flight', null));
+  const [selectedAirport, setSelectedAirport] = useState<Airport | null>(() => loadLocal('aeroslate.finder.airport', loadLocal<Airport | null>('dispatchlink.finder.airport', null)));
+  const [paste, setPaste] = useState(() => loadLocal('aeroslate.finder.paste', loadLocal('dispatchlink.finder.paste', '')));
+  const [flights, setFlights] = useState<FlightCandidate[]>(() => loadLocal('aeroslate.finder.flights', loadLocal<FlightCandidate[]>('dispatchlink.finder.flights', [])));
+  const [selectedFlight, setSelectedFlight] = useState<FlightCandidate | null>(() => loadLocal('aeroslate.finder.flight', loadLocal<FlightCandidate | null>('dispatchlink.finder.flight', null)));
   const [parseInfo, setParseInfo] = useState<Fr24ParseResult | null>(null);
 
   useEffect(() => {
     fetch('/data/airports.dat').then(response => response.text()).then(text => setAirports(parseAirportsDat(text))).catch(() => notify('Unable to load airports.dat.')).finally(() => setLoadingAirports(false));
   }, [notify]);
 
-  useEffect(() => { saveLocal('dispatchlink.finder.country', country); saveLocal('dispatchlink.finder.size', size); }, [country, size]);
-  useEffect(() => saveLocal('dispatchlink.finder.airport', selectedAirport), [selectedAirport]);
-  useEffect(() => { saveLocal('dispatchlink.finder.paste', paste); saveLocal('dispatchlink.finder.flights', flights); }, [paste, flights]);
-  useEffect(() => saveLocal('dispatchlink.finder.flight', selectedFlight), [selectedFlight]);
+  useEffect(() => { saveLocal('aeroslate.finder.country', country); saveLocal('aeroslate.finder.size', size); }, [country, size]);
+  useEffect(() => saveLocal('aeroslate.finder.airport', selectedAirport), [selectedAirport]);
+  useEffect(() => { saveLocal('aeroslate.finder.paste', paste); saveLocal('aeroslate.finder.flights', flights); }, [paste, flights]);
+  useEffect(() => saveLocal('aeroslate.finder.flight', selectedFlight), [selectedFlight]);
 
   const countries = useMemo(() => [...new Set(airports.map(airport => airport.country))].sort(), [airports]);
   const filteredAirports = useMemo(() => airports.filter(airport => airport.country === country && airport.size === size && airport.type.toLowerCase().includes('airport')), [airports, country, size]);
@@ -82,14 +82,14 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
         </div>
         <label className="stacked-input"><span>Search airports</span><div className="input-with-icon"><Search size={16} /><input value={airportQuery} onChange={event => setAirportQuery(event.target.value)} placeholder="ICAO, IATA, city, or airport" /></div></label>
         <div className="airport-results">{searchResults.map(airport => <button key={airport.id} className={selectedAirport?.id === airport.id ? 'active' : ''} onClick={() => setSelectedAirport(airport)}><strong>{airport.icao}</strong><span>{airport.name}</span><small>{airport.city}, {airport.country} · {airport.size}</small></button>)}</div>
-        {selectedAirport && <div className="selected-airport"><div><strong>{airportLabel(selectedAirport)}</strong><span>{selectedAirport.latitude.toFixed(4)}, {selectedAirport.longitude.toFixed(4)} · {selectedAirport.elevationFt.toLocaleString()} ft · {selectedAirport.timezoneName || 'Timezone unavailable'}</span></div><button onClick={() => window.open(`https://www.flightradar24.com/data/airports/${(selectedAirport.iata || selectedAirport.icao).toLowerCase()}`, 'dispatchlink-fr24', 'popup=yes,width=1300,height=900')}><ExternalLink size={16} /> Open FR24</button></div>}
+        {selectedAirport && <div className="selected-airport"><div><strong>{airportLabel(selectedAirport)}</strong><span>{selectedAirport.latitude.toFixed(4)}, {selectedAirport.longitude.toFixed(4)} · {selectedAirport.elevationFt.toLocaleString()} ft · {selectedAirport.timezoneName || 'Timezone unavailable'}</span></div><button onClick={() => window.open(`https://www.flightradar24.com/data/airports/${(selectedAirport.iata || selectedAirport.icao).toLowerCase()}`, 'aeroslate-fr24', 'popup=yes,width=1300,height=900')}><ExternalLink size={16} /> Open FR24</button></div>}
       </div>
     </section>
 
     <section className="card">
       <header><div><Upload size={18} /><h3>Real-world flight parser</h3></div><button className="text-button" onClick={() => { setPaste(''); setFlights([]); setSelectedFlight(null); setParseInfo(null); }}><RefreshCw size={15} /> Clear</button></header>
       <div className="card-body">
-        <p>Paste any supported FR24 airport or aircraft-history layout. DispatchLink automatically recognizes desktop tables, compact/mobile cards, aircraft-history cards, and aircraft-history tables. UTC sources are retained; local sources are converted to <strong>HH:MMz</strong> with the applicable airport timezone from <strong>airports.dat</strong>.</p>
+        <p>Paste any supported FR24 airport or aircraft-history layout. AeroSlate automatically recognizes desktop tables, compact/mobile cards, aircraft-history cards, and aircraft-history tables. UTC sources are retained; local sources are converted to <strong>HH:MMz</strong> with the applicable airport timezone from <strong>airports.dat</strong>.</p>
         <textarea className="fr24-paste" value={paste} onChange={event => setPaste(event.target.value)} placeholder="Paste the complete FR24 table here…" />
         <div className="button-row"><button className="primary" onClick={parse}><Search size={17} /> Parse FR24 data</button><button onClick={() => { if (!flights.length) return notify('Parse flights first.'); const row = flights[Math.floor(Math.random() * flights.length)]; setSelectedFlight(row); notify(`Selected ${row.flightNumber}.`); }}><Shuffle size={17} /> Random flight</button></div>
         {parseInfo && <div className="parser-result">

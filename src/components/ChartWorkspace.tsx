@@ -37,7 +37,7 @@ interface Props {
 const COLORS = ['#ff4d4f', '#ffd43b', '#33d6ff', '#ffffff', '#7dff8a'];
 
 function annotationKey(source: ChartSource, page: number) {
-  return `dispatchlink.annotations.${source.id}.${page}`;
+  return `aeroslate.annotations.${source.id}.${page}`;
 }
 
 function drawArrow(ctx: CanvasRenderingContext2D, a: Point, b: Point, size: number) {

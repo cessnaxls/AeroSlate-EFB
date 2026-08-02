@@ -14,7 +14,7 @@ const appBaseUrl = process.env.APP_BASE_URL || `http://localhost:${port}`;
 const redirectUri = process.env.NAVIGRAPH_REDIRECT_URI || `${appBaseUrl}/api/navigraph/callback`;
 const chartsApproved = String(process.env.NAVIGRAPH_CHARTS_APPROVED).toLowerCase() === 'true';
 const simLinkToken = process.env.SIM_LINK_TOKEN || 'development-sim-link';
-const dataDir = process.env.DATA_DIR || path.join(rootDir, '.dispatchlink-data');
+const dataDir = process.env.DATA_DIR || path.join(rootDir, '.aeroslate-data');
 const tokenStore = new Map();
 let lastSimHeartbeat = 0;
 let latestTelemetry = null;
@@ -24,7 +24,7 @@ app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false, frameguard: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(express.json({ limit: '2mb' }));
 app.use(cookieSession({
-  name: 'dispatchlink.sid',
+  name: 'aeroslate.sid',
   keys: [process.env.SESSION_SECRET || 'development-only-secret'],
   httpOnly: true,
   sameSite: appBaseUrl.startsWith('https://') ? 'none' : 'lax',
@@ -111,7 +111,7 @@ function recordsToCsv(records) {
   return [header, ...records.map(record => [record.id, record.createdAt, ...keys.map(key => record.data?.[key] ?? ''), record.previousHash, record.auditHash])].map(row => row.map(csvEscape).join(',')).join('\r\n');
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'dispatchlink-efb', time: new Date().toISOString() }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'aeroslate-efb', time: new Date().toISOString() }));
 app.get('/api/runtime', (req, res) => {
   const sid = ensureSession(req); const tokens = tokenStore.get(sid);
   res.json({ simLinked: simLinked(), chartsApproved, navigraphConfigured: navigraphConfigured(), navigraphSignedIn: Boolean(tokens), navigraphUsername: tokens?.username, mode: chartsApproved && simLinked() ? 'sim-linked' : 'standalone' });
@@ -152,8 +152,8 @@ app.post('/api/records/:kind', (req, res) => {
 app.get('/api/records/export', (req, res) => {
   try {
     const kind = req.query.type === 'duty' ? 'duty' : 'logbook'; const workspace = decryptWorkspace(workspaceKey(req));
-    if (req.query.format === 'json') { res.set('content-disposition', `attachment; filename="dispatchlink-${kind}.json"`); return res.json(workspace[kind]); }
-    res.type('text/csv').set('content-disposition', `attachment; filename="dispatchlink-${kind}.csv"`).send(recordsToCsv(workspace[kind]));
+    if (req.query.format === 'json') { res.set('content-disposition', `attachment; filename="aeroslate-${kind}.json"`); return res.json(workspace[kind]); }
+    res.type('text/csv').set('content-disposition', `attachment; filename="aeroslate-${kind}.csv"`).send(recordsToCsv(workspace[kind]));
   } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : 'Unable to export records.' }); }
 });
 
@@ -169,7 +169,7 @@ app.get('/api/simbrief', async (req, res) => {
   const staticQuery = staticId ? `&static_id=${encodeURIComponent(staticId)}` : '';
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 15_000);
   try {
-    const response = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?${key}${staticQuery}&json=1`, { signal: controller.signal, headers: { 'user-agent': 'DispatchLink-EFB/0.3' } });
+    const response = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?${key}${staticQuery}&json=1`, { signal: controller.signal, headers: { 'user-agent': 'AeroSlate-EFB/0.4' } });
     const text = await response.text();
     if (!response.ok) return res.status(response.status).json({ error: 'SimBrief did not return an OFP.', details: text.slice(0, 300) });
     res.set('cache-control', 'no-store').json(JSON.parse(text));
@@ -229,4 +229,4 @@ app.get('/api/navigraph/chart-image', requireNavigraph, async (req, res) => {
 app.use(express.static(path.join(rootDir, 'dist'), { maxAge: '1h', index: false }));
 app.use((req, res, next) => { if (req.method !== 'GET' || req.path.startsWith('/api/')) return next(); res.sendFile(path.join(rootDir, 'dist', 'index.html')); });
 app.use((error, _req, res, _next) => { console.error(error); res.status(500).json({ error: 'Unexpected server error.' }); });
-app.listen(port, () => console.log(`DispatchLink EFB listening on ${port}`));
+app.listen(port, () => console.log(`AeroSlate EFB listening on ${port}`));

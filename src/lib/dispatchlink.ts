@@ -604,13 +604,13 @@ export function parseFr24PasteDetailed(clip: string, airports: Map<string, Airpo
     if (format && rows.length) formats.add(format);
     allRows.push(...rows);
     if (format === 'airport-compact' && !rawLines.some(line => Boolean(normalizedDate(cleanLine(line), pageYear(text))))) {
-      warnings.add('The compact airport paste does not include calendar dates. DispatchLink inferred the first date from the device date at the airport and detected midnight rollover from the schedule order.');
+      warnings.add('The compact airport paste does not include calendar dates. AeroSlate inferred the first date from the device date at the airport and detected midnight rollover from the schedule order.');
     }
   }
 
   const flights = mergeFlights(allRows);
   const timeModes = [...new Set(flights.map(row => row.timeMode || 'unknown'))];
-  if (timeModes.includes('local-converted')) warnings.add('FR24 identified the pasted schedule as local time. DispatchLink converted each time to UTC using the departure or arrival airport timezone in airports.dat.');
+  if (timeModes.includes('local-converted')) warnings.add('FR24 identified the pasted schedule as local time. AeroSlate converted each time to UTC using the departure or arrival airport timezone in airports.dat.');
   if (timeModes.includes('local-unresolved')) warnings.add('Some local times could not be converted because an airport timezone was unavailable. Review those rows before dispatching.');
   if (timeModes.includes('unknown')) warnings.add('The paste did not identify its timezone. Times were normalized but not converted.');
   return { flights, formats: [...formats], timeModes, warnings: [...warnings] };
@@ -662,7 +662,7 @@ function stableId(value: string): string {
     hash ^= char.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
   }
-  return `DISPATCHLINK_${Math.abs(hash >>> 0).toString(36).toUpperCase()}`;
+  return `AEROSLATE_${Math.abs(hash >>> 0).toString(36).toUpperCase()}`;
 }
 
 function durationParts(value: string): [string, string] {

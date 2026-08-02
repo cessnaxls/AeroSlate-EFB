@@ -1,9 +1,9 @@
 {
-  "name": "dispatchlink-efb",
-  "productName": "DispatchLink EFB",
+  "name": "aeroslate-efb",
+  "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.3.1",
-  "description": "Provider-backed all-in-one flight-simulation EFB using SimBrief, Navigraph, MSFS and X-Plane.",
+  "version": "0.4.0",
+  "description": "A responsive SimBrief- and Navigraph-backed all-in-one flight-simulation EFB for web, desktop, tablets, and phones.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
@@ -17,7 +17,10 @@
     "native:dev": "concurrently \"vite\" \"node --watch server/index.mjs\" \"wait-on http://localhost:5173 && electron .\"",
     "native:start": "electron .",
     "native:dist": "npm run build && electron-builder",
-    "test:parser": "node tests/parser-regression.mjs"
+    "test:parser": "node tests/parser-regression.mjs",
+    "mobile:sync": "npx cap sync",
+    "mobile:android": "npx cap open android",
+    "mobile:ios": "npx cap open ios"
   },
   "dependencies": {
     "cookie-session": "^2.1.1",
@@ -38,8 +41,8 @@
     "wait-on": "^8.0.2"
   },
   "build": {
-    "appId": "com.dispatchlink.efb",
-    "productName": "DispatchLink EFB",
+    "appId": "com.aeroslate.efb",
+    "productName": "AeroSlate EFB",
     "asar": true,
     "files": [
       "electron/**/*",
@@ -53,17 +56,20 @@
       "target": [
         "nsis",
         "zip"
-      ]
+      ],
+      "icon": "public/icons/aeroslate.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "public/icons/aeroslate-512.png"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "icon": "public/icons/aeroslate-512.png"
     }
   }
 }

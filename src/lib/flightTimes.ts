@@ -9,7 +9,7 @@ export interface OOOITimes {
 }
 
 export const EMPTY_OOOI: OOOITimes = { out: '', off: '', on: '', in: '' };
-const EVENT_NAME = 'dispatchlink:oooi-change';
+const EVENT_NAME = 'aeroslate:oooi-change';
 
 export function normalizeZulu(value: string): string {
   const cleaned = String(value || '').trim().replace(/z/gi, '').replace(/\s+/g, '');
@@ -60,7 +60,7 @@ export function decimalHours(value: number | null): number {
 
 export function oooiStorageKey(release: string, origin: string, destination: string): string {
   const safeRelease = String(release || 'draft').replace(/[^A-Za-z0-9_-]/g, '_');
-  return `dispatchlink.times.${safeRelease}.${origin || '----'}${destination || '----'}`;
+  return `aeroslate.times.${safeRelease}.${origin || '----'}${destination || '----'}`;
 }
 
 export function saveOOOITimes(key: string, value: OOOITimes): void {
@@ -69,10 +69,12 @@ export function saveOOOITimes(key: string, value: OOOITimes): void {
 }
 
 export function useOOOITimes(key: string) {
-  const [times, setTimesState] = useState<OOOITimes>(() => loadLocal(key, EMPTY_OOOI));
+  const legacyKey = key.replace(/^aeroslate\.times\./, 'dispatchlink.times.');
+  const loadTimes = () => loadLocal(key, loadLocal<OOOITimes>(legacyKey, EMPTY_OOOI));
+  const [times, setTimesState] = useState<OOOITimes>(() => loadTimes());
 
   useEffect(() => {
-    setTimesState(loadLocal(key, EMPTY_OOOI));
+    setTimesState(loadTimes());
   }, [key]);
 
   useEffect(() => {

@@ -1,125 +1,204 @@
-# DispatchLink EFB 0.3.1
+# AeroSlate EFB 0.4.0
 
-A GitHub/Render-backed, Windows-native and browser EFB for **flight simulation**. The app treats SimBrief as the dispatch/OFP backend, Navigraph as the chart provider, and simulator telemetry as the source of actual flight events. DispatchLink presents the resulting information in one consistent workflow instead of making each page maintain a separate copy of the flight.
+AeroSlate is a GitHub/Render-backed electronic flight bag for **flight simulation**. It uses SimBrief as the dispatch and OFP backend, Navigraph as the chart/navigation provider, and the local simulator bridge as the source of live flight data and actual event times.
 
-> **Simulation and recordkeeping aid.** This is not an approved real-world navigation source, aircraft performance program, operational-control system, or operator-approved FTL compliance system.
+> **Simulation and recordkeeping aid.** AeroSlate is not an approved real-world navigation source, certified aircraft-performance program, operational-control system, or operator-approved flight-time-limitations system.
 
-## The single-flight workflow
+## One active-flight workflow
 
-1. **Choose flight** — search the bundled `airports.dat`, paste an FR24 airport or aircraft-history table, filter the parsed real-world flights, and select one.
-2. **Dispatch** — DispatchLink preloads SimBrief with the selected flight, UTC schedule, aircraft, registration and OFP preferences. Detailed navlog, NOTAMs, maps and SimBrief Runway Analysis (`tlr=1`) are enabled.
-3. **Generate and synchronize** — generate the flight in the in-app SimBrief session. A stable flight ID lets DispatchLink watch for the result and import it automatically. Manual synchronization remains available.
-4. **Brief** — the native pages present the imported route, schedule, weights, fuel, weather, NOTAMs, navlog, maps, OFP and runway-analysis material.
-5. **Fly** — the local MSFS/X-Plane bridge supplies simulator Zulu time and telemetry. OOOI events can be automatic or entered with **NOW**.
-6. **Record** — the cloud logbook and duty drafts mirror the active flight, scheduled times and OOOI times. Synced fields are deliberately read-only so conflicting copies cannot be created.
+1. **Find** — search the bundled `airports.dat`, choose a random airport, or paste a supported Flightradar24 airport/aircraft-history page.
+2. **Dispatch** — AeroSlate prepares SimBrief with the flight, schedule, aircraft, registration, detailed navlog, NOTAM, map, and runway-analysis preferences.
+3. **Generate** — generate the OFP in the embedded SimBrief provider workspace. AeroSlate watches the stable flight ID and imports the completed plan.
+4. **Brief** — OFP, route, weather, all imported NOTAMs, active navlog, fuel, charts, binder documents, and SimBrief Tools use the same active-flight record.
+5. **Fly** — MSFS/X-Plane telemetry supplies live data and simulator Zulu. OOOI can be captured automatically or with **NOW**.
+6. **Record** — actual OOOI values and computed block/airborne time flow into cloud logbook and duty drafts without duplicate entry.
 
-The FAA registry download/cache system is not present. Airport lookup and IATA-to-ICAO conversion use the supplied `public/data/airports.dat` file.
+The FAA aircraft-registry downloader/cache is not included. Airport lookup and IATA-to-ICAO conversion use `public/data/airports.dat`.
 
-## FR24 paste formats
+## Responsive phone and tablet UI
 
-The Flight Finder automatically detects and parses all four layouts supplied in the regression fixture:
+The web/PWA interface supports:
 
-- Airport departures/arrivals desktop table
-- Airport departures/arrivals compact or mobile card layout
-- Aircraft-history card layout with `STD`, `STA`, `FROM` and `TO` labels
-- Aircraft-history desktop table
+- iPhone and Android portrait/landscape layouts
+- iPad and Android-tablet portrait/landscape layouts
+- iOS safe-area padding below the status bar and above the home indicator
+- Compact sticky top bar, slide-out tablet navigation, and a phone bottom tab bar
+- Touch-sized controls and 16 px form fields to prevent unwanted iOS zoom
+- Scrollable metric strips, tables, chart tools, provider controls, and NOTAM filters
+- Landscape-phone layouts that preserve working height
 
-The parser also:
+Install the PWA through **Add to Home Screen** for the best full-screen mobile layout.
 
-- Ignores page navigation, status, delay-statistics and disclaimer text
-- Accepts 12-hour and 24-hour clocks
-- Detects whether FR24 identifies the source as local or UTC
-- Converts local schedules to `HH:MMz` using each airport's IANA timezone from `airports.dat`
-- Infers compact-page dates from the airport/device date and detects midnight rollover
-- Handles blank flight numbers by using the aircraft registration when available
-- Normalizes two-letter airline flight numbers to ICAO operator codes
-- Merges duplicate airport/history rows so aircraft-history STA and ETE enrich the airport schedule row
-- Shows the detected format and time treatment in the Flight Finder
+## AeroSlate identity
 
-Run the exact supplied-format regression test with:
+The application title, shell, installer metadata, PWA manifest, service-worker cache, native setup screen, server responses, records export names, and simulator bridge now use **AeroSlate EFB**. New 192 px and 512 px slate/wing icons are included under `public/icons/`.
 
-```bash
-npm run test:parser
-```
+Legacy DispatchLink settings and data keys are read during migration so existing flights, provider URL, OOOI times, and drafts are not discarded.
 
-## SimBrief-backed dispatch and TOLR/TLR
+## SimBrief workspace and OFP
 
-DispatchLink does not use a generic home-built takeoff/landing distance formula. Every generated flight requests SimBrief **Runway Analysis** and presents the returned TLR data or the TLR pages inside the complete OFP.
+The Electron edition displays SimBrief Dispatch and SimBrief Tools inside AeroSlate using a persistent provider webview. Provider login data remains in the provider partition and is not exposed to the React application.
 
-The active OFP becomes the authoritative source for:
+The imported OFP is authoritative for:
 
-- Flight identity, aircraft, registration and route
-- Scheduled OUT/IN and planned block/air time
-- Departure/arrival runway selections
-- Weights, payload, fuel and fuel-flow figures
-- Weather, NOTAMs, navlog and maps
+- Flight identity, aircraft, registration, route, and runways
+- STD and STA
+- **Planned block time calculated as STA minus STD**, including midnight rollover
+- ETE, cruise altitude, cost index, weights, fuel, and maps
+- METARs, TAFs, detailed navlog, and NOTAMs
 - Runway-analysis/TLR material
 
-The SimBrief workspace stays inside the Windows app. In a normal browser, DispatchLink uses one named provider window so the EFB itself remains open.
+The ICAO flight-plan copier recursively reads the JSON produced from SimBrief XML and extracts the complete `(FPL-...)` message rather than copying an object representation or unrelated text.
 
-## Navigraph architecture
+## SimBrief Tools runway analysis
 
-The Windows edition presents the official Navigraph Charts web session inside the app using a persistent provider partition. You authenticate directly with Navigraph; DispatchLink does not receive the provider password or cache Navigraph chart images.
+The Runway Analysis page loads:
 
-A second adapter remains in the project for a Navigraph-approved simulator-linked Charts API build. It is intentionally gated by `NAVIGRAPH_CHARTS_APPROVED=true` and an active simulator heartbeat.
+```text
+https://dispatch.simbrief.com/tools
+```
 
-The document desk supports touch/mouse pen, highlighter, lines, arrows, boxes, text, erase, undo/redo, zoom, night display, multipage PDFs and annotated-image export for SimBrief documents, uploaded charts and approved direct-API images.
+The active OFP supplies origin, destination, aircraft, registration, departure/arrival runways, takeoff/landing/ZFW values, block fuel, winds, temperatures, and altimeters. In the native provider webview AeroSlate applies those values to matching controls after the tool loads. A manual **Apply OFP values** control remains available if the provider page changes or a value needs to be reapplied.
 
-## Time propagation
+AeroSlate does not create generic aircraft-performance values. Imported SimBrief TLR text/documents remain available beside the interactive tool.
 
-There is one OOOI record per active flight:
+## Navigraph and provider framing
 
-- Scheduled OUT/IN: selected FR24 flight, then replaced by the imported SimBrief OFP
-- Actual OUT/OFF/ON/IN: simulator Zulu or manual **NOW**
-- Block: OUT → IN
-- Airborne: OFF → ON
-- Logbook actuals: mirrored from OOOI
-- Report, duty-on and FDP start: optionally derived from scheduled OUT using a saved lead-time preset
-- FDP end: mirrored from actual IN
-- Duty-off: optionally derived from actual IN using a saved post-flight preset
+### Electron desktop edition
 
-Times are stored as `HH:MMz`. Time inputs accept `1234`, `12:34`, or `12:34z` and normalize when committed.
+The official authenticated Navigraph Charts web application is displayed in AeroSlate’s provider webview with a persistent session. SimBrief Dispatch and SimBrief Tools use the same native pattern. Login popups remain child windows of AeroSlate; unrelated external links open in the system browser.
 
-## MSFS and X-Plane bridge
+### Browser/PWA and mobile
 
-`bridge/dispatchlink_bridge.py` supports:
+An ordinary website cannot force another provider’s authenticated site into an iframe when the provider blocks framing. AeroSlate therefore:
 
-- Microsoft Flight Simulator through Python-SimConnect
-- X-Plane 11/12 through native RREF UDP
-- Simulator Zulu, position, heading, MSL/AGL altitude, IAS, GS and vertical speed
-- On-ground, parking-brake and engine state
-- Aircraft title and registration
-- Total fuel and total weight where available
-- Surface type/condition where exposed
-- The supplied TCalc directory/file coordinate math
+- Uses the embedded provider webview in Electron
+- Uses an in-app browser overlay when hosted in a compatible mobile native wrapper
+- Uses a named provider window as the web/PWA fallback so AeroSlate itself remains open
+
+AeroSlate does not reverse-proxy provider login pages, intercept provider passwords, remove provider security headers, or cache Navigraph chart images.
+
+The custom chart-image API adapter remains gated for a separately approved simulator-context implementation. See `docs/NAVIGRAPH_ACCESS_REQUEST.md`.
+
+## Flight binder and chart desk
+
+The Binder links directly to:
+
+- Complete SimBrief OFP PDF
+- SimBrief map documents returned with the OFP
+- Official Navigraph Charts workspace
+- Official SimBrief Tools
+- User-uploaded PDF/image documents
+
+The document workspace supports pen, highlighter, line, arrow, rectangle, text, erase, undo/redo, zoom, night display, multiple PDF pages, and annotated-image export.
+
+## Navlog and active navlog
+
+The planned navlog includes:
+
+- Fix and coordinates
+- Airway/direct segment
+- Magnetic course
+- Leg and remaining distance
+- Planned altitude
+- TAS/GS/Mach when supplied
+- Wind and OAT
+- Leg and cumulative time
+- Leg and remaining fuel
+
+**Active Navlog** adds persistent actual crossing time, actual altitude, actual fuel, remarks, and completion status. **NOW** enters the current UTC crossing time.
+
+## Weather and NOTAMs
+
+The Weather page displays origin, destination, and alternate METAR/TAF blocks. NOTAM extraction recursively searches the complete imported OFP rather than only airport weather objects.
+
+Important notices are promoted into a separate operational box, including detected:
+
+- Runway closures/restrictions
+- Approach, SID, STAR, ILS, RNAV, RNP, or minima changes
+- Airport/aerodrome closure language
+- Critical navaid outages
+- TFR/airspace restrictions
+- Obstacles and cranes
+
+All remaining imported NOTAMs remain available and can be filtered by runway, procedure, airport, airspace, navaid, or other.
+
+## Fuel page
+
+The fuel page separates three ideas:
+
+1. **SimBrief plan flow** — ramp minus taxi equals takeoff; takeoff minus trip burn equals planned landing fuel.
+2. **Actual checkpoint** — enter actual ramp/takeoff/current fuel or copy current fuel from simulator telemetry.
+3. **Trend** — compare actual fuel with the simple SimBrief average-burn trend and project landing fuel over the remaining planned ETE.
+
+Minimum-takeoff fuel, tank capacity, and average flow appear only when returned by the OFP. AeroSlate labels whether flow came directly from SimBrief or was derived as trip fuel divided by ETE.
+
+## Configurable simulator data
+
+Run `bridge/aeroslate_bridge.py` on the simulator PC. The Live page groups user-selected SimConnect/X-Plane values into:
+
+- Flight
+- Position
+- Aircraft state
+- Fuel and mass
+
+The TCalc directory/file display was removed from the UI. The bridge may retain compatibility calculations internally, but AeroSlate presents only operational live data. Metric selections are stored on the device.
 
 MSFS example:
 
 ```powershell
-py -m pip install SimConnect
-py bridge\dispatchlink_bridge.py --sim msfs --url https://YOUR-APP.onrender.com --token YOUR_SIM_LINK_TOKEN
+py -m pip install SimConnect requests
+py bridge\aeroslate_bridge.py --sim msfs --url https://YOUR-APP.onrender.com --token YOUR_SIM_LINK_TOKEN
 ```
 
 X-Plane example:
 
 ```powershell
-py bridge\dispatchlink_bridge.py --sim xplane --url https://YOUR-APP.onrender.com --token YOUR_SIM_LINK_TOKEN
+py -m pip install requests
+py bridge\aeroslate_bridge.py --sim xplane --url https://YOUR-APP.onrender.com --token YOUR_SIM_LINK_TOKEN
 ```
 
-## Cloud records
+The legacy `bridge/dispatchlink_bridge.py` remains temporarily for existing shortcuts.
 
-- AES-256-GCM encrypted workspace vaults on the Render persistent disk
-- Append-only flight and duty entries
-- Typed-name attestation before save
-- Chained SHA-256 audit hashes
-- CSV and JSON export
-- FAA/EASA-oriented record fields and user-selected rule/scheme fields
+## OOOI, logbook, and duty
 
-DispatchLink is **compliance-oriented, not regulator-certified**. The pilot/operator remains responsible for loggability decisions, signatures/endorsements, retention, backups and the applicable company/authority FTL rules.
+OOOI is the authoritative source of actual times:
+
+- OUT — gate departure
+- OFF — airborne
+- ON — touchdown
+- IN — gate arrival
+- Block — OUT to IN
+- Airborne — OFF to ON
+
+Scheduled STD/STA come from the selected flight and are replaced by the imported OFP. Simulator Zulu is used while linked; device UTC is the fallback. Automatic thresholds and debounce are saved locally.
+
+The records page uses grouped sections and dropdowns for crew role, operation, flight rules, regulation/scheme, and duty role. Synced identity/schedule/OOOI fields are read-only. Cloud records provide encrypted workspace vaults, append-only entries, typed-name attestation, chained SHA-256 audit hashes, and CSV/JSON export.
+
+AeroSlate is **compliance-oriented, not regulator-certified**. The pilot/operator remains responsible for loggability, signatures/endorsements, retention, backups, and the applicable operator/authority rules.
+
+## Scratchpad
+
+Clearance, ATIS, and notes templates are inserted automatically for each new active flight. Existing saved text is never overwritten. Each tab supports copy, restore template, and clear.
+
+## Supported FR24 paste formats
+
+The parser automatically recognizes:
+
+- Airport desktop table
+- Airport compact/mobile cards
+- Aircraft-history cards
+- Aircraft-history desktop table
+
+It accepts 12/24-hour times, detects local-versus-UTC source text, converts local schedules through `airports.dat` timezones, infers compact dates/midnight rollover, handles blank flight numbers, normalizes airline codes, and merges duplicate rows from airport/history sources.
+
+```bash
+npm run test:parser
+```
 
 ## Run locally
 
-Requirements: Node.js 20 or later.
+Requires Node.js 20 or later.
 
 ```bash
 cp .env.example .env
@@ -127,29 +206,31 @@ npm install
 npm run dev
 ```
 
-- Web app: `http://localhost:5173`
+- Web: `http://localhost:5173`
 - API: `http://localhost:3000`
 
-Checks:
+Validation commands:
 
 ```bash
 npm run check
 npm run test:parser
 npm run build
 node --check server/index.mjs
-python -m py_compile bridge/dispatchlink_bridge.py
+node --check electron/main.cjs
+node --check electron/preload.cjs
+python -m py_compile bridge/aeroslate_bridge.py
 ```
 
-## Deploy the backend to Render
+## Deploy to Render
 
-1. Push this repository to GitHub.
-2. In Render select **New → Blueprint** and choose the repository.
-3. `render.yaml` creates the Node service and a persistent disk at `/var/data`.
-4. Set `APP_BASE_URL` to the final Render HTTPS URL.
-5. Copy the generated `SIM_LINK_TOKEN` into the bridge command.
-6. Leave `NAVIGRAPH_CHARTS_APPROVED=false` unless Navigraph approves the direct chart API implementation.
+1. Push the repository to GitHub.
+2. In Render choose **New → Blueprint**.
+3. Select this repository.
+4. Set `APP_BASE_URL` to the final HTTPS service URL.
+5. Use the generated `SIM_LINK_TOKEN` in the local bridge command.
+6. Keep `NAVIGRAPH_CHARTS_APPROVED=false` unless Navigraph has approved that separate API use case.
 
-## Windows native app
+## Native desktop app
 
 Development:
 
@@ -158,53 +239,35 @@ npm install
 npm run native:dev
 ```
 
-Build an installer and portable ZIP:
+Installer/ZIP:
 
 ```bash
 npm run native:dist
 ```
 
-On first packaged launch, enter the HTTPS URL of your Render service. The URL is saved in the Electron user-data directory. It can later be changed from **Connections → Native app shell** or by launching with:
+At first launch enter the Render URL. It is stored in `aeroslate-native.json` and can later be changed from **Connections & App** or with:
 
 ```powershell
-DispatchLink.exe --app-url=https://YOUR-APP.onrender.com
+"AeroSlate EFB.exe" --app-url=https://YOUR-APP.onrender.com
 ```
-
-The native shell keeps separate persistent sessions for:
-
-- DispatchLink itself
-- SimBrief and Navigraph provider pages
-
-Provider login popups are opened as child windows inside the app; unrelated links open in the system browser.
-
-## Navigraph direct API setup
-
-Only after approval:
-
-```text
-NAVIGRAPH_CLIENT_ID=...
-NAVIGRAPH_CLIENT_SECRET=...
-NAVIGRAPH_REDIRECT_URI=https://YOUR-SERVICE.onrender.com/api/navigraph/callback
-NAVIGRAPH_CHARTS_APPROVED=true
-```
-
-See `docs/NAVIGRAPH_ACCESS_REQUEST.md`.
 
 ## Important files
 
 ```text
-bridge/dispatchlink_bridge.py           Local MSFS/X-Plane telemetry bridge
-public/data/airports.dat                Supplied airport database
-server/index.mjs                        SimBrief proxy, OAuth, telemetry, encrypted records
-src/App.tsx                             Main EFB shell and briefing pages
-src/lib/flightTimes.ts                  Canonical OOOI/time propagation
-src/pages/FlightFinderPage.tsx          Airport search and FR24 parser
-src/pages/SimBriefDispatchPage.tsx      Embedded dispatch and OFP watcher
-src/pages/RunwayAnalysisPage.tsx        SimBrief TLR presentation
-src/pages/OOOIPage.tsx                  Manual/automatic OOOI capture
-src/pages/RecordsPage.tsx               Synced logbook and duty records
-src/components/ProviderPortal.tsx       Native SimBrief/Navigraph sessions
-src/components/ChartWorkspace.tsx       PDF/chart annotation engine
-electron/                               Native Windows/macOS/Linux shell
-render.yaml                             Render service and persistent disk
+bridge/aeroslate_bridge.py               Local MSFS/X-Plane telemetry bridge
+electron/                                Native provider-webview shell
+public/data/airports.dat                 Airport database
+public/icons/                             AeroSlate PWA/installer identity
+server/index.mjs                         SimBrief proxy, OAuth, telemetry, encrypted records
+src/App.tsx                              Responsive AeroSlate shell
+src/lib/ofp.ts                           OFP/FPL/block/NOTAM interpretation
+src/lib/flightTimes.ts                   Canonical OOOI propagation
+src/pages/FlightFinderPage.tsx           Airport search and FR24 parser
+src/pages/NavlogPage.tsx                 Planned and active navlog
+src/pages/WeatherPage.tsx                Weather and categorized NOTAMs
+src/pages/FuelPage.tsx                   Plan/checkpoint/trend fuel workflow
+src/pages/RunwayAnalysisPage.tsx         Embedded SimBrief Tools workflow
+src/pages/RecordsPage.tsx                Synced logbook and duty records
+src/components/ProviderPortal.tsx        SimBrief/Navigraph provider sessions
+src/components/ChartWorkspace.tsx        PDF/image annotation desk
 ```

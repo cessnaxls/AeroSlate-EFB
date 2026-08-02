@@ -1,10 +1,35 @@
 {
-  "name": "DispatchLink EFB 0.3",
-  "short_name": "DL EFB",
-  "description": "SimBrief-first electronic flight bag with simulator-linked Navigraph support.",
+  "name": "AeroSlate EFB",
+  "short_name": "AeroSlate",
+  "description": "A responsive SimBrief- and Navigraph-backed electronic flight bag for flight simulation.",
   "start_url": "/",
+  "scope": "/",
+  "id": "/",
   "display": "standalone",
-  "background_color": "#081018",
-  "theme_color": "#081018",
-  "icons": []
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#071019",
+  "theme_color": "#071019",
+  "categories": [
+    "navigation",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/icons/aeroslate-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/aeroslate-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }

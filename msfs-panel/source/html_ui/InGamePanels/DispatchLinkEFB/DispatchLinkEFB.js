@@ -23,7 +23,7 @@
       });
       if (!response.ok) throw new Error(String(response.status));
     } catch (error) {
-      console.error('DispatchLink simulator heartbeat failed', error);
+      console.error('AeroSlate simulator heartbeat failed', error);
     }
   }
 
