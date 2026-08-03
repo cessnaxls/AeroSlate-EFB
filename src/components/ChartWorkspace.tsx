@@ -104,7 +104,7 @@ export function ChartWorkspace({ source, watermark }: Props) {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(1);
-  const [tool, setTool] = useState<Tool>('pan');
+  const [tool, setTool] = useState<Tool>('pen');
   const [color, setColor] = useState(COLORS[0]);
   const [zoom, setZoom] = useState(0.8);
   const [night, setNight] = useState(false);
@@ -113,11 +113,16 @@ export function ChartWorkspace({ source, watermark }: Props) {
   const [redoStack, setRedoStack] = useState<Annotation[][]>([]);
   const [status, setStatus] = useState('Select a chart');
   const drawingBase = useRef<Annotation[] | null>(null);
+  const renderTask = useRef<any>(null);
+  const sourceKey = source ? `${source.id}|${source.url}|${source.kind}` : '';
+  const sourceRef = useRef<ChartSource | null>(source);
+  sourceRef.current = source;
   const draftId = useRef<string | null>(null);
 
   const persist = useCallback((items: Annotation[]) => {
-    if (source) saveLocal(annotationKey(source, page), items);
-  }, [source, page]);
+    const active = sourceRef.current;
+    if (active) saveLocal(annotationKey(active, page), items);
+  }, [page, sourceKey]);
 
   const commit = useCallback((next: Annotation[]) => {
     setUndoStack(stack => [...stack.slice(-49), annotations]);
@@ -168,27 +173,45 @@ export function ChartWorkspace({ source, watermark }: Props) {
     };
     void load();
     return () => { cancelled = true; };
-  }, [source]);
+  }, [sourceKey]);
 
   useEffect(() => {
     if (!pdf || !baseCanvas.current || !overlayCanvas.current) return;
     let cancelled = false;
     const render = async () => {
       setStatus(`Rendering page ${page}…`);
-      const pdfPage = await pdf.getPage(page);
-      const viewport = pdfPage.getViewport({ scale: 1.6 });
-      if (cancelled || !baseCanvas.current || !overlayCanvas.current) return;
-      baseCanvas.current.width = viewport.width;
-      baseCanvas.current.height = viewport.height;
-      overlayCanvas.current.width = viewport.width;
-      overlayCanvas.current.height = viewport.height;
-      const ctx = baseCanvas.current.getContext('2d');
-      if (!ctx) return;
-      await pdfPage.render({ canvasContext: ctx, viewport }).promise;
-      if (!cancelled) setStatus('Ready');
+      try {
+        renderTask.current?.cancel?.();
+        const pdfPage = await pdf.getPage(page);
+        const viewport = pdfPage.getViewport({ scale: 1.6 });
+        if (cancelled || !baseCanvas.current || !overlayCanvas.current) return;
+        const width = Math.ceil(viewport.width);
+        const height = Math.ceil(viewport.height);
+        if (baseCanvas.current.width !== width || baseCanvas.current.height !== height) {
+          baseCanvas.current.width = width;
+          baseCanvas.current.height = height;
+          overlayCanvas.current.width = width;
+          overlayCanvas.current.height = height;
+        }
+        const ctx = baseCanvas.current.getContext('2d', { alpha: false });
+        if (!ctx) return;
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+        const task = pdfPage.render({ canvasContext: ctx, viewport });
+        renderTask.current = task;
+        await task.promise;
+        if (!cancelled) setStatus('Ready');
+      } catch (error: any) {
+        if (error?.name !== 'RenderingCancelledException' && !cancelled) {
+          console.error(error);
+          setStatus('Unable to render chart');
+        }
+      }
     };
     void render();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; renderTask.current?.cancel?.(); };
   }, [pdf, page]);
 
   useEffect(() => {
@@ -200,11 +223,11 @@ export function ChartWorkspace({ source, watermark }: Props) {
     setAnnotations(saved);
     setUndoStack([]);
     setRedoStack([]);
-  }, [source, page]);
+  }, [sourceKey, page]);
 
   useEffect(() => {
     if (overlayCanvas.current) paintAnnotations(overlayCanvas.current, annotations);
-  }, [annotations, status]);
+  }, [annotations]);
 
   const canvasPoint = (event: React.PointerEvent<HTMLCanvasElement>): Point => {
     const canvas = overlayCanvas.current!;
@@ -335,11 +358,11 @@ export function ChartWorkspace({ source, watermark }: Props) {
       </div>}
     </div>
     <div className="chart-scroll">
-      {!source && <div className="empty-chart"><PenLine size={42} /><h3>Chart desk ready</h3><p>Choose a Navigraph chart, SimBrief PDF, or local chart file.</p></div>}
+      {!source && <div className="empty-chart"><PenLine size={42} /><h3>Chart desk ready</h3><p>Choose an FAA chart or a chart saved in your binder.</p></div>}
       {source && <div className="chart-scaled" style={{ width: width * zoom, height: height * zoom }}>
         <div className="chart-stage" style={{ width, height, transform: `scale(${zoom})` }}>
           <canvas ref={baseCanvas} className={night ? 'chart-base night' : 'chart-base'} />
-          <canvas ref={overlayCanvas} className={`chart-overlay ${tool === 'pan' ? 'pan' : ''}`}
+          <canvas ref={overlayCanvas} style={{ touchAction: tool === 'pan' ? 'pan-x pan-y' : 'none' }} className={`chart-overlay ${tool === 'pan' ? 'pan' : ''}`}
             onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} />
           {source.navigraph && <div className="chart-watermark">{watermark || 'Navigraph chart — authenticated simulator use only'}</div>}
         </div>

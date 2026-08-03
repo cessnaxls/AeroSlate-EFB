@@ -1,3 +1,15 @@
+# AeroSlate EFB 0.11.1
+
+- Stabilized FAA chart rendering so annotations no longer trigger PDF reloads or flashing.
+- Made the chart source identity stable and added cancellation for stale PDF render jobs.
+- Defaulted the chart desk to Pen mode and isolated the annotation canvas from page gestures.
+- Corrected SimBrief dispatch to use the documented `cargo` parameter for freight.
+- Added SimBrief `acdata` passenger and bag-weight overrides so generated OFPs reproduce AeroSlate passenger-plus-baggage payloads while freight remains separate.
+- Added native SimBrief form prefilling for passenger, payload, and freight controls.
+- Centered highlighted random flights within the Flight Finder table viewport.
+- Made Trip button state derive from the actual saved trip store, with a confirmation toast after a successful add.
+- Initialized portrait navigation independently from the landscape collapsed-sidebar preference.
+
 # AeroSlate EFB 0.11.0
 
 ## Trips

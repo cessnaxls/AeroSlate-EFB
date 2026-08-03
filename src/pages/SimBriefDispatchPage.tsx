@@ -12,6 +12,16 @@ interface Props {
 }
 
 export function SimBriefDispatchPage({ url, flight, staticId, loading, onImport }: Props) {
+  const dispatchPrefill = (() => {
+    try {
+      const params = new URL(url).searchParams;
+      return {
+        passengers: params.get('pax') || undefined,
+        payload: params.get('payload') || params.get('manualpayload') || undefined,
+        freight: params.get('cargo') || undefined
+      };
+    } catch { return {}; }
+  })();
   const [watching, setWatching] = useState(true);
   const [synced, setSynced] = useState(false);
   const [lastCheck, setLastCheck] = useState('');
@@ -54,6 +64,6 @@ export function SimBriefDispatchPage({ url, flight, staticId, loading, onImport 
         <div className="provider-capabilities"><span><Check size={14} /> Detailed navlog</span><span><Check size={14} /> NOTAMs and maps</span><span><Check size={14} /> Runway analysis / TLR</span><span><Check size={14} /> Stable flight ID</span></div>
       </div>
     </section>
-    <section className="card provider-card"><ProviderPortal title="SimBrief Dispatch" url={url} windowName="aeroslate-simbrief" description="The native AeroSlate app keeps the authenticated SimBrief session inside the app. Generate the OFP here; the flight watcher then imports it without leaving AeroSlate." /></section>
+    <section className="card provider-card"><ProviderPortal title="SimBrief Dispatch" url={url} windowName="aeroslate-simbrief" prefill={dispatchPrefill} autoPrefill description="The native AeroSlate app keeps the authenticated SimBrief session inside the app. Generate the OFP here; the flight watcher then imports it without leaving AeroSlate." /></section>
   </div>;
 }

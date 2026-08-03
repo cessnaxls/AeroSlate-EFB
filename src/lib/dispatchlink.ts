@@ -733,7 +733,7 @@ function durationParts(value: string): [string, string] {
   return match ? [match[1], match[2]] : ['', ''];
 }
 
-export function buildSimbriefDispatch(flight: FlightCandidate, extras: { pax?: number; payload?: number; freight?: number; cargo?: number; remarks?: string; pilotId?: string } = {}): SimbriefDispatch {
+export function buildSimbriefDispatch(flight: FlightCandidate, extras: { pax?: number; bags?: number; bagWeight?: number; payload?: number; freight?: number; cargo?: number; remarks?: string; pilotId?: string } = {}): SimbriefDispatch {
   const flightMatch = flight.flightNumber.match(/^([A-Z]{3})(\d+[A-Z]?)$/);
   const clock = flight.std.replace(/[^0-9]/g, '').padStart(4, '0');
   const [steh, stem] = durationParts(flight.ete);
@@ -767,16 +767,29 @@ export function buildSimbriefDispatch(flight: FlightCandidate, extras: { pax?: n
   if (steh) params.set('steh', steh);
   if (stem) params.set('stem', stem);
   if (!flightMatch && flight.flightNumber !== '—') params.set('callsign', flight.flightNumber);
-  if (extras.pax != null) params.set('pax', String(extras.pax));
+  if (extras.pax != null) params.set('pax', String(Math.max(0, Math.round(extras.pax))));
   const payload = extras.payload;
   const freight = extras.freight ?? extras.cargo;
-  if (payload != null) params.set('payload', String(Math.max(0, Math.round(payload))));
-  if (freight != null) params.set('freight', String(Math.max(0, Math.round(freight))));
+  // SimBrief's documented API calls the Freight field `cargo`. The website's
+  // manual Payload control is not part of the public parameter table, so we
+  // also override the per-passenger and per-bag assumptions through acdata.
+  // This makes the generated load sheet reproduce AeroSlate's exact
+  // passenger + baggage payload while keeping freight separate.
+  if (extras.pax != null && extras.pax > 0) {
+    const bagWeightPerPassenger = Math.max(0, Number(extras.bagWeight || 0) / extras.pax);
+    params.set('acdata', JSON.stringify({ paxwgt: 190, bagwgt: Number(bagWeightPerPassenger.toFixed(3)) }));
+  }
+  if (payload != null) {
+    const roundedPayload = String(Math.max(0, Math.round(payload)));
+    params.set('payload', roundedPayload);
+    params.set('manualpayload', roundedPayload);
+  }
+  if (freight != null) params.set('cargo', String(Math.max(0, Math.round(freight))));
   if (extras.remarks) params.set('manualrmk', extras.remarks);
   if (extras.pilotId && /^\d+$/.test(extras.pilotId)) params.set('pid', extras.pilotId);
   return { url: `https://dispatch.simbrief.com/options/custom?${params.toString()}`, staticId };
 }
 
-export function buildSimbriefUrl(flight: FlightCandidate, extras: { pax?: number; payload?: number; freight?: number; cargo?: number; remarks?: string; pilotId?: string } = {}): string {
+export function buildSimbriefUrl(flight: FlightCandidate, extras: { pax?: number; bags?: number; bagWeight?: number; payload?: number; freight?: number; cargo?: number; remarks?: string; pilotId?: string } = {}): string {
   return buildSimbriefDispatch(flight, extras).url;
 }

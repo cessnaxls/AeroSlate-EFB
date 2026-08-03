@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.11.0",
-  "description": "AeroSlate EFB free edition with persistent unscheduled trips, collision-aware scheduling, professional grouped NOTAM alerts, chart drawing and expansion, and corrected SimBrief payload handling.",
+  "version": "0.11.1",
+  "description": "AeroSlate EFB free edition with stable chart annotation, corrected SimBrief load assumptions, centered random-flight selection, and reliable portrait navigation.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {

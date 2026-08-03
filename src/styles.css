@@ -1610,3 +1610,33 @@ main { min-height: 100dvh; }
   .flight-row-actions { display:grid!important; grid-template-columns:repeat(3,68px)!important; width:216px!important; min-width:216px!important; gap:6px!important; }
   .flight-row-actions button { width:68px!important; min-width:68px!important; max-width:68px!important; height:34px!important; font-size:10px!important; }
 }
+
+/* AeroSlate 0.11.1 — stable chart desk and first-launch portrait drawer */
+.chart-workspace,
+.chart-workspace-host,
+.chart-scroll,
+.chart-stage,
+.chart-base,
+.chart-overlay {
+  animation: none !important;
+  transition: none !important;
+}
+.chart-workspace-host { contain: layout paint; }
+.chart-scroll { overscroll-behavior: contain; }
+.chart-stage { transform-origin: top left; isolation: isolate; }
+.chart-base,
+.chart-overlay { display:block; backface-visibility:hidden; }
+.chart-base { background:#fff; }
+.chart-overlay { user-select:none; -webkit-user-select:none; }
+.chart-overlay:not(.pan) { cursor: crosshair; }
+.chart-overlay.pan { cursor: grab; pointer-events:none; }
+
+@media (orientation: portrait) and (max-width: 1180px) {
+  .sidebar.collapsed { width:min(320px,88vw) !important; }
+  .sidebar.collapsed .brand > div:not(.brand-mark),
+  .sidebar.collapsed .nav-group > span,
+  .sidebar.collapsed nav button > span,
+  .sidebar.collapsed nav button svg:last-child,
+  .sidebar.collapsed .sidebar-status { display:initial !important; }
+  .sidebar.collapsed nav button { justify-content:flex-start !important; }
+}

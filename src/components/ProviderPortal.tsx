@@ -38,7 +38,10 @@ function prefillScript(values: Record<string, string | number | undefined>) {
       [/temperature.*departure|departure.*temperature|oat.*departure/i, values.departureTemperature],
       [/temperature.*arrival|arrival.*temperature|oat.*arrival/i, values.arrivalTemperature],
       [/altimeter.*departure|qnh.*departure/i, values.departureAltimeter],
-      [/altimeter.*arrival|qnh.*arrival/i, values.arrivalAltimeter]
+      [/altimeter.*arrival|qnh.*arrival/i, values.arrivalAltimeter],
+      [/passengers?|pax/i, values.passengers],
+      [/^payload$|manual payload|payload.*lbs/i, values.payload],
+      [/freight|cargo/i, values.freight]
     ];
     const elements = [...document.querySelectorAll('input, select, textarea')];
     let changed = 0;

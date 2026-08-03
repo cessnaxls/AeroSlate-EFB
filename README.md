@@ -69,3 +69,10 @@ npm start
 - SimBrief dispatch sends passenger count to `pax`, passenger-plus-bag weight to `payload`, and freight weight to `freight`.
 - FAA charts are loaded from the official current d-TPP XML catalog and grouped by actual chart type.
 - NOTAM alert tiles use plain-language category names.
+
+
+## 0.11.1 load and chart behavior
+
+AeroSlate sends passenger count as `pax`, freight as SimBrief's documented `cargo` field, and applies passenger/bag assumptions through `acdata`. The requested passenger-plus-baggage total is also retained as the manual payload hint and in AeroSlate remarks. In the native desktop shell, AeroSlate additionally fills the visible SimBrief Passenger, Payload, and Freight controls after the page loads.
+
+The FAA chart PDF is rendered once per selected chart/page. Drawing occurs on a separate persistent canvas, so pen strokes, highlights, and shapes do not reload the chart document.

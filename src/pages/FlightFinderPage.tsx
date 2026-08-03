@@ -129,7 +129,7 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
     setSelectedFlight(flight);
     requestAnimationFrame(() => {
       const row = flightTableRef.current?.querySelector<HTMLElement>(`[data-flight-id="${CSS.escape(flight.id)}"]`);
-      row?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      row?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
     });
   };
   const dispatch = (flight: FlightCandidate) => {
@@ -137,6 +137,8 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
     saveLocal('aeroslate.lastDispatchLoad', { flightNumber: flight.flightNumber, pax: load.pax, bags: load.bags, bagWeight: load.bagWeight, freight: load.freight, payload: load.paxWeight + load.bagWeight });
     const plan = buildSimbriefDispatch(flight, {
       pax: load.pax,
+      bags: load.bags,
+      bagWeight: load.bagWeight,
       payload: load.paxWeight + load.bagWeight,
       freight: load.freight,
       remarks: `AeroSlate load: ${load.pax} pax; payload ${(load.paxWeight + load.bagWeight).toLocaleString()} lb (${load.bags} bags)${load.freight ? `, ${load.freight.toLocaleString()} lb freight` : ''}.`
@@ -182,7 +184,7 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
             <td className="reg-cell">{row.registration || '—'}</td>
             <td className="schedule-cell"><span title={row.rawStd ? `Pasted: ${row.rawStd}` : undefined}><small>STD</small>{row.std}</span><span title={row.rawSta ? `Pasted: ${row.rawSta}` : undefined}><small>STA</small>{row.sta}</span></td>
             <td className="ete-cell">{row.ete}</td>
-            <td className="dispatch-cell"><div className="flight-row-actions"><button className="primary compact build-action" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button>{onSchedule && <button className={`compact schedule-button ${addedTripKeys.has(tripCandidateKey(row)) ? 'trip-added' : ''}`} title="Add to unscheduled trips" onClick={async event => { event.stopPropagation(); const added = await onSchedule(row); if (added) setAddedTripKeys(current => new Set([...current, tripCandidateKey(row)])); }}><span className="trip-button-icon">{addedTripKeys.has(tripCandidateKey(row)) ? <Check size={15} /> : <CalendarPlus size={14} />}</span> Trip</button>}<button className="compact tail-button" disabled={!fr24TailUrl(row.registration)} title={row.registration ? `Open ${row.registration} on Flightradar24` : 'No registration available'} onClick={event => { event.stopPropagation(); const url = fr24TailUrl(row.registration); if (url) window.open(url, 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900'); }}><ExternalLink size={14} /> Tail</button></div></td>
+            <td className="dispatch-cell"><div className="flight-row-actions"><button className="primary compact build-action" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button>{onSchedule && <button className={`compact schedule-button ${addedTripKeys.has(tripCandidateKey(row)) ? 'trip-added' : ''}`} title="Add to unscheduled trips" onClick={async event => { event.stopPropagation(); const added = await onSchedule(row); if (added) { setAddedTripKeys(new Set(loadTrips().map(item => tripCandidateKey(item)))); notify('Leg added to trip'); } }}><span className="trip-button-icon">{addedTripKeys.has(tripCandidateKey(row)) ? <Check size={15} /> : <CalendarPlus size={14} />}</span> Trip</button>}<button className="compact tail-button" disabled={!fr24TailUrl(row.registration)} title={row.registration ? `Open ${row.registration} on Flightradar24` : 'No registration available'} onClick={event => { event.stopPropagation(); const url = fr24TailUrl(row.registration); if (url) window.open(url, 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900'); }}><ExternalLink size={14} /> Tail</button></div></td>
           </tr>)}
           {!flights.length && <tr><td colSpan={7} className="empty-cell">Copy a supported FR24 page, then press <strong>Paste & Parse</strong>.</td></tr>}
         </tbody></table>

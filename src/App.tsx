@@ -70,6 +70,7 @@ function migrateFlightLocalData(previous: ReturnType<typeof summary>, next: Retu
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard'); const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => loadLocal('aeroslate.sidebar.collapsed', false));
+  const [portraitDrawer, setPortraitDrawer] = useState(() => window.matchMedia('(max-width: 699px), (orientation: portrait) and (max-width: 1180px)').matches);
   const [ofp, setOfp] = useState<AnyRecord | null>(() => loadLocal('aeroslate.lastOFP', loadLocal<AnyRecord | null>('dispatchlink.lastOFP', null)));
   const [simbriefKey, setSimbriefKey] = useState(() => loadLocal('aeroslate.simbriefKey', loadLocal('dispatchlink.simbriefKey', '')));
   const [simbriefMode, setSimbriefMode] = useState<'username' | 'userid'>(() => loadLocal('aeroslate.simbriefMode', loadLocal<'username' | 'userid'>('dispatchlink.simbriefMode', 'username')));
@@ -84,6 +85,12 @@ export default function App() {
   const notify = useCallback((text: string) => setMessage(text), []);
 
   useEffect(() => saveLocal('aeroslate.sidebar.collapsed', sidebarCollapsed), [sidebarCollapsed]);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 699px), (orientation: portrait) and (max-width: 1180px)');
+    const update = () => { setPortraitDrawer(query.matches); if (query.matches) setMenuOpen(false); };
+    update(); query.addEventListener?.('change', update);
+    return () => query.removeEventListener?.('change', update);
+  }, []);
   useEffect(() => { if (!message) return; const timer = window.setTimeout(() => setMessage(''), 4200); return () => window.clearTimeout(timer); }, [message]);
   const refreshRuntime = useCallback(async () => { try { const response = await fetch('/api/runtime', { cache: 'no-store' }); if (response.ok) setRuntime(await response.json()); } catch { /* offline status */ } }, []);
   useEffect(() => { void refreshRuntime(); const runtimeTimer = window.setInterval(() => void refreshRuntime(), 5000); const clockTimer = window.setInterval(() => setClock(new Date()), 1000); if ('serviceWorker' in navigator) void navigator.serviceWorker.register('/sw.js'); return () => { clearInterval(runtimeTimer); clearInterval(clockTimer); }; }, [refreshRuntime]);
@@ -133,10 +140,11 @@ export default function App() {
   const navigate = (next: Page) => { setPage(next); setMenuOpen(false); };
   const grouped = ['Plan', 'Brief', 'Fly', 'Record', 'System'] as const;
 
-  return <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+  const effectiveCollapsed = !portraitDrawer && sidebarCollapsed;
+  return <div className={`app-shell ${effectiveCollapsed ? 'sidebar-collapsed' : ''}`}>
     {menuOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
-    <aside className={`${menuOpen ? 'sidebar open' : 'sidebar'} ${sidebarCollapsed ? 'collapsed' : ''}`}>
-      <div className="brand"><div className="brand-mark"><AeroSlateLogo size={40} /></div><div><strong>AeroSlate</strong><span>Electronic flight bag</span></div><button className="sidebar-collapse" title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setSidebarCollapsed(value => !value)}>{sidebarCollapsed ? <PanelLeftOpen size={18}/> : <PanelLeftClose size={18}/>}</button><button className="mobile-close" onClick={() => setMenuOpen(false)}><X /></button></div>
+    <aside className={`${menuOpen ? 'sidebar open' : 'sidebar'} ${effectiveCollapsed ? 'collapsed' : ''}`}>
+      <div className="brand"><div className="brand-mark"><AeroSlateLogo size={40} /></div><div><strong>AeroSlate</strong><span>Electronic flight bag</span></div><button className="sidebar-collapse" title={effectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setSidebarCollapsed(value => !value)}>{effectiveCollapsed ? <PanelLeftOpen size={18}/> : <PanelLeftClose size={18}/>}</button><button className="mobile-close" onClick={() => setMenuOpen(false)}><X /></button></div>
       <nav>{grouped.map(group => <div className="nav-group" key={group}><span>{group}</span>{NAV_ITEMS.filter(item => item.group === group).map(item => <button key={item.id} className={page === item.id ? 'active' : ''} onClick={() => navigate(item.id)}><item.icon size={18} /><span>{item.label}</span>{page === item.id && <ChevronRight size={15} />}</button>)}</div>)}</nav>
       <div className="sidebar-status"><div><span className={`status-dot ${runtime.simLinked ? 'online' : ''}`} />{runtime.simLinked ? 'Simulator linked' : 'Simulator offline'}</div><div><span className="status-dot online" />Provider workspaces ready</div></div>
     </aside>
