@@ -109,6 +109,9 @@ export interface ParsedNotam {
   important: boolean;
   priority: 'critical' | 'amendment' | 'advisory';
   category: 'airport' | 'runway' | 'taxiway' | 'lighting' | 'procedure' | 'navaid' | 'communication' | 'service' | 'airspace' | 'obstacle' | 'other';
+  validFrom: string | null;
+  validTo: string | null;
+  temporalStatus: 'active' | 'future' | 'past' | 'undated';
 }
 
 export function dig<T = any>(obj: any, ...paths: string[]): T | undefined {
@@ -349,6 +352,35 @@ function normalizeNotamStation(text: string, fallback: string): string {
   return (candidates[0] || fallback || 'GENERAL').toUpperCase();
 }
 
+
+function notamDateFromToken(token: string): Date | null {
+  const digits = token.replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  const year = 2000 + Number(digits.slice(0, 2));
+  const month = Number(digits.slice(2, 4)) - 1;
+  const day = Number(digits.slice(4, 6));
+  const hour = Number(digits.slice(6, 8));
+  const minute = Number(digits.slice(8, 10));
+  const date = new Date(Date.UTC(year, month, day, hour, minute));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseNotamValidity(text: string): Pick<ParsedNotam, 'validFrom' | 'validTo' | 'temporalStatus'> {
+  const startToken = text.match(/(?:^|\s)B\)\s*(\d{10})/i)?.[1]
+    || text.match(/(?:FROM|EFFECTIVE)\s*(\d{10})/i)?.[1];
+  const endToken = text.match(/(?:^|\s)C\)\s*(\d{10}|PERM)/i)?.[1]
+    || text.match(/(?:TO|UNTIL)\s*(\d{10}|PERM)/i)?.[1];
+  const from = startToken ? notamDateFromToken(startToken) : null;
+  const permanent = String(endToken || '').toUpperCase() === 'PERM';
+  const to = endToken && !permanent ? notamDateFromToken(endToken) : null;
+  const now = new Date();
+  let temporalStatus: ParsedNotam['temporalStatus'] = 'undated';
+  if (from && now < from) temporalStatus = 'future';
+  else if (to && now > to) temporalStatus = 'past';
+  else if (from || to || permanent) temporalStatus = 'active';
+  return { validFrom: from?.toISOString() || null, validTo: permanent ? null : (to?.toISOString() || null), temporalStatus };
+}
+
 function classifyNotam(text: string): Pick<ParsedNotam, 'important' | 'priority' | 'category'> {
   const runway = /\bRWY\b|RUNWAY|DECLARED DISTANCE|TORA|TODA|ASDA|LDA|RVR/i.test(text);
   const taxiway = /\bTWY\b|TAXIWAY|APRON/i.test(text);
@@ -404,7 +436,8 @@ export function getAllNotams(ofp: AnyRecord | null): ParsedNotam[] {
     seen.add(dedupeKey);
     const station = normalizeNotamStation(normalized, fallbackStation);
     const classification = classifyNotam(normalized);
-    results.push({ id: `${station}-${results.length}-${path}`, station, text: normalized, ...classification });
+    const validity = parseNotamValidity(normalized);
+    results.push({ id: `${station}-${results.length}-${path}`, station, text: normalized, ...classification, ...validity });
     return true;
   };
 

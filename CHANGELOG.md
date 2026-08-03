@@ -1,30 +1,28 @@
-# AeroSlate EFB 0.9.0
+# AeroSlate EFB 0.9.1
 
-## Operational corrections
-- Procedure `NA` is displayed as **Not authorized**, not “Not applicable.”
-- Improved ICAO flight-plan extraction from nested SimBrief XML/JSON and multiline `(FPL-...)` content.
-- Empty/object TLR obstacle values no longer render as `[object Object]`.
-- Added ISA deviation to every navlog waypoint when SimBrief supplies it.
+## Trip planner reliability
 
-## Interface
-- Flight number in the top flight bar now matches the route airport typography.
-- Structured takeoff and landing analysis panels display side-by-side when space permits.
-- Runway surface conditions are title-cased.
-- Portrait flight rows use the same compact height as landscape rows.
-- Flight Finder now filters by free text, airline ICAO code, and equipment.
-- Preflight and postflight tabs were removed.
+- Fixed Trip entries not appearing after they were added from Flight Finder.
+- Trips now refresh immediately when the shared ledger changes.
+- Added an explicit schedule-date control and selectable calendar dates.
+- Added duplicate protection, itinerary removal, dispatch actions, and live itinerary counts.
+- Connected-rig generation now always produces the requested 1–5 legs. It uses matching parsed connections when available and generates a continuous simulator itinerary when the current paste does not contain onward flights.
+- The planner automatically opens the month containing the selected flight.
+- Calendar entries are selectable and dispatchable.
 
-## OFP
-- Rebuilt the plaintext OFP as a professional operational briefing.
-- Added dispatch identity, schedule/profile, route and airports, aircraft/configuration, weather snapshot, fuel, weights/load, ICAO FPL, and operational remarks without a PDF dependency.
+## Flight Finder
 
-## Map and charts
-- Dark map is the default.
-- Added compact radar enable/disable and opacity controls.
-- Added an optional aviation-tile overlay configured through `VITE_OPENAIP_TILE_URL`.
-- Retained official/public chart binder support.
+- Build, Trip, and Tail remain side by side in portrait mode.
+- Removed the stray collapsed-sidebar label remnant.
 
-## Trips
-- Added 1–5 leg connected random rig generation from parsed schedules.
-- Added a month-style trip planner.
-- Each calendar trip can be dispatched directly to SimBrief with its stored randomized payload.
+## Active Navlog
+
+- Removed the fuel-pump glyph from inside the actual-fuel field.
+- Corrected the active checkpoint grid so ALT and FUEL no longer overlap.
+
+## NOTAM effective-time filtering
+
+- Added Current, Future, Past, and All filters.
+- The initial pilot-critical scan now shows current or undated operational NOTAMs.
+- Parses standard NOTAM B) and C) YYMMDDHHMM validity fields and PERM endings.
+- Full legal briefing content remains retained in the complete imported set.

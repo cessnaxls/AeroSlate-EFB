@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.9.0",
-  "description": "AeroSlate EFB free edition with corrected ICAO/NOTAM semantics, comprehensive OFP briefing, ISA navlog data, structured side-by-side TLR, dark adjustable route radar, filtered flight finder, connected trip rigs, and planner calendar.",
+  "version": "0.9.1",
+  "description": "AeroSlate EFB free edition with functional trip scheduling and rig generation, compact portrait row actions, corrected active-navlog inputs, and effective-time NOTAM filtering.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {

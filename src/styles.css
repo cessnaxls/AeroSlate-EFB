@@ -1408,3 +1408,33 @@ main { min-height: 100dvh; }
 .weather-ofp-summary { display:grid; gap:10px; }.weather-ofp-summary span{font-size:10px;color:var(--muted);text-transform:uppercase}.weather-ofp-summary p{font-family:var(--mono);font-size:12px;line-height:1.45;margin:3px 0 0}.route-airport-grid{margin-top:12px}
 @media(max-width:900px){.tlr-phase-stack{grid-template-columns:1fr!important}.flight-filter-bar{grid-template-columns:1fr 1fr}.flight-filter-bar input{grid-column:1/-1}.trip-builder-grid{grid-template-columns:1fr}.planner-day{min-height:72px}}
 @media(max-width:700px){.responsive-flight-table tbody tr{height:44px!important}.responsive-flight-table th,.responsive-flight-table td{padding:5px 7px!important;font-size:11px}.responsive-flight-table td small{font-size:8px!important;margin-top:0!important}.flight-row-actions button{min-height:30px!important;padding:4px 7px!important}.flight-filter-bar{grid-template-columns:1fr}.flight-filter-bar input{grid-column:auto}.flight-primary>span{font-size:15px!important}.planner-grid{min-width:680px}.planner-card .card-body{overflow-x:auto}}
+
+/* AeroSlate 0.9.1 — trip planner, portrait row actions, active-navlog and NOTAM timing fixes */
+.active-checkpoint-line { grid-template-columns: 82px 52px 92px 92px minmax(150px,1fr) 44px auto !important; }
+.active-checkpoint-line .fuel-input { width: 100%; min-width: 0; }
+.fuel-inline { display: contents; }
+.notam-time-filter { display:flex; gap:6px; flex-wrap:wrap; }
+.notam-time-filter button { min-height:30px; padding:5px 9px; border-radius:8px; }
+.notam-time-filter button.active { background:#174766; border-color:#2d8fbe; color:white; }
+.notam-validity { display:block; margin-top:6px; color:#8fa8b8; font-size:9px; }
+.planner-day { cursor:pointer; text-align:left; color:inherit; }
+.planner-day.selected { border-color:#27a8e5; box-shadow:inset 0 0 0 1px #27a8e5; background:#0d2332; }
+.planner-day.blank { cursor:default; opacity:.45; }
+.trip-date-picker { display:grid; grid-template-columns:auto minmax(150px,220px); align-items:center; gap:8px; }
+.trip-date-picker span { color:var(--muted); font-size:10px; text-transform:uppercase; }
+.trip-actions { display:flex !important; flex-wrap:nowrap; gap:6px; align-items:center; }
+.trip-actions button { white-space:nowrap; }
+.danger-button { border-color:#6a3036 !important; color:#ffb2b6 !important; }
+.sidebar.collapsed .brand > div:not(.brand-mark),
+.sidebar.collapsed .brand > span,
+.sidebar.collapsed .brand::before,
+.sidebar.collapsed .brand::after { display:none !important; content:none !important; }
+
+@media(max-width:700px){
+  .flight-row-actions { display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; gap:4px !important; }
+  .flight-row-actions button { flex:1 1 0 !important; min-width:0 !important; padding:4px 5px !important; font-size:9px !important; }
+  .responsive-flight-table .dispatch-cell { min-width:178px; }
+  .active-checkpoint-line { grid-template-columns:70px 46px 74px 78px minmax(120px,1fr) 38px auto !important; gap:4px !important; }
+  .trip-actions { width:100%; }
+  .trip-actions button { flex:1; }
+}
