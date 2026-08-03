@@ -1438,3 +1438,85 @@ main { min-height: 100dvh; }
   .trip-actions { width:100%; }
   .trip-actions button { flex:1; }
 }
+
+/* AeroSlate 0.9.2 — compact portrait actions and pilot-readable NOTAM briefing */
+@media (max-width: 760px) {
+  .responsive-flight-table tr {
+    grid-template-columns: minmax(0,1fr) !important;
+    grid-template-areas:
+      "flight"
+      "route"
+      "equip"
+      "reg"
+      "schedule"
+      "ete"
+      "action" !important;
+    height: auto !important;
+    min-height: 0 !important;
+    gap: 4px !important;
+    padding: 8px !important;
+  }
+  .responsive-flight-table .dispatch-cell { width: 100% !important; }
+  .flight-row-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    gap: 6px !important;
+  }
+  .flight-row-actions button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    width: auto !important;
+    padding: 7px 5px !important;
+  }
+}
+
+.notam-brief-card { display: grid; gap: 7px; }
+.notam-headline { display: block; color: #f2f7fa; font-size: 13px; line-height: 1.35; letter-spacing: .01em; }
+.notam-validity { display: block; color: #8ea5b5; font-size: 10px; }
+.notam-full-text { margin-top: 2px; border-top: 1px solid rgba(255,255,255,.07); padding-top: 6px; }
+.notam-full-text > summary { cursor: pointer; color: #71c8f3; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .45px; }
+.notam-full-text p { margin-top: 7px !important; color: #c4d1d9; }
+.compact-full-notam { display: grid; gap: 6px; padding-block: 9px !important; }
+.operational-airport > summary { position: sticky; top: 0; z-index: 1; }
+.operational-airport > div { display: grid; gap: 0; }
+.notam-station > summary small { white-space: normal; }
+
+/* Keep Flight Finder as one-line tabular rows at every width. The table may pan horizontally on phones. */
+.responsive-flight-table { min-width: 980px !important; table-layout: fixed !important; }
+.responsive-flight-table thead { display: table-header-group !important; }
+.responsive-flight-table tbody { display: table-row-group !important; }
+.responsive-flight-table tbody tr {
+  display: table-row !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+.responsive-flight-table th,
+.responsive-flight-table td {
+  display: table-cell !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  padding: 8px 9px !important;
+}
+.responsive-flight-table .dispatch-cell { width: 210px !important; }
+.flight-row-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+  gap: 6px !important;
+}
+.flight-row-actions button {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+  padding: 7px 6px !important;
+}
+@media (max-width: 760px) {
+  .responsive-flight-table tr { display: table-row !important; height: 56px !important; padding: 0 !important; }
+  .responsive-flight-table td { display: table-cell !important; }
+}

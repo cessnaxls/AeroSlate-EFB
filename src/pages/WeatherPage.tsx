@@ -16,6 +16,23 @@ function statusLabel(item: ParsedNotam) {
   if (/NOT AVBL|NOT AVAILABLE|SUSPENDED/i.test(item.text)) return 'Not available';
   return item.priority === 'critical' ? 'UNAVAILABLE' : 'ADVISORY';
 }
+
+function notamHeadline(item: ParsedNotam) {
+  const e = item.text.match(/(?:^|\n)E\)\s*([^\n]+)/i)?.[1]?.trim();
+  const source = e || item.text.split(/\n+/).map(line => line.trim()).find(line => line && !/^[QABC]\)/i.test(line) && !/NOTAM[NR]?$/i.test(line)) || item.text;
+  return source
+    .replace(/\bCLSD\b/gi, 'CLOSED')
+    .replace(/\bU\/S\b/gi, 'UNSERVICEABLE')
+    .replace(/\bOOS\b/gi, 'OUT OF SERVICE')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function validityLabel(item: ParsedNotam) {
+  if (item.temporalStatus === 'undated') return 'Validity not machine-readable';
+  const from = item.validFrom ? new Date(item.validFrom).toISOString().slice(0, 16).replace('T', ' ') + 'Z' : 'effective now';
+  const to = item.validTo ? new Date(item.validTo).toISOString().slice(0, 16).replace('T', ' ') + 'Z' : 'until further notice';
+  return `${from} → ${to}`;
+}
 function operationalRank(item: ParsedNotam) {
   if (item.priority === 'critical' && /(?:AD|AIRPORT|AERODROME).*\b(?:CLSD|CLOSED)\b/i.test(item.text)) return 0;
   if (item.priority === 'critical' && /(?:RWY|RUNWAY).*\b(?:CLSD|CLOSED)\b/i.test(item.text)) return 1;
@@ -65,7 +82,7 @@ export function WeatherPage({ ofp, flight }: { ofp: AnyRecord | null; flight: Fl
         <div className="card-body operational-notam-groups">
           {Object.entries(operationalGroups).map(([station, items]) => <details className="operational-airport" key={station} open={station === flight.origin || station === flight.destination}>
             <summary><div><strong>{station}</strong><span>{items.length} operational item{items.length === 1 ? '' : 's'}</span></div><div><span className="critical-dot">{items.filter(item => item.priority === 'critical').length} critical</span><span className="amendment-dot">{items.filter(item => item.priority === 'amendment').length} changed</span><ChevronDown size={15}/></div></summary>
-            <div>{items.map(item => <article className={`priority-${item.priority}`} key={item.id}><div className="notam-glance-line"><span className={`notam-status ${item.priority}`}>{statusLabel(item)}</span><span className={`notam-category ${item.category}`}>{categoryLabel(item.category)}</span></div><p>{item.text}</p><small className="notam-validity">{item.temporalStatus === 'undated' ? 'No machine-readable validity time' : `${item.validFrom ? `From ${new Date(item.validFrom).toISOString().slice(0,16).replace('T',' ')}Z` : 'Effective now'}${item.validTo ? ` · until ${new Date(item.validTo).toISOString().slice(0,16).replace('T',' ')}Z` : ''}`}</small></article>)}</div>
+            <div>{items.map(item => <article className={`priority-${item.priority} notam-brief-card`} key={item.id}><div className="notam-glance-line"><span className={`notam-status ${item.priority}`}>{statusLabel(item)}</span><span className={`notam-category ${item.category}`}>{categoryLabel(item.category)}</span></div><strong className="notam-headline">{notamHeadline(item)}</strong><small className="notam-validity">{validityLabel(item)}</small><details className="notam-full-text"><summary>Full legal text</summary><p>{item.text}</p></details></article>)}</div>
           </details>)}
           {!important.length && <div className="empty-inline good-scan"><strong>No critical airport or procedure condition identified.</strong><span>The complete imported NOTAM set remains available below for mandatory review.</span></div>}
         </div>
@@ -74,10 +91,10 @@ export function WeatherPage({ ofp, flight }: { ofp: AnyRecord | null; flight: Fl
 
     <section className="briefing-section card all-notams">
       <details>
-        <summary><div><Filter size={18} /><span><strong>Complete imported NOTAM set</strong><small>All {allNotams.length} imported notices retained; review this section for the complete briefing</small></span></div><div className="summary-badges"><span className="pill neutral">{allNotams.length}</span><ChevronDown size={17} /></div></summary>
+        <summary><div><Filter size={18} /><span><strong>Complete imported NOTAM set</strong><small>Searchable legal briefing · grouped by station · full source text retained</small></span></div><div className="summary-badges"><span className="pill neutral">{allNotams.length}</span><ChevronDown size={17} /></div></summary>
         <div className="notam-toolbar"><div className="notam-time-filter" aria-label="NOTAM effective-time filter"><button className={timeFilter === 'active' ? 'active' : ''} onClick={() => setTimeFilter('active')}>Current {timeCounts.active}</button><button className={timeFilter === 'future' ? 'active' : ''} onClick={() => setTimeFilter('future')}>Future {timeCounts.future}</button><button className={timeFilter === 'past' ? 'active' : ''} onClick={() => setTimeFilter('past')}>Past {timeCounts.past}</button><button className={timeFilter === 'all' ? 'active' : ''} onClick={() => setTimeFilter('all')}>All {allNotams.length}</button></div><div className="notam-filter-bar">{(['all', 'airport', 'runway', 'taxiway', 'lighting', 'procedure', 'navaid', 'communication', 'service', 'airspace', 'obstacle', 'other'] as const).map(item => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item === 'all' ? `All types` : categoryLabel(item)}</button>)}</div><label className="notam-search"><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search station or NOTAM text" /></label></div>
         <div className="card-body notam-groups">
-          {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([station, items]) => <details key={station} className="notam-station"><summary><span><strong>{station}</strong><small>{items.length} NOTAM{items.length === 1 ? '' : 's'} · {items.filter(item => item.priority === 'critical').length} critical · {items.filter(item => item.priority === 'amendment').length} changed</small></span><ChevronDown size={15} /></summary><div>{items.sort((a, b) => operationalRank(a) - operationalRank(b)).map(item => <article key={item.id} className={`full-notam priority-${item.priority}`}><div><span className={`notam-category ${item.category}`}>{categoryLabel(item.category)}</span>{item.priority !== 'advisory' && <span className={`notam-status ${item.priority}`}>{statusLabel(item)}</span>}</div><p>{item.text}</p></article>)}</div></details>) }
+          {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([station, items]) => <details key={station} className="notam-station"><summary><span><strong>{station}</strong><small>{items.length} NOTAM{items.length === 1 ? '' : 's'} · {items.filter(item => item.priority === 'critical').length} critical · {items.filter(item => item.priority === 'amendment').length} changed</small></span><ChevronDown size={15} /></summary><div>{items.sort((a, b) => operationalRank(a) - operationalRank(b)).map(item => <article key={item.id} className={`full-notam priority-${item.priority} compact-full-notam`}><div><span className={`notam-category ${item.category}`}>{categoryLabel(item.category)}</span>{item.priority !== 'advisory' && <span className={`notam-status ${item.priority}`}>{statusLabel(item)}</span>}</div><strong className="notam-headline">{notamHeadline(item)}</strong><small className="notam-validity">{validityLabel(item)}</small><details className="notam-full-text"><summary>Full text</summary><p>{item.text}</p></details></article>)}</div></details>) }
           {!allNotams.length && <div className="empty-inline"><AlertTriangle size={18} /> No NOTAM text was found in the imported OFP. Regenerate with NOTAMs and FIR NOTAMs enabled, then synchronize the OFP again.</div>}
         </div>
       </details>

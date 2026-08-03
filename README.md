@@ -1,4 +1,4 @@
-# AeroSlate EFB 0.9.1 — Free Edition
+# AeroSlate EFB 0.9.2 — Free Edition
 
 AeroSlate is a local-first, Render-free-tier EFB for flight simulation with SimBrief planning, FR24 schedule parsing, structured TLR, active navlog, simulator telemetry, records, trips, public charts, and an interactive route/radar map.
 
@@ -52,10 +52,16 @@ MSFS uses the included SimConnect bridge. X-Plane 11/12 uses the included UDP/RR
 AeroSlate can present and bind chart PDFs from official/public sources. The FAA publishes current U.S. terminal procedures as downloadable d-TPP PDFs. Worldwide coverage requires separate public AIP catalogs or a licensed chart API; there is no single unrestricted worldwide chart API bundled with AeroSlate. An optional aviation map-tile URL can be configured with `VITE_OPENAIP_TILE_URL`.
 
 
-## 0.9.1 operational fixes
+## 0.9.2 operational fixes
 
 The trip calendar now refreshes from the shared local ledger, schedules flights on a selected date, generates continuous 1–5-leg rigs, and exposes dispatch/removal controls. Flight row actions remain horizontal on portrait displays.
 
 NOTAMs now support Current, Future, Past, and All effective-time views. Standard B)/C) validity timestamps are parsed where present; undated items remain visible in Current so the complete briefing is not accidentally hidden.
 
 The Active Navlog actual-fuel field no longer contains an overlapping icon.
+
+
+## Trip planner
+
+Trips are saved locally first and do not require GitHub Gist or an internet connection. The Trip button, Add single leg, and connected-rig generator all write to the same itinerary store. AeroSlate then copies records into the audit ledger and optional encrypted Gist in the background. Existing ledger trips are migrated automatically.
+

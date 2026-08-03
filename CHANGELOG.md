@@ -1,28 +1,25 @@
-# AeroSlate EFB 0.9.1
+# AeroSlate EFB 0.9.2
 
-## Trip planner reliability
+## Trip planner repaired
 
-- Fixed Trip entries not appearing after they were added from Flight Finder.
-- Trips now refresh immediately when the shared ledger changes.
-- Added an explicit schedule-date control and selectable calendar dates.
-- Added duplicate protection, itinerary removal, dispatch actions, and live itinerary counts.
-- Connected-rig generation now always produces the requested 1–5 legs. It uses matching parsed connections when available and generates a continuous simulator itinerary when the current paste does not contain onward flights.
-- The planner automatically opens the month containing the selected flight.
-- Calendar entries are selectable and dispatchable.
+- Replaced the trip planner's dependency on the asynchronous audit ledger with a dedicated local-first itinerary store.
+- `Trip` now writes the selected flight immediately, updates the itinerary counter, and opens Trips without requiring GitHub Gist.
+- `Add single leg` and `Generate connected rig` use the same reliable storage path.
+- Existing trip records in the audit ledger are migrated into the local planner automatically.
+- Audit-ledger and Gist copies are written after the local save; a cloud/audit failure can no longer prevent the planner from working.
+- Added visible error notifications instead of silent failures.
+- Calendar entries, dispatch, deletion, duplicate protection, and 1–5 leg rigs remain supported.
 
-## Flight Finder
+## Flight Finder portrait controls
 
-- Build, Trip, and Tail remain side by side in portrait mode.
-- Removed the stray collapsed-sidebar label remnant.
+- Build, Trip, and Tail remain side by side at every responsive breakpoint.
+- Flight results remain straight, single-line table rows in portrait and landscape.
+- Narrow devices pan the table horizontally instead of converting rows into tall cards.
 
-## Active Navlog
+## NOTAM briefing redesign
 
-- Removed the fuel-pump glyph from inside the actual-fuel field.
-- Corrected the active checkpoint grid so ALT and FUEL no longer overlap.
-
-## NOTAM effective-time filtering
-
-- Added Current, Future, Past, and All filters.
-- The initial pilot-critical scan now shows current or undated operational NOTAMs.
-- Parses standard NOTAM B) and C) YYMMDDHHMM validity fields and PERM endings.
-- Full legal briefing content remains retained in the complete imported set.
+- Operational cards now lead with a concise plain-language headline.
+- Effective dates are displayed separately in a compact line.
+- Original legal NOTAM text is retained under an expandable Full legal text control.
+- Complete NOTAMs remain grouped by station and searchable, but no longer display every raw coded block by default.
+- Current, Future, Past, and All effective-time filters remain available.

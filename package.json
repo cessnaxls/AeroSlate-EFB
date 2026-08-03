@@ -2,7 +2,7 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "AeroSlate EFB free edition with functional trip scheduling and rig generation, compact portrait row actions, corrected active-navlog inputs, and effective-time NOTAM filtering.",
   "main": "electron/main.cjs",
   "type": "module",

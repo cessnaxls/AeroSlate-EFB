@@ -25,6 +25,7 @@ import { GatePage } from './pages/GatePage';
 import { TripsPage } from './pages/TripsPage';
 import { HelpPage } from './pages/HelpPage';
 import { appendLedgerRecord, emptyLedger, getOrCreateDeviceId, normalizeLedger } from './lib/cloudLedger';
+import { addTripsLocal, tripToRecordData } from './lib/trips';
 import { generateDispatchPayload } from './lib/dispatchlink';
 
 type Page = 'dashboard' | 'finder' | 'trips' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'sim' | 'times' | 'gates' | 'flightlogs' | 'dutylogs' | 'help' | 'settings';
@@ -112,11 +113,22 @@ export default function App() {
   const loadDemo = () => { setOfp(demoOFP); saveLocal('aeroslate.lastOFP', demoOFP); notify('Demo OFP loaded.'); setPage('dashboard'); };
   const scheduleTrip = useCallback(async (candidate: FlightCandidate) => {
     setSelectedCandidate(candidate); saveLocal('aeroslate.finder.flight', candidate);
-    const key='aeroslate.records.ledger.v2'; const ledger=normalizeLedger(loadLocal(key,emptyLedger()));
-    if (ledger.trips.some(entry => String(entry.data.candidateId)===candidate.id)) { notify(`${candidate.flightNumber} is already in Trips.`); setPage('trips'); return; }
-    const load=generateDispatchPayload(candidate); const data={candidateId:candidate.id,date:candidate.date,flightNumber:candidate.flightNumber,departure:candidate.departure,arrival:candidate.arrival,aircraft:candidate.aircraft,registration:candidate.registration,std:candidate.std,sta:candidate.sta,ete:candidate.ete,rawStd:candidate.rawStd||'',rawSta:candidate.rawSta||'',status:'Scheduled',...load};
-    const result=await appendLedgerRecord(ledger,'trip',data,getOrCreateDeviceId()); saveLocal(key,result.ledger);
-    window.dispatchEvent(new CustomEvent('aeroslate-ledger-updated')); notify(`${candidate.flightNumber} added to Trips · ${load.pax} pax, ${load.bags} bags.`); setPage('trips');
+    const local = addTripsLocal([candidate], String(candidate.date).slice(0, 10));
+    if (!local.added.length) { notify(`${candidate.flightNumber} is already in Trips.`); setPage('trips'); return; }
+    const trip = local.added[0];
+    notify(`${candidate.flightNumber} added to Trips · ${trip.pax} pax, ${trip.bags} bags.`);
+    setPage('trips');
+    try {
+      const key='aeroslate.records.ledger.v2';
+      const ledger=normalizeLedger(loadLocal(key,emptyLedger()));
+      if (!ledger.trips.some(entry => String(entry.data.candidateId)===candidate.id && String(entry.data.date).slice(0,10)===trip.date)) {
+        const result=await appendLedgerRecord(ledger,'trip',tripToRecordData(trip),getOrCreateDeviceId());
+        saveLocal(key,result.ledger);
+        window.dispatchEvent(new CustomEvent('aeroslate-ledger-updated'));
+      }
+    } catch (error) {
+      console.warn('Trip audit copy could not be written; local trip remains saved.', error);
+    }
   },[notify]);
 
   const navigate = (next: Page) => { setPage(next); setMenuOpen(false); };
