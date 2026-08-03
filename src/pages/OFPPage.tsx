@@ -1,5 +1,6 @@
 import { Clipboard, FileText, Gauge, Plane, Route, ShieldCheck, Clock3, CloudSun } from 'lucide-react';
 import { asArray, dig, getICAOFlightPlan, getWeather, type AnyRecord, type FlightSummary } from '../lib/ofp';
+import { loadLocal } from '../lib/storage';
 interface Props { ofp: AnyRecord | null; flight: FlightSummary; notify: (message: string) => void; }
 const text=(v:unknown,f='—')=>v===undefined||v===null||v===''?f:String(v);
 const num=(v:unknown,u='')=>{const n=Number(v);return Number.isFinite(n)?`${n.toLocaleString()}${u}`:'—'};
@@ -10,7 +11,8 @@ export function OFPPage({ofp,flight,notify}:Props){
  const alternates=asArray(dig(ofp,'alternate')).map((a:any)=>a?.icao_code||a?.icao).filter(Boolean).join(', ')||flight.alternate;
  const remarks=text(dig(ofp,'general.dx_rmk','params.manualrmk','general.remarks'),'No dispatcher remarks.');
  const fuel:[string,unknown][]=[['Ramp',dig(ofp,'fuel.plan_ramp')],['Taxi',dig(ofp,'fuel.taxi')],['Takeoff',dig(ofp,'fuel.plan_takeoff')],['Trip',dig(ofp,'fuel.enroute_burn')],['Contingency',dig(ofp,'fuel.contingency')],['Alternate',dig(ofp,'fuel.alternate_burn')],['Reserve',dig(ofp,'fuel.reserve')],['Extra',dig(ofp,'fuel.extra')],['Landing',dig(ofp,'fuel.plan_landing')]];
- const weights:[string,unknown][]=[['Passengers',dig(ofp,'weights.pax_count')],['Passenger weight',dig(ofp,'weights.pax_weight')],['Baggage',dig(ofp,'weights.bag_count')],['Cargo',dig(ofp,'weights.cargo')],['Payload',dig(ofp,'weights.payload')],['ZFW',dig(ofp,'weights.est_zfw')],['TOW',dig(ofp,'weights.est_tow')],['LDW',dig(ofp,'weights.est_ldw')],['MTOW',dig(ofp,'weights.max_tow')],['MLW',dig(ofp,'weights.max_ldw')]];
+ const generated=loadLocal<any>('aeroslate.lastDispatchLoad',null); const matching=generated&&generated.flightNumber===`${flight.airline}${flight.flightNumber}`?generated:null;
+ const weights:[string,unknown][]=[['Passengers',matching?.pax??dig(ofp,'weights.pax_count')],['Passenger weight',matching?matching.pax*190:dig(ofp,'weights.pax_weight')],['Baggage',matching?.bags??dig(ofp,'weights.bag_count')],['Bag weight',matching?.bagWeight??dig(ofp,'weights.bag_weight')],['Freight',matching?.freight??dig(ofp,'weights.cargo')],['Payload',matching?.payload??dig(ofp,'weights.payload')],['ZFW',dig(ofp,'weights.est_zfw')],['TOW',dig(ofp,'weights.est_tow')],['LDW',dig(ofp,'weights.est_ldw')],['MTOW',dig(ofp,'weights.max_tow')],['MLW',dig(ofp,'weights.max_ldw')]];
  const depwx=getWeather(ofp,'origin').metar, arrwx=getWeather(ofp,'destination').metar;
  return <div className="ofp-briefing-page">
   <section className="card ofp-hero"><div className="card-body"><div className="ofp-title-block"><span>{flight.airline}{flight.flightNumber}</span><strong>{flight.origin} → {flight.destination}</strong><small>{flight.aircraft} · {flight.registration} · Release {flight.release}</small></div><button onClick={copy}><Clipboard size={16}/> Copy ICAO FPL</button></div></section>

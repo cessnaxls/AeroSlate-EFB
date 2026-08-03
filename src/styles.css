@@ -1574,3 +1574,39 @@ main { min-height: 100dvh; }
 .chart-group-list button small { flex:none; color:var(--muted); }
 .chart-group-list button.active { background:rgba(39,157,225,.20); border-color:rgba(53,183,255,.65); }
 @media (max-width: 760px) { .polished-chart-layout { grid-template-columns: 1fr !important; } .polished-chart-layout .faa-chart-browser { min-height:auto; } .chart-group-list { max-height:36dvh; } .polished-chart-layout .chart-viewer-card { min-height:56dvh; } }
+/* AeroSlate 0.11 workflow refinements */
+.unscheduled-trips-card { overflow: hidden; }
+.unscheduled-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 14px; border-bottom:1px solid var(--border); background:#091722; }
+.unscheduled-toolbar span { color:var(--muted); font-size:11px; margin-right:auto; }
+.unscheduled-list { display:grid; gap:8px; padding:12px; }
+.unscheduled-list article { display:grid; grid-template-columns:minmax(220px,1fr) minmax(150px,190px) auto auto; gap:10px; align-items:end; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#091722; }
+.unscheduled-list article>div { display:grid; gap:3px; }.unscheduled-list article span { color:var(--muted); font-size:10px; }
+.unscheduled-list label { display:grid; gap:4px; }.unscheduled-list label>span { text-transform:uppercase; letter-spacing:.08em; font-size:8px; }
+.chart-airport-shortcuts { display:flex; gap:6px; margin:8px 0; flex-wrap:wrap; }.chart-airport-shortcuts button { min-height:28px; padding:4px 10px; }
+.chart-reload-button { min-width:88px; overflow:visible; }.chart-reload-button span { white-space:nowrap; }
+.chart-workspace-host { min-height:600px; height:calc(100% - 54px); background:#0a1117; overflow:hidden; }
+.chart-workspace-host .chart-workspace { min-height:600px; height:100%; }
+.chart-viewer-card.chart-expanded { position:fixed; z-index:150; left:var(--sidebar-width,302px); right:0; top:var(--topbar-height,126px); bottom:0; margin:0; border-radius:0; max-width:none; }
+.sidebar-collapsed .chart-viewer-card.chart-expanded { left:94px; }
+.grouped-alert-detail { padding:10px; gap:8px; }
+.alert-category-group { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#091722; }
+.alert-category-group>summary { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; cursor:pointer; list-style:none; }
+.alert-category-group>summary span { display:flex; align-items:baseline; gap:8px; }.alert-category-group>summary small { color:var(--muted); }
+.alert-category-group .foreflight-notam-row { grid-template-columns:1fr; padding:10px 12px; }.alert-category-group .foreflight-notam-row p { font-size:12px; }
+@media(max-width:760px){
+  .unscheduled-list article { grid-template-columns:1fr 1fr; }.unscheduled-list article>div { grid-column:1/-1; }
+  .chart-api-layout { min-width:900px; }.polished-chart-layout { overflow-x:auto; }
+  .chart-viewer-card.chart-expanded { left:0; top:calc(env(safe-area-inset-top) + 74px); bottom:var(--mobile-tabbar-height,74px); }
+}
+@media(max-width:700px){
+  .responsive-flight-table { min-width:980px !important; table-layout:fixed !important; }
+  .responsive-flight-table th:nth-child(1),.responsive-flight-table td:nth-child(1){width:125px!important}
+  .responsive-flight-table th:nth-child(2),.responsive-flight-table td:nth-child(2){width:170px!important}
+  .responsive-flight-table th:nth-child(3),.responsive-flight-table td:nth-child(3){width:90px!important}
+  .responsive-flight-table th:nth-child(4),.responsive-flight-table td:nth-child(4){width:105px!important}
+  .responsive-flight-table th:nth-child(5),.responsive-flight-table td:nth-child(5){width:180px!important}
+  .responsive-flight-table th:nth-child(6),.responsive-flight-table td:nth-child(6){width:75px!important}
+  .responsive-flight-table th:nth-child(7),.responsive-flight-table td:nth-child(7){width:230px!important}
+  .flight-row-actions { display:grid!important; grid-template-columns:repeat(3,68px)!important; width:216px!important; min-width:216px!important; gap:6px!important; }
+  .flight-row-actions button { width:68px!important; min-width:68px!important; max-width:68px!important; height:34px!important; font-size:10px!important; }
+}

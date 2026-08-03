@@ -17,7 +17,8 @@ export function normalizeTripDate(value: unknown, fallback = new Date()): string
 export function formatTripDate(value: unknown): string {
   const iso = normalizeTripDate(value);
   const [year, month, day] = iso.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const monthText = new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short' });
+  return `${monthText}. ${day}, ${year}`;
 }
 
 export interface PlannedTrip {
@@ -35,7 +36,7 @@ export interface PlannedTrip {
   ete: string;
   rawStd: string;
   rawSta: string;
-  status: 'Scheduled' | 'Dispatched' | 'Completed' | 'Canceled';
+  status: 'Unscheduled' | 'Scheduled' | 'Dispatched' | 'Completed' | 'Canceled';
   pax: number;
   bags: number;
   bagWeight: number;
@@ -58,7 +59,11 @@ export function saveTrips(trips: PlannedTrip[]): void {
   window.dispatchEvent(new CustomEvent(TRIPS_UPDATED_EVENT));
 }
 
-export function plannedTripFromFlight(flight: FlightCandidate, date: string, rigId = '', existingLoad?: Partial<PlannedTrip>): PlannedTrip {
+export function tripCandidateKey(flight: Pick<FlightCandidate, 'flightNumber'|'departure'|'arrival'|'std'|'date'|'registration'>): string {
+  return [flight.flightNumber, flight.departure, flight.arrival, flight.std, normalizeTripDate(flight.date), flight.registration].join('|').toUpperCase();
+}
+
+export function plannedTripFromFlight(flight: FlightCandidate, date: string, rigId = '', existingLoad?: Partial<PlannedTrip>, unscheduled = false): PlannedTrip {
   const payload = existingLoad?.pax != null ? existingLoad : generateDispatchPayload(flight);
   return {
     id: uuid(),
@@ -75,7 +80,7 @@ export function plannedTripFromFlight(flight: FlightCandidate, date: string, rig
     ete: flight.ete,
     rawStd: flight.rawStd || '',
     rawSta: flight.rawSta || '',
-    status: 'Scheduled',
+    status: unscheduled ? 'Unscheduled' : 'Scheduled',
     pax: Number(payload.pax || 0),
     bags: Number(payload.bags || 0),
     bagWeight: Number(payload.bagWeight || 0),
@@ -84,14 +89,15 @@ export function plannedTripFromFlight(flight: FlightCandidate, date: string, rig
   };
 }
 
-export function addTripsLocal(flights: FlightCandidate[], date: string, rigId = ''): { trips: PlannedTrip[]; added: PlannedTrip[] } {
+export function addTripsLocal(flights: FlightCandidate[], date: string, rigId = '', unscheduled = false): { trips: PlannedTrip[]; added: PlannedTrip[] } {
   const current = loadTrips();
   const added: PlannedTrip[] = [];
   for (const flight of flights) {
     const scheduledDate = normalizeTripDate(date || flight.date);
-    const exists = current.some(item => item.candidateId === flight.id && item.date === scheduledDate);
+    const key = tripCandidateKey(flight);
+    const exists = current.some(item => tripCandidateKey(flightFromTrip(item)) === key && (unscheduled || item.date === scheduledDate));
     if (exists) continue;
-    const trip = plannedTripFromFlight(flight, scheduledDate, rigId);
+    const trip = plannedTripFromFlight(flight, scheduledDate, rigId, undefined, unscheduled);
     current.push(trip);
     added.push(trip);
   }

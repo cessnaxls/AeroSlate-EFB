@@ -700,6 +700,7 @@ export function generateDispatchPayload(flight: FlightCandidate): DispatchPayloa
 export function pickOFPLayout(flightNumber: string): string {
   const airline = flightNumber.match(/^([A-Z]{3})/)?.[1] || '';
   if (airline === 'UAL') return randomItem(['UAL 2012', 'UAL 2018']);
+  if (airline === 'ENY') return 'AAL';
   if (KNOWN_LAYOUTS.has(airline)) return airline;
   if (REGIONAL.has(airline)) return randomItem(['AAL', 'DAL', 'UAL 2012', 'UAL 2018']);
   return randomItem(FALLBACK_LAYOUTS).replace(/^UAL$/, randomItem(['UAL 2012', 'UAL 2018']));

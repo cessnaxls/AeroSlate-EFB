@@ -113,10 +113,9 @@ export default function App() {
   const loadDemo = () => { setOfp(demoOFP); saveLocal('aeroslate.lastOFP', demoOFP); notify('Demo OFP loaded.'); setPage('dashboard'); };
   const scheduleTrip = useCallback(async (candidate: FlightCandidate): Promise<boolean> => {
     setSelectedCandidate(candidate); saveLocal('aeroslate.finder.flight', candidate);
-    const local = addTripsLocal([candidate], String(candidate.date).slice(0, 10));
-    if (!local.added.length) { notify(`${candidate.flightNumber} is already in Trips.`); window.setTimeout(() => setPage('trips'), 450); return false; }
+    const local = addTripsLocal([candidate], String(candidate.date).slice(0, 10), '', true);
+    if (!local.added.length) { notify(`${candidate.flightNumber} is already in Unscheduled Trips.`); return false; }
     const trip = local.added[0];
-    window.setTimeout(() => setPage('trips'), 850);
     try {
       const key='aeroslate.records.ledger.v2';
       const ledger=normalizeLedger(loadLocal(key,emptyLedger()));

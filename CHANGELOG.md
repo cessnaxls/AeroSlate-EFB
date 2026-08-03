@@ -1,24 +1,32 @@
-# AeroSlate EFB 0.10.1
+# AeroSlate EFB 0.11.0
 
-## Trip dates
-- New legs added from Flight Finder are normalized to ISO calendar dates before storage.
-- The itinerary presents dates using the same friendly month/day/year format as Trip Builder.
-- Existing valid saved dates are migrated automatically.
+## Trips
+- Adding a leg in Flight Finder no longer navigates away from the page.
+- Added legs retain a green checked Trip button across navigation, reloads, filters, and subsequent FR24 pastes.
+- Flight Finder additions enter an Unscheduled Trips queue.
+- Unscheduled legs can be assigned individually or randomly distributed over 7, 14, or 30 days.
+- Pairing/rig identifiers are preserved while random scheduling, and existing scheduled slots are respected.
+- Trip dates display as `Aug. 3, 2026` while remaining stored as ISO dates internally.
 
-## SimBrief payload mapping
-- Passenger count is sent to SimBrief's passenger-count field.
-- SimBrief payload is now exactly `(passengers × 190 lb) + (bags × 40 lb)`.
-- Freight is sent separately to the SimBrief freight field and is not included in payload.
-- The same mapping is used by Build buttons, itinerary dispatch, rigs, and calendar dispatch.
+## SimBrief payload
+- Passenger count is sent to SimBrief's passenger field.
+- Payload is exactly passenger count × 190 lb plus bag count × 40 lb.
+- Freight is sent separately and is not included in payload.
+- AeroSlate stores the generated load and presents it in the OFP briefing so SimBrief defaults do not overwrite the generated bag/payload summary.
+- Envoy (`ENY`) now selects the American Airlines (`AAL`) OFP layout.
 
 ## Charts
-- Replaced FAA webpage scraping with the official current d-TPP XML metafile.
-- Airport diagrams, departures, arrivals, approaches, minimums, hot spots, and visual procedures are grouped cleanly.
-- The airport chart set loads automatically when the Charts view is opened.
-- Removed unrelated chart-supplement documents from airport search results.
-- Refined the chart browser and viewer layout for tablet and phone use.
+- FAA chart PDFs now open in AeroSlate's annotation workspace.
+- Added pen, highlighter, line, arrow, rectangle, text, eraser, undo/redo, zoom, and export through the existing chart workspace.
+- Added origin, destination, and alternate airport shortcuts.
+- Added full-workspace chart expansion.
+- Reworked the chart reload control to prevent clipping on tablets.
 
-## NOTAMs and Flight Finder
-- Replaced cryptic three-letter alert tiles with plain-language category labels.
-- Renamed alert counters to `Critical` and `Procedure changes`.
-- Centered Clear flights beneath the other import actions.
+## NOTAMs
+- Current operational alerts are now collapsible by plain-language category within each airport.
+- Repetitive status/category tiles were replaced with concise summaries and expandable legal text.
+- The complete legal briefing remains available with current/future/past and category filters.
+
+## Device behavior
+- Disabled browser pinch, gesture, wheel, and keyboard page zoom while preserving chart-workspace zoom.
+- Portrait flight tables retain full-size Build, Trip, and Tail controls and pan horizontally rather than compressing the actions.

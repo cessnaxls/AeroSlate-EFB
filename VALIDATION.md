@@ -1,13 +1,12 @@
-# Validation — AeroSlate EFB 0.10.1
+# AeroSlate EFB 0.11.0 validation
 
 Passed:
-- TypeScript project check
+- TypeScript project check (`npm run check`)
+- FR24 parser regression: all four supported paste formats
+- Workflow regression: airport catalog, FAA chart API, route weather, NOTAM priorities, structured TLR
 - Node server syntax check
-- Both simulator bridge Python compilation checks
-- All four exact FR24 parser regression formats
-- Airport catalog regression: 7,692 airports and 237 countries
-- Workflow regression: clipboard parsing, FAA charts, route weather, NOTAM priorities, and structured TLR
-- SimBrief URL implementation review: pax, payload, and freight are separate parameters
+- Electron main/preload syntax checks
+- Python bridge byte compilation
 - ZIP integrity check
 
-The FAA chart service now reads the official current d-TPP XML metafile rather than scraping the search page.
+The final Vite bundle could not be executed in this workspace because its internal npm registry does not provide `@vitejs/plugin-react`. GitHub Actions and Render install from their normal registries and run the production build.
