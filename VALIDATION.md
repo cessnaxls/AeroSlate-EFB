@@ -1,10 +1,11 @@
-# Validation — 0.11.2
+# Validation — 0.11.3
 
-- TypeScript check
-- FR24 parser regression suite
+Passed:
+- TypeScript project check
 - Workflow regression suite
-- SimBrief pound-to-kilogram dispatch regression
-- Persistent multi-leg trip-state regression
-- Node/Electron syntax checks
-- Python bridge compilation
-- ZIP integrity
+- All four FR24 parser fixtures
+- SimBrief payload compensation regression
+- SimBrief cargo thousands-of-pounds regression
+- Node server and Electron syntax checks
+- Python simulator bridge compilation
+- ZIP integrity test

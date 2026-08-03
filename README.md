@@ -76,3 +76,8 @@ npm start
 AeroSlate sends passenger count as `pax`, freight as SimBrief's documented `cargo` field, and applies passenger/bag assumptions through `acdata`. The requested passenger-plus-baggage total is also retained as the manual payload hint and in AeroSlate remarks. In the native desktop shell, AeroSlate additionally fills the visible SimBrief Passenger, Payload, and Freight controls after the page loads.
 
 The FAA chart PDF is rendered once per selected chart/page. Drawing occurs on a separate persistent canvas, so pen strokes, highlights, and shapes do not reload the chart document.
+
+
+## SimBrief payload handling in 0.11.3
+
+AeroSlate no longer sends the undocumented `payload` or `manualpayload` URL fields. It uses the documented `pax`, `cargo`, and `acdata.paxwgt` inputs instead. Freight is sent as thousands of pounds, and passenger weight is adjusted to offset SimBrief's standard baggage allowance so the visible SimBrief Payload matches AeroSlate's generated passenger-plus-baggage total.

@@ -1,7 +1,7 @@
-# AeroSlate EFB 0.11.2
+# AeroSlate EFB 0.11.3
 
-- Trip buttons now use a persistent logical leg key and remain green independently for every saved leg.
-- Trip state survives filters, tab changes, reloads, and later FR24 pastes.
-- SimBrief payload and freight URL values are converted from AeroSlate pounds to the kilograms expected by the custom-options endpoint.
-- Native form prefill still receives the original pound values.
-- Existing trip records are migrated into the persistent green-state index automatically.
+- Removed unsupported SimBrief `payload` and `manualpayload` query parameters.
+- Corrected `cargo` to SimBrief's thousands-of-pounds API convention.
+- Uses documented `acdata.paxwgt` compensation so SimBrief's visible Payload matches AeroSlate passenger plus baggage weight.
+- Keeps exact AeroSlate pound values for the native form-filler and OFP display.
+- Retains persistent independent green Trip buttons.

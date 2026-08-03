@@ -728,8 +728,8 @@ function stableId(value: string): string {
   return `AEROSLATE_${Math.abs(hash >>> 0).toString(36).toUpperCase()}`;
 }
 
-function poundsToKilograms(value: number): number {
-  return Math.max(0, Math.round(value / 2.2046226218));
+function poundsToThousands(value: number): string {
+  return (Math.max(0, value) / 1000).toFixed(3).replace(/\.?0+$/, '');
 }
 
 function durationParts(value: string): [string, string] {
@@ -774,25 +774,25 @@ export function buildSimbriefDispatch(flight: FlightCandidate, extras: { pax?: n
   if (extras.pax != null) params.set('pax', String(Math.max(0, Math.round(extras.pax))));
   const payload = extras.payload;
   const freight = extras.freight ?? extras.cargo;
-  // SimBrief's documented API calls the Freight field `cargo`. The website's
-  // manual Payload control is not part of the public parameter table, so we
-  // also override the per-passenger and per-bag assumptions through acdata.
-  // This makes the generated load sheet reproduce AeroSlate's exact
-  // passenger + baggage payload while keeping freight separate.
-  // SimBrief's custom-options URL accepts manual mass values in kilograms,
-  // even when the visible form is set to pounds. Preserve AeroSlate's pound
-  // values in private query keys for the native form-filler and convert only
-  // the provider-facing payload/cargo parameters.
+  // The documented SimBrief API has no manual `payload` input. Passing the
+  // website field name in a custom URL produces incorrect values, so do not
+  // send payload/manualpayload at all. SimBrief does support `paxwgt` inside
+  // acdata and `cargo` in thousands of pounds. Its standard LBS load model
+  // assigns 55 lb of checked baggage per passenger; offset that standard
+  // baggage allowance through paxwgt so the resulting visible Payload equals
+  // AeroSlate's exact (pax × 190 lb) + (bags × 40 lb) total.
   if (payload != null) {
     const payloadLb = Math.max(0, Math.round(payload));
-    const payloadKg = poundsToKilograms(payloadLb);
-    params.set('payload', String(payloadKg));
-    params.set('manualpayload', String(payloadKg));
     params.set('as_payload_lbs', String(payloadLb));
+    if (extras.pax && extras.pax > 0) {
+      const simbriefBagAllowancePerPax = 55;
+      const adjustedPaxWeight = Math.max(0, (payloadLb / extras.pax) - simbriefBagAllowancePerPax);
+      params.set('acdata', JSON.stringify({ paxwgt: Number(adjustedPaxWeight.toFixed(3)) }));
+    }
   }
   if (freight != null) {
     const freightLb = Math.max(0, Math.round(freight));
-    params.set('cargo', String(poundsToKilograms(freightLb)));
+    params.set('cargo', poundsToThousands(freightLb));
     params.set('as_freight_lbs', String(freightLb));
   }
   if (extras.remarks) params.set('manualrmk', extras.remarks);
