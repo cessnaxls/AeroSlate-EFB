@@ -1,4 +1,4 @@
-# AeroSlate EFB 0.10.0 — Free Edition
+# AeroSlate EFB 0.10.1 — Free Edition
 
 AeroSlate is a Render/GitHub-hosted simulator EFB with SimBrief planning, FR24 paste parsing, trip scheduling, navlog, fuel monitoring, OOOI, records, NOTAM briefing, route weather, and public/official chart integrations.
 
@@ -11,7 +11,7 @@ AeroSlate is a Render/GitHub-hosted simulator EFB with SimBrief planning, FR24 p
 
 The free Render filesystem is ephemeral. Trips and records are local-first and can optionally synchronize to an encrypted private GitHub Gist.
 
-## 0.10.0 highlights
+## 0.10.1 highlights
 
 ### Portrait flight actions
 The flight table keeps Build, Trip, and Tail side by side at their full button size. Narrow devices pan the fixed-width table horizontally rather than shrinking or stacking controls.
@@ -61,3 +61,11 @@ npm run test:workflow
 npm run build
 npm start
 ```
+
+
+## 0.10.1 operational corrections
+
+- Trip dates are normalized and displayed consistently regardless of whether a leg was added from Flight Finder or Trip Builder.
+- SimBrief dispatch sends passenger count to `pax`, passenger-plus-bag weight to `payload`, and freight weight to `freight`.
+- FAA charts are loaded from the official current d-TPP XML catalog and grouped by actual chart type.
+- NOTAM alert tiles use plain-language category names.

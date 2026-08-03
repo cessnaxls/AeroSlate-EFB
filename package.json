@@ -2,7 +2,7 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "AeroSlate EFB free edition with fixed portrait flight actions, independent trip-rig previews, 30-minute day planning, ForeFlight-style NOTAM presentation, multi-layer route weather, altitude-matched icing screening, and integrated FAA d-TPP charts.",
   "main": "electron/main.cjs",
   "type": "module",

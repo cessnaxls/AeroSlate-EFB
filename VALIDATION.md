@@ -1,18 +1,13 @@
-# Validation — AeroSlate EFB 0.10.0
+# Validation — AeroSlate EFB 0.10.1
 
 Passed:
-
-- TypeScript 5.8.3 project check
+- TypeScript project check
 - Node server syntax check
-- Electron main-process syntax check
-- MSFS and X-Plane Python bridge compilation
-- Four exact FR24 parser regression formats
-- Airport catalog regression: 7,692 airports across 237 countries
-- Structured SimBrief TLR regression
-- NOTAM priority regression
-- Fixed-width portrait action-group source checks
-- Independent trip-rig preview and 30-minute day-view source checks
-- FAA chart API and PDF-proxy source checks
-- RainViewer, NASA GIBS, Open-Meteo route-weather and icing source checks
+- Both simulator bridge Python compilation checks
+- All four exact FR24 parser regression formats
+- Airport catalog regression: 7,692 airports and 237 countries
+- Workflow regression: clipboard parsing, FAA charts, route weather, NOTAM priorities, and structured TLR
+- SimBrief URL implementation review: pax, payload, and freight are separate parameters
+- ZIP integrity check
 
-The final Vite production bundle was not run because project dependencies are not installed in this sandbox. GitHub Actions and Render perform the normal dependency installation and production build.
+The FAA chart service now reads the official current d-TPP XML metafile rather than scraping the search page.

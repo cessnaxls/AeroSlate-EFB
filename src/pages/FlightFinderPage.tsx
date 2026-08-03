@@ -127,8 +127,9 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
     const load = generateDispatchPayload(flight);
     const plan = buildSimbriefDispatch(flight, {
       pax: load.pax,
-      cargo: load.freight,
-      remarks: `AeroSlate load: ${load.pax} pax, ${load.bags} bags (${load.bagWeight.toLocaleString()} lb)${load.freight ? `, ${load.freight.toLocaleString()} lb freight` : ''}.`
+      payload: load.paxWeight + load.bagWeight,
+      freight: load.freight,
+      remarks: `AeroSlate load: ${load.pax} pax; payload ${(load.paxWeight + load.bagWeight).toLocaleString()} lb (${load.bags} bags)${load.freight ? `, ${load.freight.toLocaleString()} lb freight` : ''}.`
     });
     notify(`Dispatch load · ${load.pax} pax · ${load.bags} bags${load.freight ? ` · ${load.freight.toLocaleString()} lb freight` : ''}.`);
     onDispatch(plan.url, flight, plan.staticId);

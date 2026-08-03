@@ -6,6 +6,20 @@ import type { LedgerEntry, RecordData } from './cloudLedger';
 export const TRIPS_KEY = 'aeroslate.trips.v1';
 export const TRIPS_UPDATED_EVENT = 'aeroslate-trips-updated';
 
+export function normalizeTripDate(value: unknown, fallback = new Date()): string {
+  const raw = String(value || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const parsed = new Date(raw);
+  const date = Number.isNaN(parsed.getTime()) ? fallback : parsed;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+export function formatTripDate(value: unknown): string {
+  const iso = normalizeTripDate(value);
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export interface PlannedTrip {
   id: string;
   candidateId: string;
@@ -35,7 +49,7 @@ function uuid(): string {
 
 export function loadTrips(): PlannedTrip[] {
   const value = loadLocal<unknown>(TRIPS_KEY, []);
-  return Array.isArray(value) ? value.filter(Boolean) as PlannedTrip[] : [];
+  return Array.isArray(value) ? (value.filter(Boolean) as PlannedTrip[]).map(item => ({ ...item, date: normalizeTripDate(item.date) })) : [];
 }
 
 export function saveTrips(trips: PlannedTrip[]): void {
@@ -50,7 +64,7 @@ export function plannedTripFromFlight(flight: FlightCandidate, date: string, rig
     id: uuid(),
     candidateId: flight.id,
     rigId,
-    date: String(date || flight.date).slice(0, 10),
+    date: normalizeTripDate(date || flight.date),
     flightNumber: flight.flightNumber,
     departure: flight.departure,
     arrival: flight.arrival,
@@ -74,7 +88,7 @@ export function addTripsLocal(flights: FlightCandidate[], date: string, rigId = 
   const current = loadTrips();
   const added: PlannedTrip[] = [];
   for (const flight of flights) {
-    const scheduledDate = String(flight.date || date).slice(0, 10) || date;
+    const scheduledDate = normalizeTripDate(date || flight.date);
     const exists = current.some(item => item.candidateId === flight.id && item.date === scheduledDate);
     if (exists) continue;
     const trip = plannedTripFromFlight(flight, scheduledDate, rigId);
@@ -123,7 +137,7 @@ export function mergeLedgerTrips(entries: LedgerEntry[]): PlannedTrip[] {
       id: entry.id,
       candidateId: String(d.candidateId || entry.id),
       rigId: String(d.rigId || ''),
-      date: String(d.date || '').slice(0, 10),
+      date: normalizeTripDate(d.date),
       flightNumber: String(d.flightNumber || ''),
       departure: String(d.departure || ''),
       arrival: String(d.arrival || ''),

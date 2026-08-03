@@ -1,34 +1,24 @@
-# AeroSlate EFB 0.10.0
+# AeroSlate EFB 0.10.1
 
-## Flight Finder
-- Keeps Build, Trip, and Tail at their full landscape size in portrait mode.
-- Uses a horizontally scrollable fixed-width table instead of compressing or stacking row actions.
-- Shows a temporary green check next to Trip after a successful save.
-- Retains the fading “Leg added to trip” notification.
+## Trip dates
+- New legs added from Flight Finder are normalized to ISO calendar dates before storage.
+- The itinerary presents dates using the same friendly month/day/year format as Trip Builder.
+- Existing valid saved dates are migrated automatically.
 
-## Trips
-- Random rig generation is independent of the currently selected Flight Finder row.
-- Generated 1–5 leg rigs appear as a preview with Regenerate and Accept controls.
-- Calendar days open an expanded day schedule with 30-minute Zulu tick marks.
-- Scheduled legs appear as time-positioned blocks and can be dispatched from the day view.
-- Local trip storage remains primary; Gist synchronization is optional.
-
-## NOTAMs
-- Replaced the dense alert wall with a ForeFlight-inspired route-station selector and focused alert list.
-- Displays only currently active operational alerts in the initial panel.
-- Preserves every imported NOTAM in the complete legal briefing.
-- Keeps Current, Future, Past, All, category, station, and text filters.
-- Shows concise plain-language headlines and expandable original legal text.
-
-## Maps and weather
-- Added reflectivity radar, satellite imagery, infrared cloud phase, and cloud-top temperature layers.
-- Added independent opacity and aviation-layer controls.
-- Added model-based icing screening at sampled route fixes.
-- Icing checks use each fix’s planned altitude and estimated crossing time, and only mark points where forecast temperature and moisture/cloud criteria overlap.
-- Dark map and dark controls remain the default.
+## SimBrief payload mapping
+- Passenger count is sent to SimBrief's passenger-count field.
+- SimBrief payload is now exactly `(passengers × 190 lb) + (bags × 40 lb)`.
+- Freight is sent separately to the SimBrief freight field and is not included in payload.
+- The same mapping is used by Build buttons, itinerary dispatch, rigs, and calendar dispatch.
 
 ## Charts
-- Added an integrated FAA d-TPP chart API proxy.
-- US airport diagrams, departures, arrivals, approaches, and minimums can be browsed and opened inside AeroSlate.
-- Official FAA PDFs can be added directly to the flight binder.
-- Worldwide official/public AIP PDF links can still be added manually because no single unrestricted global procedure-chart API exists.
+- Replaced FAA webpage scraping with the official current d-TPP XML metafile.
+- Airport diagrams, departures, arrivals, approaches, minimums, hot spots, and visual procedures are grouped cleanly.
+- The airport chart set loads automatically when the Charts view is opened.
+- Removed unrelated chart-supplement documents from airport search results.
+- Refined the chart browser and viewer layout for tablet and phone use.
+
+## NOTAMs and Flight Finder
+- Replaced cryptic three-letter alert tiles with plain-language category labels.
+- Renamed alert counters to `Critical` and `Procedure changes`.
+- Centered Clear flights beneath the other import actions.

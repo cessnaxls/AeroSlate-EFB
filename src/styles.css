@@ -1557,3 +1557,20 @@ main { min-height: 100dvh; }
 .map-legend { display:flex; flex-wrap:wrap; gap:8px 14px; padding-top:8px; color:#89a2b3; font-size:9px; }.map-legend span{display:inline-flex;align-items:center;gap:5px}.map-legend span:last-child{flex:1 1 320px}
 .chart-api-layout { display:grid; grid-template-columns:minmax(280px,.72fr) minmax(0,1.28fr); gap:14px; }.chart-api-layout>.span-2{grid-column:1/-1}.chart-search-row{display:grid;grid-template-columns:1fr auto;gap:8px}.faa-chart-list{display:grid;gap:5px;margin-top:10px;max-height:52vh;overflow-y:auto}.faa-chart-list button{display:grid;text-align:left;gap:2px;padding:9px 10px;border-radius:8px;background:#08151f}.faa-chart-list button.active{border-color:#2ba8e2;background:#103149}.faa-chart-list button span{font-size:9px;color:var(--muted)}.chart-viewer-card{min-height:620px}.chart-viewer-body{height:calc(100% - 54px);min-height:560px;background:#18222a}.chart-viewer-body iframe{width:100%;height:100%;min-height:560px;border:0;background:white}.chart-source-note{padding:0 16px 14px}
 @media(max-width:900px){.chart-api-layout{grid-template-columns:1fr}.chart-api-layout>.span-2{grid-column:auto}.chart-viewer-card{min-height:540px}.chart-viewer-body,.chart-viewer-body iframe{min-height:480px}}
+
+
+/* AeroSlate 0.10.1 refinements */
+.compact-import-card .import-button-stack > .text-button { justify-self: center; width: min(190px, 80%); }
+.foreflight-notam-icon { min-width: 112px !important; width: auto !important; padding: 8px 10px !important; font-size: 11px !important; letter-spacing: .04em !important; text-align: center; }
+.polished-chart-layout { grid-template-columns: minmax(300px, 34%) minmax(0, 1fr) !important; align-items: stretch; gap: 14px; }
+.polished-chart-layout .faa-chart-browser, .polished-chart-layout .chart-viewer-card { min-height: calc(100dvh - 230px); }
+.chart-group-list { display: grid; gap: 8px; margin-top: 12px; max-height: calc(100dvh - 350px); overflow-y: auto; padding-right: 4px; }
+.chart-group-list details { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(4,20,31,.42); }
+.chart-group-list summary { display:flex; justify-content:space-between; align-items:center; padding:11px 12px; cursor:pointer; }
+.chart-group-list summary span { color: var(--muted); font-size:12px; }
+.chart-group-list details > div { display:grid; gap:4px; padding:0 7px 7px; }
+.chart-group-list button { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; padding:9px 10px; border-radius:8px; text-align:left; }
+.chart-group-list button strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chart-group-list button small { flex:none; color:var(--muted); }
+.chart-group-list button.active { background:rgba(39,157,225,.20); border-color:rgba(53,183,255,.65); }
+@media (max-width: 760px) { .polished-chart-layout { grid-template-columns: 1fr !important; } .polished-chart-layout .faa-chart-browser { min-height:auto; } .chart-group-list { max-height:36dvh; } .polished-chart-layout .chart-viewer-card { min-height:56dvh; } }
