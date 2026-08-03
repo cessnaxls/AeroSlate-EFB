@@ -18,11 +18,18 @@ assert.doesNotMatch(finder, /<textarea[^>]*fr24-paste/);
 assert.doesNotMatch(finder, /<th>Source<\/th>/);
 assert.match(finder, /<th>EQUIP<\/th>/);
 assert.match(finder, /<th>REG<\/th>/);
+assert.match(finder, /Random tail on FR24/);
+assert.match(finder, /flightradar24\.com\/data\/aircraft/);
+assert.match(finder, /> Tail<\/button>/);
 
 const app = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');
 assert.match(app, /page-panel/);
 assert.match(app, /flightlogs/);
 assert.match(app, /dutylogs/);
+const chartsPage = fs.readFileSync(path.join(root, 'src/pages/ChartsPage.tsx'), 'utf8');
+assert.match(chartsPage, /https:\/\/charts\.navigraph\.com\/flights\/current/);
+const runwayPage = fs.readFileSync(path.join(root, 'src/pages/RunwayAnalysisPage.tsx'), 'utf8');
+assert.match(runwayPage, /https:\/\/dispatch\.simbrief\.com\/tools/);
 
 const buildDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aeroslate-workflow-'));
 try {

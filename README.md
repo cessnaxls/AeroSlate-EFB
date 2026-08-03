@@ -1,4 +1,4 @@
-# AeroSlate EFB 0.5.0 Free
+# AeroSlate EFB 0.5.1 — Free Render Edition
 
 AeroSlate is a responsive, local-first electronic flight bag for **Microsoft Flight Simulator 2020 and X-Plane 11/12**. The hosted service deploys on Render's free web-service plan. SimBrief supplies the dispatch/OFP data, the official Navigraph Charts website is presented as an authenticated provider workspace, and the local simulator bridge supplies live telemetry and simulator Zulu time.
 
@@ -218,3 +218,15 @@ npm run native:dist
 ```
 
 The resulting installer/archive is placed in `release/`. GitHub Actions also includes the native build workflow.
+
+## 0.5.1 operational workflow additions
+
+Parsed airport flights now include **Build** and **Tail** actions. Tail opens the matching FR24 aircraft-history page, and **Random tail on FR24** selects a registration from the current list. Copy that aircraft page and use **Paste & Parse** again to switch from an airport schedule to a tail rotation.
+
+The provider destinations are fixed to the official current-flight pages:
+
+- Navigraph Charts: `https://charts.navigraph.com/flights/current`
+- SimBrief Tools: `https://dispatch.simbrief.com/tools`
+- OFP: the PDF URL supplied by SimBrief under `/ofp/flightplans/`
+
+The planned navlog calculates waypoint ETAs; Active Navlog carries downstream ATA estimates from the latest actual crossing. The pilot-critical NOTAM scan is grouped by airport and promotes only closures, runway/approach-equipment outages, unavailable procedures, and procedure amendments. The complete unmodified NOTAM set remains available below it.

@@ -22,13 +22,7 @@ export function RunwayAnalysisPage({ ofp, flight, onOpenOFP, notify }: Props) {
   const origin = metarValues(originMetar); const destination = metarValues(destinationMetar);
   const takeoffWeight = weight(ofp, 'weights.est_tow'); const landingWeight = weight(ofp, 'weights.est_ldw');
   const zfw = weight(ofp, 'weights.est_zfw'); const blockFuel = weight(ofp, 'fuel.plan_ramp');
-  const params = new URLSearchParams({
-    orig: flight.origin, dest: flight.destination, type: flight.aircraft, reg: flight.registration,
-    origrwy: flight.departureRunway === '—' ? '' : flight.departureRunway,
-    destrwy: flight.arrivalRunway === '—' ? '' : flight.arrivalRunway,
-    tow: takeoffWeight ? String(takeoffWeight) : '', ldw: landingWeight ? String(landingWeight) : '', units: flight.units
-  });
-  const toolsUrl = `https://dispatch.simbrief.com/tools?${params.toString()}`;
+  const toolsUrl = 'https://dispatch.simbrief.com/tools';
   const prefill = {
     origin: flight.origin, destination: flight.destination, aircraft: flight.aircraft, registration: flight.registration,
     departureRunway: flight.departureRunway, arrivalRunway: flight.arrivalRunway,

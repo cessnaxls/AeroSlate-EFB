@@ -29,6 +29,11 @@ function timeModeLabel(mode?: FlightCandidate['timeMode']) {
 
 const AIRPORTS = airportCatalog as Airport[];
 
+function fr24TailUrl(registration?: string) {
+  const reg = String(registration || '').trim().replace(/^REG\s*/i, '').toLowerCase();
+  return reg ? `https://www.flightradar24.com/data/aircraft/${encodeURIComponent(reg)}` : '';
+}
+
 export function FlightFinderPage({ onDispatch, notify }: Props) {
   const airports = AIRPORTS;
   const [country, setCountry] = useState(() => loadLocal('aeroslate.finder.country', 'United States'));
@@ -67,6 +72,15 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
     const airport = filteredAirports[Math.floor(Math.random() * filteredAirports.length)];
     setSelectedAirport(airport); setAirportQuery(airport.icao);
     notify(`Selected ${airport.icao} · ${airport.name}.`);
+  };
+
+  const openRandomTail = () => {
+    const withTail = flights.filter(row => fr24TailUrl(row.registration));
+    if (!withTail.length) { notify('No registrations are available in the parsed flight list.'); return; }
+    const row = withTail[Math.floor(Math.random() * withTail.length)];
+    setSelectedFlight(row);
+    window.open(fr24TailUrl(row.registration), 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900');
+    notify(`Opened ${row.registration} aircraft history on FR24.`);
   };
 
   const parseText = (text: string) => {
@@ -112,7 +126,7 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
       <div className="card-body paste-action-body">
         <div className="paste-action-copy"><strong>One-button import</strong><p>Copy a complete FR24 airport departures/arrivals page or aircraft-history page. AeroSlate reads the clipboard, detects the layout, converts times, and builds the flight list automatically.</p></div>
         <button className="primary paste-parse-button" onClick={() => void pasteAndParse()} disabled={readingClipboard}><Clipboard size={20} /> {readingClipboard ? 'Reading clipboard…' : 'Paste & Parse'}</button>
-        <div className="button-row compact-actions"><button onClick={() => { if (!flights.length) return notify('Paste and parse flights first.'); const row = flights[Math.floor(Math.random() * flights.length)]; setSelectedFlight(row); notify(`Selected ${row.flightNumber}.`); }}><Shuffle size={17} /> Random flight</button><button className="text-button" onClick={() => { setFlights([]); setSelectedFlight(null); setParseInfo(null); }}><RefreshCw size={15} /> Clear flights</button></div>
+        <div className="button-row compact-actions"><button onClick={() => { if (!flights.length) return notify('Paste and parse flights first.'); const row = flights[Math.floor(Math.random() * flights.length)]; setSelectedFlight(row); notify(`Selected ${row.flightNumber}.`); }}><Shuffle size={17} /> Random flight</button><button onClick={openRandomTail} disabled={!flights.some(row => Boolean(fr24TailUrl(row.registration)))}><Plane size={17} /> Random tail on FR24</button><button className="text-button" onClick={() => { setFlights([]); setSelectedFlight(null); setParseInfo(null); }}><RefreshCw size={15} /> Clear flights</button></div>
         {parseInfo && <div className="parser-result">
           <div className="parser-format-row"><strong>Detected</strong>{parseInfo.formats.map(format => <span className="pill blue" key={format}>{FORMAT_LABELS[format]}</span>)}{parseInfo.timeModes.map(mode => <span className={mode === 'local-unresolved' || mode === 'unknown' ? 'pill warn' : 'pill good'} key={mode}>{timeModeLabel(mode)}</span>)}</div>
           {parseInfo.warnings.map(warning => <div className="notice warn parser-warning" key={warning}><p>{warning}</p></div>)}
@@ -131,7 +145,7 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
             <td className="reg-cell">{row.registration || '—'}</td>
             <td className="schedule-cell"><span title={row.rawStd ? `Pasted: ${row.rawStd}` : undefined}><small>STD</small>{row.std}</span><span title={row.rawSta ? `Pasted: ${row.rawSta}` : undefined}><small>STA</small>{row.sta}</span></td>
             <td className="ete-cell">{row.ete}</td>
-            <td className="dispatch-cell"><button className="primary compact" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button></td>
+            <td className="dispatch-cell"><div className="flight-row-actions"><button className="primary compact" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button><button className="compact tail-button" disabled={!fr24TailUrl(row.registration)} title={row.registration ? `Open ${row.registration} on Flightradar24` : 'No registration available'} onClick={event => { event.stopPropagation(); const url = fr24TailUrl(row.registration); if (url) window.open(url, 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900'); }}><ExternalLink size={14} /> Tail</button></div></td>
           </tr>)}
           {!flights.length && <tr><td colSpan={7} className="empty-cell">Copy a supported FR24 page, then press <strong>Paste & Parse</strong>.</td></tr>}
         </tbody></table>
