@@ -27,7 +27,10 @@ assert.match(app, /page-panel/);
 assert.match(app, /flightlogs/);
 assert.match(app, /dutylogs/);
 const chartsPage = fs.readFileSync(path.join(root, 'src/pages/ChartsPage.tsx'), 'utf8');
-assert.match(chartsPage, /https:\/\/charts\.navigraph\.com\/flights\/current/);
+assert.match(chartsPage, /chartfox\.org/);
+assert.match(chartsPage, /faa\.gov\/air_traffic\/flight_info\/aeronav\/digital_products\/dtpp/);
+assert.match(chartsPage, /rainviewer\.com\/public\/weather-maps\.json/);
+assert.doesNotMatch(chartsPage, /charts\.navigraph\.com/);
 const runwayPage = fs.readFileSync(path.join(root, 'src/pages/RunwayAnalysisPage.tsx'), 'utf8');
 assert.match(runwayPage, /https:\/\/dispatch\.simbrief\.com\/tools/);
 
@@ -74,4 +77,4 @@ try {
 } finally {
   fs.rmSync(buildDir, { recursive: true, force: true });
 }
-console.log(`Workflow regression passed: airports=${airports.length}, countries=${new Set(airports.map(item => item.country)).size}, persistent providers, clipboard parser, NOTAM priorities, structured TLR`);
+console.log(`Workflow regression passed: airports=${airports.length}, countries=${new Set(airports.map(item => item.country)).size}, public chart suite, route radar, clipboard parser, NOTAM priorities, structured TLR`);

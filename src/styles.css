@@ -1312,3 +1312,73 @@ main { min-height: 100dvh; }
   .scratch-sheet { min-height: 270px; }
   .flight-row-actions button { padding-inline: 5px; font-size: 10px; }
 }
+
+/* AeroSlate 0.8.0 — aligned data rows, professional OFP, ops logs, gates and chart suite */
+.flight-table-wrap { overflow-x: auto !important; }
+.responsive-flight-table { min-width: 980px !important; table-layout: fixed !important; }
+.responsive-flight-table tbody tr { display: table-row !important; height: 56px !important; }
+.responsive-flight-table th, .responsive-flight-table td { display: table-cell !important; vertical-align: middle !important; white-space: nowrap !important; padding: 8px 9px !important; border-bottom: 1px solid #1d2e3a !important; }
+.responsive-flight-table .route-cell { display: table-cell !important; line-height: 1 !important; }
+.responsive-flight-table .route-cell strong, .responsive-flight-table .route-cell span { display: inline !important; vertical-align: middle !important; }
+.responsive-flight-table .route-cell span { margin: 0 5px; }
+.responsive-flight-table .schedule-cell { display: table-cell !important; }
+.responsive-flight-table .schedule-cell > span { display: inline-grid; margin-right: 12px; vertical-align: middle; }
+.responsive-flight-table .dispatch-cell { display: table-cell !important; }
+.responsive-flight-table .equip-cell::before, .responsive-flight-table .reg-cell::before, .responsive-flight-table .ete-cell::before { content: none !important; }
+@media (max-width: 700px) {
+  .responsive-flight-table thead { display: table-header-group !important; }
+  .responsive-flight-table, .responsive-flight-table tbody { display: table !important; width: 100% !important; }
+  .flight-table-wrap { margin: 0; border-radius: 0 0 12px 12px; }
+}
+
+.ofp-briefing-page { display: grid; gap: 14px; }
+.ofp-hero .card-body { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.ofp-title-block { display:grid; gap:3px; }
+.ofp-title-block > span { color:var(--blue); font-weight:800; letter-spacing:.12em; }
+.ofp-title-block > strong { font-size:clamp(24px,3vw,40px); }
+.ofp-title-block small { color:var(--muted); }
+.ofp-kpi-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.ofp-kpi-grid > div { border:1px solid var(--border); background:#091722; border-radius:9px; padding:10px; display:grid; gap:3px; }
+.ofp-kpi-grid span { color:var(--muted); font-size:10px; text-transform:uppercase; }
+.route-briefing-text { font-family:monospace; line-height:1.65; font-size:14px; }
+.compact-fpl { max-height:240px; overflow:auto; }
+
+.gate-summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.gate-summary-grid > div { padding:18px; border:1px solid var(--border); border-radius:12px; background:#091722; display:grid; gap:6px; }
+.gate-summary-grid span { color:var(--muted); text-transform:uppercase; font-size:10px; }
+.gate-summary-grid strong { font-size:20px; }
+
+.ops-log-entry { display:grid; grid-template-columns:90px 150px 140px minmax(220px,1fr) auto; gap:8px; align-items:end; }
+.ops-log-entry label { display:grid; gap:5px; }
+.ops-log-entry label span { color:var(--muted); font-size:10px; text-transform:uppercase; }
+.ops-log-list { display:grid; gap:6px; margin-top:14px; }
+.ops-log-list > div { display:grid; grid-template-columns:72px 120px 120px 1fr; gap:10px; align-items:center; padding:10px; border:1px solid var(--border); border-radius:9px; }
+.ops-log-list p { margin:0; }
+
+.charts-suite { display:grid; gap:12px; }
+.map-card { height:calc(100dvh - var(--safe-top) - 150px); min-height:480px; }
+.map-card .card-body, .map-body { height:100%; min-height:0; display:flex; flex-direction:column; }
+.route-radar-map { flex:1; min-height:380px; width:100%; border-radius:10px; overflow:hidden; z-index:0; }
+.map-disclaimer { margin:8px 0 0; }
+.binder-add-row { display:grid; grid-template-columns:1fr 2fr auto; gap:8px; }
+.chart-binder-grid { display:grid; gap:8px; }
+.chart-binder-grid article { display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:center; padding:10px; border:1px solid var(--border); border-radius:9px; }
+.chart-binder-grid article div { display:grid; gap:2px; }
+.chart-binder-grid article span { color:var(--muted); font-size:11px; }
+
+/* Navlog: only the navlog viewport scrolls. Active mode uses horizontal pan; planned mode uses vertical rows. */
+.navlog-page, .navlog-card { max-height:calc(100dvh - var(--safe-top) - 92px); overflow:hidden !important; }
+.navlog-card .card-body { min-height:0; overflow:hidden; }
+.navlog-scroll.axis-vertical { overflow-y:auto !important; overflow-x:hidden !important; height:100%; }
+.navlog-scroll.axis-horizontal { overflow-x:auto !important; overflow-y:hidden !important; height:100%; }
+.navlog-scroll.axis-vertical .rich-navlog { min-width:100% !important; table-layout:fixed; }
+
+@media (max-width:900px){
+ .ofp-hero .card-body { align-items:flex-start; flex-direction:column; }
+ .gate-summary-grid { grid-template-columns:1fr; }
+ .ops-log-entry { grid-template-columns:1fr 1fr; }
+ .ops-log-entry .grow { grid-column:1/-1; }
+ .ops-log-list > div { grid-template-columns:64px 1fr auto; }
+ .ops-log-list p { grid-column:1/-1; }
+ .binder-add-row { grid-template-columns:1fr; }
+}

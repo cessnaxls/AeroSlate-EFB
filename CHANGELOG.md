@@ -1,26 +1,12 @@
-# AeroSlate EFB 0.7.0
+# AeroSlate EFB 0.8.0
 
-## Flight Finder
-- Expanded the airport browser and reduced the import panel to four compact stacked actions.
-- Random Flight now selects the row and scrolls it into view.
-- Build now generates the requested realistic time-of-day passenger, baggage, and occasional freight load before opening SimBrief.
-- Preserved trip scheduling and encrypted GitHub Gist synchronization.
-
-## Navigation and workflow
-- Fixed landscape tablet sidebar collapse so the EFB can expand into the released space.
-- Added Help, FRAT, Preflight, and Postflight pages.
-- Help includes step-by-step private encrypted GitHub Gist setup for trips and records.
-
-## Navlog
-- The navlog card is constrained to the available device viewport.
-- Added Rows and Columns modes so the navlog scrolls on only one axis at a time.
-- The rest of the page remains fixed while the navlog itself scrolls.
-
-## Weather and NOTAMs
-- Operational airport groups are collapsible.
-- Procedure changes and increased minima take precedence over generic outage words when categorizing a notice.
-- Complete source NOTAM text remains grouped by station for the legal briefing.
-
-## Scratchboard
-- Rebuilt the scratchpad as four simultaneously available cockpit sheets: Clearance, ATIS, Taxi, and Flight Notes.
-- Each sheet autosaves, has its own quick inserts, and can be copied, reset, or cleared independently.
+## Changed
+- Rebuilt every Flight Finder row as one aligned table row in portrait and landscape. Route, equipment, registration, schedule, ETE and actions now share a common vertical center.
+- The Trip action now saves immediately to the local encrypted ledger and opens Trips; it no longer only navigates to a page with an unsaved candidate.
+- Replaced the OFP PDF workspace with a native professional SimBrief briefing containing overview, route, fuel, weights, ICAO FPL and dispatcher remarks.
+- Removed FRAT.
+- Replaced preflight and postflight checklist pages with timestamped operational activity logs similar to operator activity feeds.
+- Replaced Scratchpad with a departure/arrival gate page. It uses OFP gate data first and supports a live AeroDataBox provider adapter when a key is configured.
+- Removed Navigraph. Added a public/official chart suite with ChartFox, FAA d-TPP search, per-flight binders and direct chart URLs.
+- Added a draggable/zoomable Leaflet route map with SimBrief waypoint overlay, light/dark basemaps and public RainViewer radar where available.
+- Tightened the Navlog viewport so only the table scrolls; Rows mode is vertical-only and Columns mode is horizontal-only.

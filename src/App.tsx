@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, BookOpenCheck, Calculator, CalendarDays, Check, CheckCircle2, ChevronRight, ClipboardCheck, CloudSun, FileText, Fuel, Gauge, HelpCircle, Import,
-  LayoutDashboard, Link2, Map, Menu, NotebookPen, PanelLeftClose, PanelLeftOpen, Plane, RefreshCw, Route, Search, Settings, ShieldCheck, Timer, X
+  LayoutDashboard, Link2, Map, MapPin, Menu, PanelLeftClose, PanelLeftOpen, Plane, RefreshCw, Route, Search, Settings, Timer, X
 } from 'lucide-react';
 import { AeroSlateLogo } from './components/AeroSlateLogo';
 import { type ChartSource } from './components/ChartWorkspace';
@@ -21,12 +21,14 @@ import { RunwayAnalysisPage } from './pages/RunwayAnalysisPage';
 import { SimPage } from './pages/SimPage';
 import { OOOIPage } from './pages/OOOIPage';
 import { RecordsPage } from './pages/RecordsPage';
-import { ScratchpadPage } from './pages/ScratchpadPage';
+import { GatePage } from './pages/GatePage';
 import { TripsPage } from './pages/TripsPage';
 import { HelpPage } from './pages/HelpPage';
-import { OperationalWorkflowPage } from './pages/OperationalWorkflowPage';
+import { OperationsLogPage } from './pages/OperationsLogPage';
+import { appendLedgerRecord, emptyLedger, getOrCreateDeviceId, normalizeLedger } from './lib/cloudLedger';
+import { generateDispatchPayload } from './lib/dispatchlink';
 
-type Page = 'dashboard' | 'finder' | 'trips' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'frat' | 'preflight' | 'sim' | 'times' | 'postflight' | 'flightlogs' | 'dutylogs' | 'scratchpad' | 'help' | 'settings';
+type Page = 'dashboard' | 'finder' | 'trips' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'preflight' | 'sim' | 'times' | 'postflight' | 'gates' | 'flightlogs' | 'dutylogs' | 'help' | 'settings';
 interface RuntimeStatus { simLinked: boolean; mode: 'standalone' | 'sim-linked'; providerMode: 'official-web-session'; }
 interface NavItem { id: Page; label: string; shortLabel: string; icon: typeof LayoutDashboard; group: 'Plan' | 'Brief' | 'Fly' | 'Record' | 'System'; }
 const NAV_ITEMS: NavItem[] = [
@@ -40,14 +42,13 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'weather', label: 'WX / NOTAMs', shortLabel: 'Weather', icon: CloudSun, group: 'Brief' },
   { id: 'fuel', label: 'Fuel', shortLabel: 'Fuel', icon: Fuel, group: 'Brief' },
   { id: 'performance', label: 'Runway', shortLabel: 'Runway', icon: Calculator, group: 'Brief' },
-  { id: 'frat', label: 'FRAT', shortLabel: 'FRAT', icon: ShieldCheck, group: 'Brief' },
   { id: 'preflight', label: 'Preflight', shortLabel: 'Preflight', icon: ClipboardCheck, group: 'Fly' },
   { id: 'sim', label: 'Live data', shortLabel: 'Live', icon: Activity, group: 'Fly' },
   { id: 'times', label: 'OOOI', shortLabel: 'OOOI', icon: Timer, group: 'Fly' },
   { id: 'postflight', label: 'Postflight', shortLabel: 'Post', icon: CheckCircle2, group: 'Fly' },
   { id: 'flightlogs', label: 'Flights', shortLabel: 'Flights', icon: BookOpenCheck, group: 'Record' },
   { id: 'dutylogs', label: 'Duty', shortLabel: 'Duty', icon: Timer, group: 'Record' },
-  { id: 'scratchpad', label: 'Scratchpad', shortLabel: 'Notes', icon: NotebookPen, group: 'Record' },
+  { id: 'gates', label: 'Gates', shortLabel: 'Gates', icon: MapPin, group: 'Fly' },
   { id: 'help', label: 'Help', shortLabel: 'Help', icon: HelpCircle, group: 'System' },
   { id: 'settings', label: 'Settings', shortLabel: 'More', icon: Settings, group: 'System' }
 ];
@@ -112,6 +113,15 @@ export default function App() {
     saveLocal('aeroslate.dispatch.url', url); saveLocal('aeroslate.dispatch.flight', selected); saveLocal('aeroslate.dispatch.staticId', staticId); setPage('simbrief'); notify(`Prepared ${selected.flightNumber} for SimBrief.`);
   };
   const loadDemo = () => { setOfp(demoOFP); saveLocal('aeroslate.lastOFP', demoOFP); notify('Demo OFP loaded.'); setPage('dashboard'); };
+  const scheduleTrip = useCallback(async (candidate: FlightCandidate) => {
+    setSelectedCandidate(candidate); saveLocal('aeroslate.finder.flight', candidate);
+    const key='aeroslate.records.ledger.v2'; const ledger=normalizeLedger(loadLocal(key,emptyLedger()));
+    if (ledger.trips.some(entry => String(entry.data.candidateId)===candidate.id)) { notify(`${candidate.flightNumber} is already in Trips.`); setPage('trips'); return; }
+    const load=generateDispatchPayload(candidate); const data={candidateId:candidate.id,date:candidate.date,flightNumber:candidate.flightNumber,departure:candidate.departure,arrival:candidate.arrival,aircraft:candidate.aircraft,registration:candidate.registration,std:candidate.std,sta:candidate.sta,ete:candidate.ete,rawStd:candidate.rawStd||'',rawSta:candidate.rawSta||'',status:'Scheduled',...load};
+    const result=await appendLedgerRecord(ledger,'trip',data,getOrCreateDeviceId()); saveLocal(key,result.ledger);
+    window.dispatchEvent(new CustomEvent('aeroslate-ledger-updated')); notify(`${candidate.flightNumber} added to Trips · ${load.pax} pax, ${load.bags} bags.`); setPage('trips');
+  },[notify]);
+
   const navigate = (next: Page) => { setPage(next); setMenuOpen(false); };
   const grouped = ['Plan', 'Brief', 'Fly', 'Record', 'System'] as const;
 
@@ -133,19 +143,18 @@ export default function App() {
         <div className={`page-panel ${page === 'ofp' ? 'active' : ''}`}><OFPPage ofp={ofp} flight={flight} notify={notify} /></div>
         <div className={`page-panel ${page === 'performance' ? 'active' : ''}`}><RunwayAnalysisPage ofp={ofp} flight={flight} onOpenOFP={() => setPage('ofp')} notify={notify} /></div>
         {page === 'dashboard' && <Dashboard ofp={ofp} flight={flight} setPage={setPage} />}
-        {page === 'finder' && <FlightFinderPage onDispatch={openDispatch} onSelect={setSelectedCandidate} onSchedule={flight => { setSelectedCandidate(flight); setPage('trips'); }} notify={notify} />}
+        {page === 'finder' && <FlightFinderPage onDispatch={openDispatch} onSelect={setSelectedCandidate} onSchedule={flight => void scheduleTrip(flight)} notify={notify} />}
         {page === 'trips' && <TripsPage candidate={selectedCandidate} onDispatch={openDispatch} notify={notify} />}
         {page === 'navlog' && <NavlogPage ofp={ofp} flight={flight} />}
         {page === 'weather' && <WeatherPage ofp={ofp} flight={flight} />}
         {page === 'fuel' && <FuelPage ofp={ofp} flight={flight} />}
-        {page === 'frat' && <OperationalWorkflowPage mode="frat" flight={flight} />}
-        {page === 'preflight' && <OperationalWorkflowPage mode="preflight" flight={flight} />}
+        {page === 'preflight' && <OperationsLogPage mode="preflight" flight={flight} notify={notify} />}
         {page === 'sim' && <SimPage />}
         {page === 'times' && <OOOIPage release={flight.release} origin={flight.origin} destination={flight.destination} schedOut={flight.schedOut} schedIn={flight.schedIn} />}
-        {page === 'postflight' && <OperationalWorkflowPage mode="postflight" flight={flight} />}
+        {page === 'postflight' && <OperationsLogPage mode="postflight" flight={flight} notify={notify} />}
         {page === 'flightlogs' && <RecordsPage flight={flight} mode="logbook" />}
         {page === 'dutylogs' && <RecordsPage flight={flight} mode="duty" />}
-        {page === 'scratchpad' && <ScratchpadPage flight={flight} notify={notify} />}
+        {page === 'gates' && <GatePage ofp={ofp} flight={flight} notify={notify} />}
         {page === 'help' && <HelpPage />}
         {page === 'settings' && <SettingsPage simbriefKey={simbriefKey} setSimbriefKey={setSimbriefKey} mode={simbriefMode} setMode={setSimbriefMode} loading={loadingOFP} importOFP={async () => { await importOFP(); }} loadDemo={loadDemo} runtime={runtime} refreshRuntime={refreshRuntime} notify={notify} />}
       </div>
@@ -158,7 +167,7 @@ function Dashboard({ ofp, flight, setPage }: { ofp: AnyRecord | null; flight: Re
   const units = flight.units; const tow = weight(ofp, 'weights.est_tow'); const mtow = weight(ofp, 'weights.max_tow'); const ramp = weight(ofp, 'fuel.plan_ramp'); const landing = weight(ofp, 'fuel.plan_landing');
   const tlr = getRunwayAnalysis(ofp); const originWx = getWeather(ofp, 'origin').metar; const destinationWx = getWeather(ofp, 'destination').metar;
   return <div className="dashboard-page">
-    {flight.source === 'none' && <div className="hero-empty"><AeroSlateLogo size={64} /><div><h1>Your flight, one continuous workflow</h1><p>Find a real flight, generate it with SimBrief, brief with Navigraph, fly with live simulator data, and copy actual times into your records.</p><button className="primary" onClick={() => setPage('finder')}><Search size={17} /> Find a flight</button></div></div>}
+    {flight.source === 'none' && <div className="hero-empty"><AeroSlateLogo size={64} /><div><h1>Your flight, one continuous workflow</h1><p>Find a real flight, generate it with SimBrief, review official/public charts and route weather, fly with live simulator data, and copy actual times into your records.</p><button className="primary" onClick={() => setPage('finder')}><Search size={17} /> Find a flight</button></div></div>}
     {flight.source === 'candidate' && <div className="active-flight-banner"><div><span>Selected flight</span><strong>{flight.airline}{flight.flightNumber} · {flight.origin} → {flight.destination}</strong><small>{flight.aircraft} {flight.registration} · STD {flight.schedOut}</small></div><button className="primary" onClick={() => setPage('simbrief')}><Plane size={17} /> Dispatch in SimBrief</button></div>}
     <div className="metric-strip dashboard-metrics"><Metric label="STD / STA" value={`${flight.schedOut} / ${flight.schedIn}`} sub={`Block ${flight.blockTime}`} /><Metric label="Distance" value={flight.distance} sub={`${flight.cruiseAltitude} · CI ${flight.costIndex}`} /><Metric label="Ramp fuel" value={formatWeight(ramp, units)} sub={`Landing ${formatWeight(landing, units)}`} /><Metric label="Takeoff weight" value={formatWeight(tow, units)} sub={mtow ? `Limit ${formatWeight(mtow, units)}` : 'SimBrief OFP'} alert={mtow && tow > mtow ? 'bad' : tow ? 'good' : undefined} /></div>
     <div className="dashboard-grid streamlined-dashboard">
@@ -176,8 +185,8 @@ function SettingsPage({ simbriefKey, setSimbriefKey, mode, setMode, loading, imp
   const changeBackend = async () => { if (!api?.setAppUrl) return; const current = await api.getAppUrl?.(); const next = window.prompt('Render service URL', current || 'https://your-aeroslate.onrender.com'); if (next) await api.setAppUrl(next); };
   return <div className="content-grid two settings-grid">
     <Card title="SimBrief synchronization" icon={Plane}><p>The account identifier imports the latest generated OFP and makes it the single source for schedule, route, fuel, weather, NOTAMs and documents.</p><div className="segmented"><button className={mode === 'username' ? 'active' : ''} onClick={() => setMode('username')}>Username</button><button className={mode === 'userid' ? 'active' : ''} onClick={() => setMode('userid')}>Pilot ID</button></div><label className="stacked-input"><span>{mode === 'username' ? 'SimBrief username' : 'Numeric Pilot ID'}</span><input value={simbriefKey} onChange={event => setSimbriefKey(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void importOFP(); }} /></label><div className="button-row"><button className="primary" onClick={() => void importOFP()} disabled={loading}>{loading ? <RefreshCw className="spin" /> : <Import />} {loading ? 'Synchronizing…' : 'Import latest OFP'}</button><button onClick={loadDemo}>Load demo</button></div></Card>
-    <Card title="Provider workspaces" icon={Map}><div className="connection-cards"><div className="ok"><Check /><span><strong>SimBrief</strong><small>In-app dispatch and tools</small></span></div><div className="ok"><Check /><span><strong>Navigraph</strong><small>Official authenticated Charts session</small></span></div><div className={runtime.simLinked ? 'ok' : 'blocked'}>{runtime.simLinked ? <Check /> : <X />}<span><strong>Simulator bridge</strong><small>{runtime.simLinked ? 'Connected' : 'Optional for flight data'}</small></span></div></div><p className="muted">The desktop shell embeds official provider sessions. Mobile wrappers use a secure in-app provider browser; the normal web/PWA build may need a provider window because browsers enforce provider framing restrictions.</p><button onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh status</button></Card>
+    <Card title="Provider workspaces" icon={Map}><div className="connection-cards"><div className="ok"><Check /><span><strong>SimBrief</strong><small>In-app dispatch and tools</small></span></div><div className="ok"><Check /><span><strong>Charts & map</strong><small>FAA, ChartFox, public radar and route overlay</small></span></div><div className={runtime.simLinked ? 'ok' : 'blocked'}>{runtime.simLinked ? <Check /> : <X />}<span><strong>Simulator bridge</strong><small>{runtime.simLinked ? 'Connected' : 'Optional for flight data'}</small></span></div></div><p className="muted">AeroSlate uses public/official chart sources and a built-in route/radar map. Chart currency and availability remain the responsibility of the publishing authority.</p><button onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh status</button></Card>
     <Card title={native ? 'Native application' : 'Install AeroSlate'} icon={LayoutDashboard}>{native ? <><p>Provider sessions remain signed in across launches and are displayed in AeroSlate’s own workspace.</p><button onClick={() => void changeBackend()}><Settings size={16} /> Change Render backend</button></> : <><p>Install the PWA for safe-area support, full-screen layout and device-local settings.</p><button onClick={() => void install()}>Install / Add to Home Screen</button></>}</Card>
-    <Card title="Data ownership" icon={Link2}><div className="status-list"><div><span>Planned flight</span><strong>SimBrief OFP</strong></div><div><span>Charts</span><strong>Navigraph session</strong></div><div><span>Actual times</span><strong>OOOI</strong></div><div><span>Records</span><strong>OOOI copied automatically</strong></div><div><span>Device settings</span><strong>Stored locally</strong></div></div></Card>
+    <Card title="Data ownership" icon={Link2}><div className="status-list"><div><span>Planned flight</span><strong>SimBrief OFP</strong></div><div><span>Charts</span><strong>FAA / ChartFox / AIP binder</strong></div><div><span>Actual times</span><strong>OOOI</strong></div><div><span>Records</span><strong>OOOI copied automatically</strong></div><div><span>Device settings</span><strong>Stored locally</strong></div></div></Card>
   </div>;
 }
