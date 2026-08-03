@@ -102,61 +102,6 @@ app.get('/api/document', async (req, res) => {
 
 
 
-function decodeHtml(value = '') {
-  return String(value).replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-}
-function xmlValue(block, tag) {
-  return decodeHtml(block.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1]?.trim() || '');
-}
-function chartTypeFromCode(code = '', title = '') {
-  const map = { APD: 'Airport diagram', DP: 'Departure', STAR: 'Arrival', IAP: 'Approach', MIN: 'Minimums', HOT: 'Hot spots', CVFP: 'Visual procedure' };
-  return map[String(code).toUpperCase()] || (title.toUpperCase().includes('AIRPORT DIAGRAM') ? 'Airport diagram' : 'Procedure');
-}
-let faaCatalogCache = { fetchedAt: 0, cycle: '', xml: '' };
-async function faaCatalog() {
-  if (faaCatalogCache.xml && Date.now() - faaCatalogCache.fetchedAt < 6 * 60 * 60 * 1000) return faaCatalogCache;
-  const response = await fetch('https://nfdc.faa.gov/webContent/dtpp/current.xml', { headers: { 'user-agent': 'AeroSlate-EFB/0.10.1' } });
-  if (!response.ok) throw new Error(`FAA catalog HTTP ${response.status}`);
-  const xml = await response.text();
-  const cycle = xml.match(/<digital_tpp[^>]+cycle=["']([^"']+)/i)?.[1] || '';
-  faaCatalogCache = { fetchedAt: Date.now(), cycle, xml };
-  return faaCatalogCache;
-}
-app.get('/api/charts/faa', async (req, res) => {
-  const airport = String(req.query.airport || '').trim().toUpperCase();
-  if (!/^[A-Z0-9]{3,4}$/.test(airport)) return res.status(400).json({ error: 'Enter a valid US airport identifier.' });
-  const ident = airport.length === 4 && airport.startsWith('K') ? airport.slice(1) : airport;
-  try {
-    const catalog = await faaCatalog();
-    const airportRx = new RegExp(`<airport_name\\b[^>]*(?:apt_ident=["']${ident}["']|icao_ident=["']${airport}["'])[^>]*>([\\s\\S]*?)<\\/airport_name>`, 'i');
-    const airportBlock = catalog.xml.match(airportRx)?.[1] || '';
-    if (!airportBlock) return res.status(404).json({ error: `No current FAA d-TPP charts were found for ${airport}.` });
-    const charts = [];
-    const records = airportBlock.match(/<record>[\s\S]*?<\/record>/gi) || [];
-    for (const record of records) {
-      const code = xmlValue(record, 'chart_code').toUpperCase();
-      const title = xmlValue(record, 'chart_name') || 'FAA terminal procedure';
-      const pdf = xmlValue(record, 'pdf_name');
-      if (!pdf || !/\.pdf$/i.test(pdf)) continue;
-      const url = `https://aeronav.faa.gov/d-tpp/${catalog.cycle}/${encodeURIComponent(pdf)}`;
-      charts.push({ id: crypto.createHash('sha1').update(`${airport}|${pdf}`).digest('hex').slice(0, 16), airport: airport.length === 3 ? `K${airport}` : airport, title, type: chartTypeFromCode(code, title), code, url });
-    }
-    const order = { 'Airport diagram':0, 'Hot spots':1, 'Departure':2, 'Arrival':3, 'Approach':4, 'Minimums':5, 'Visual procedure':6, 'Procedure':7 };
-    charts.sort((a, b) => (order[a.type] ?? 9) - (order[b.type] ?? 9) || a.title.localeCompare(b.title));
-    res.set('cache-control', 'public, max-age=21600').json({ airport: airport.length === 3 ? `K${airport}` : airport, source: 'FAA d-TPP XML metafile', cycle: catalog.cycle, charts });
-  } catch (error) { res.status(502).json({ error: error instanceof Error ? error.message : 'Unable to retrieve the FAA chart catalog.' }); }
-});
-app.get('/api/charts/pdf', async (req, res) => {
-  try {
-    const url = new URL(String(req.query.url || ''));
-    const allowed = url.protocol === 'https:' && (url.hostname === 'aeronav.faa.gov' || url.hostname === 'www.faa.gov' || url.hostname.endsWith('.faa.gov'));
-    if (!allowed || !/\.pdf(?:$|\?)/i.test(url.href)) return res.status(400).json({ error: 'Only official FAA chart PDFs can be proxied.' });
-    const response = await fetch(url, { redirect: 'follow', headers: { 'user-agent': 'AeroSlate-EFB/0.10.0' } });
-    if (!response.ok) return res.status(response.status).end();
-    res.set('content-type', 'application/pdf').set('cache-control', 'public, max-age=21600').set('content-disposition', 'inline').send(Buffer.from(await response.arrayBuffer()));
-  } catch { res.status(400).json({ error: 'Invalid FAA chart URL.' }); }
-});
-
 app.use(express.static(path.join(rootDir, 'dist'), { maxAge: '1h', index: false }));
 app.use((req, res, next) => { if (req.method !== 'GET' || req.path.startsWith('/api/')) return next(); res.sendFile(path.join(rootDir, 'dist', 'index.html')); });
 app.use((error, _req, res, _next) => { console.error(error); res.status(500).json({ error: 'Unexpected server error.' }); });

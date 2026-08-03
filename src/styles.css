@@ -1704,3 +1704,21 @@ main { min-height: 100dvh; }
   .chart-notam-item details { grid-column:auto; }
   .chart-scroll { padding:12px; }
 }
+
+/* v0.11.6 Navigraph-only chart workspace */
+.navigraph-page{height:calc(100dvh - var(--safe-top) - 78px);min-height:560px;display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;overflow:hidden}
+.navigraph-page.expanded{position:fixed;z-index:80;inset:calc(var(--safe-top) + 62px) 0 0 var(--sidebar-width,0);height:auto;min-height:0;padding:10px;background:#071018}
+.sidebar.collapsed~.app-main .navigraph-page.expanded{left:86px}
+.navigraph-topbar{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px 9px 15px;border:1px solid var(--border);border-radius:12px;background:#0d1b26}
+.navigraph-heading{min-width:0;display:grid;gap:2px}.navigraph-heading strong{font-size:15px}.navigraph-heading span{color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.navigraph-actions{display:flex;gap:7px;flex:0 0 auto}.navigraph-actions button{min-height:38px;padding:8px 11px}.navigraph-actions button.active{border-color:#36b8ff;background:#123c54}
+.navigraph-workspace{min-height:0;display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden;border:1px solid var(--border);border-radius:13px;background:#050b10}.navigraph-workspace.with-notes{grid-template-columns:minmax(0,1fr) 310px}
+.navigraph-provider-pane{position:relative;min-width:0;min-height:0;overflow:hidden;background:#111}.navigraph-webview,.navigraph-iframe{display:block;width:100%;height:100%;min-height:0;border:0;background:#111}
+.navigraph-web-help{position:absolute;right:12px;bottom:12px;max-width:520px;display:flex;align-items:center;gap:10px;padding:8px 9px 8px 12px;border:1px solid #315065;border-radius:10px;background:rgba(6,18,27,.94);box-shadow:0 12px 35px rgba(0,0,0,.35);font-size:10px;color:#a9bdca}.navigraph-web-help button{white-space:nowrap}
+.navigraph-notes-pane{min-width:0;min-height:0;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto auto;gap:10px;padding:13px;border-left:1px solid var(--border);background:#0a1721;overflow:auto}.navigraph-notes-pane header{display:grid;gap:3px}.navigraph-notes-pane header>div{display:flex;align-items:center;gap:7px}.navigraph-notes-pane header small{color:var(--muted)}
+.chart-note-tabs{display:flex;flex-wrap:wrap;gap:6px}.chart-note-tabs button{min-height:32px;padding:6px 9px;font-size:10px}.chart-note-tabs button.active{background:#155b82;border-color:#39b7fa}
+.chart-label-field{display:grid;gap:5px}.chart-label-field span{color:var(--muted);font-size:10px}.chart-label-field input{width:100%}
+.navigraph-notes-pane textarea{width:100%;height:100%;min-height:220px;resize:none;line-height:1.55;font-family:inherit}
+.notes-status{display:flex;align-items:center;gap:6px;color:#58d79b;font-size:10px}.notes-guidance{display:flex;align-items:flex-start;gap:7px;padding:9px;border:1px solid #263d4c;border-radius:9px;background:#0d202d}.notes-guidance p{margin:0;color:#9fb2bf;font-size:10px;line-height:1.45}
+@media(max-width:900px){.navigraph-workspace.with-notes{grid-template-columns:minmax(0,1fr) 270px}.navigraph-actions button span{display:none}.navigraph-actions button{width:40px;padding:8px}.navigraph-page.expanded{left:0;bottom:var(--mobile-nav-height,68px)}}
+@media(max-width:700px){.navigraph-page{height:calc(100dvh - var(--safe-top) - 120px);min-height:420px}.navigraph-topbar{align-items:flex-start}.navigraph-workspace.with-notes{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(260px,38%)}.navigraph-notes-pane{border-left:0;border-top:1px solid var(--border)}.navigraph-web-help{left:8px;right:8px;bottom:8px;flex-direction:column;align-items:stretch}.navigraph-web-help button{width:100%}}

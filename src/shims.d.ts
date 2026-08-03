@@ -27,12 +27,6 @@ declare module 'lucide-react' {
   export const Type: any; export const Undo2: any; export const Upload: any; export const Wifi: any; export const WifiOff: any; export const X: any;
   export const Wind: any; export const ZoomIn: any; export const ZoomOut: any;
 }
-declare module 'pdfjs-dist' {
-  export const GlobalWorkerOptions: { workerSrc: string };
-  export function getDocument(src: any): { promise: Promise<any> };
-  export type PDFDocumentProxy = any;
-}
-declare module 'pdfjs-dist/build/pdf.worker.min.mjs?url' { const url: string; export default url; }
 declare namespace JSX { interface IntrinsicAttributes { key?: any } interface IntrinsicElements { [elemName: string]: any; } }
 
 interface ImportMetaEnv { readonly VITE_OPENAIP_TILE_URL?: string }

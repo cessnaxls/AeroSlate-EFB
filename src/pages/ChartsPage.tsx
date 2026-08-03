@@ -1,99 +1,118 @@
-import { ChartWorkspace } from '../components/ChartWorkspace';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ChevronDown, CloudSun, ExternalLink, FolderPlus, Layers, Map as MapIcon, Radar, RefreshCw, Wind, Trash2 } from 'lucide-react';
-import { asArray, dig, getAllNotams, type AnyRecord, type FlightSummary, type ParsedNotam } from '../lib/ofp';
+import { ExternalLink, FileText, PanelLeftOpen, PanelLeftClose, RefreshCw, Save, NotebookPen } from 'lucide-react';
+import { isNativeApp } from '../components/ProviderPortal';
+import type { AnyRecord, FlightSummary } from '../lib/ofp';
 import { loadLocal, saveLocal } from '../lib/storage';
 
-declare global { interface Window { L?: any } }
-interface BinderItem { id:string; chartId?:string; title:string; airport:string; url:string; source:string; type?:string }
-interface FaaChart { id:string; airport:string; title:string; type:string; url:string; effective?:string }
-interface RoutePoint { lat:number; lon:number; ident:string; altitudeFt:number; eta:string }
-interface IcingPoint extends RoutePoint { tempC:number; humidity:number; cloud:number; severity:'trace'|'light'|'moderate' }
+const NAVIGRAPH_CURRENT_FLIGHT = 'https://charts.navigraph.com/flights/current';
 
-function loadLeaflet(){return new Promise<any>((resolve,reject)=>{if(window.L)return resolve(window.L);if(!document.querySelector('link[data-leaflet]')){const l=document.createElement('link');l.rel='stylesheet';l.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';l.dataset.leaflet='1';document.head.appendChild(l)}const e=document.querySelector('script[data-leaflet]')as HTMLScriptElement|null;if(e){e.addEventListener('load',()=>resolve(window.L));return}const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.dataset.leaflet='1';s.onload=()=>resolve(window.L);s.onerror=reject;document.head.appendChild(s)})}
-function number(...values:any[]){for(const value of values){const n=Number(String(value??'').replace(/[^0-9.-]/g,''));if(Number.isFinite(n))return n}return 0}
-function routePoints(ofp:AnyRecord|null):RoutePoint[]{return asArray<any>(dig(ofp,'navlog.fix','navlog.fixes')).map((f,index)=>({lat:number(f.pos_lat,f.latitude,f.lat),lon:number(f.pos_long,f.longitude,f.lon),ident:String(f.ident||f.name||index+1),altitudeFt:number(f.altitude_feet,f.altitude,f.alt,f.planned_altitude),eta:String(f.time_total||f.eta||'')})).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)&&Math.abs(p.lat)<=90&&Math.abs(p.lon)<=180)}
-function pressureLevel(altitudeFt:number){const levels=[{h:1000,a:360},{h:925,a:2500},{h:850,a:5000},{h:700,a:10000},{h:600,a:14000},{h:500,a:18000},{h:400,a:24000},{h:300,a:30000},{h:250,a:34000},{h:200,a:39000}];return levels.reduce((best,x)=>Math.abs(x.a-altitudeFt)<Math.abs(best.a-altitudeFt)?x:best,levels[0]).h}
-async function analyzeIcing(points:RoutePoint[]):Promise<IcingPoint[]>{
-  const sample=points.filter((_,i)=>i===0||i===points.length-1||i%Math.max(1,Math.floor(points.length/12))===0).slice(0,14);
-  const groups=new Map<number,RoutePoint[]>();sample.forEach(p=>{const level=pressureLevel(p.altitudeFt);groups.set(level,[...(groups.get(level)||[]),p])});
-  const hazards:IcingPoint[]=[];
-  for(const [level,items] of groups){
-    const latitude=items.map(p=>p.lat.toFixed(4)).join(',');const longitude=items.map(p=>p.lon.toFixed(4)).join(',');
-    const vars=`temperature_${level}hPa,relative_humidity_${level}hPa,cloud_cover_${level}hPa`;
-    try{
-      const response=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=${vars}&forecast_days=2&timezone=UTC`);
-      if(!response.ok)continue;const data=await response.json();const rows=Array.isArray(data)?data:[data];
-      rows.forEach((row:any,index:number)=>{const p=items[index];if(!p)return;const times:string[]=row?.hourly?.time||[];let target=Date.now();const hhmm=String(p.eta||'').match(/(\d{1,2}):(\d{2})/);if(hhmm){const d=new Date();d.setUTCHours(Number(hhmm[1]),Number(hhmm[2]),0,0);if(d.getTime()<Date.now()-6*3600000)d.setUTCDate(d.getUTCDate()+1);target=d.getTime()}else if(/^\d+$/.test(String(p.eta||'')))target+=Number(p.eta)*1000;let hour=0;if(times.length)hour=times.reduce((best,t,i)=>Math.abs(new Date(t+'Z').getTime()-target)<Math.abs(new Date(times[best]+'Z').getTime()-target)?i:best,0);const temp=number(row?.hourly?.[`temperature_${level}hPa`]?.[hour]);const rh=number(row?.hourly?.[`relative_humidity_${level}hPa`]?.[hour]);const cloud=number(row?.hourly?.[`cloud_cover_${level}hPa`]?.[hour]);if(temp<=10&&temp>=-20&&(rh>=80||cloud>=65)){const severity=temp<=0&&temp>=-15&&(rh>=90||cloud>=80)?'moderate':rh>=85?'light':'trace';hazards.push({...p,tempC:temp,humidity:rh,cloud,severity})}})
-    }catch{}
-  }
-  return hazards;
+type NoteScope = 'flight' | 'departure' | 'destination' | 'alternate' | 'chart';
+interface ChartNotes {
+  flight: string;
+  departure: string;
+  destination: string;
+  alternate: string;
+  chart: string;
+  chartLabel: string;
+  updatedAt: string;
 }
 
-function RouteWeatherMap({ofp,flight,opacity,layer,aviation,icing}:{ofp:AnyRecord|null;flight:FlightSummary;opacity:number;layer:string;aviation:boolean;icing:boolean}){
-  const ref=useRef<HTMLDivElement|null>(null),mapRef=useRef<any>(null);const pts=useMemo(()=>routePoints(ofp),[ofp]);const[icingPoints,setIcingPoints]=useState<IcingPoint[]>([]);
-  useEffect(()=>{let dead=false;if(!icing){setIcingPoints([]);return;}void analyzeIcing(pts).then(rows=>{if(!dead)setIcingPoints(rows)});return()=>{dead=true}},[icing,pts]);
-  useEffect(()=>{let dead=false;void loadLeaflet().then(async L=>{if(dead||!ref.current)return;if(mapRef.current)mapRef.current.remove();const map=L.map(ref.current,{zoomControl:true,worldCopyJump:true});mapRef.current=map;const dark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(map);const bases={'Dark':dark,'Light':L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'})};const overlays:any={};
-    if(pts.length>1){const route=L.polyline(pts.map(p=>[p.lat,p.lon]),{weight:4,opacity:.95,color:'#2ea7ff'}).addTo(map);overlays['SimBrief route']=route;pts.forEach((p,i)=>L.circleMarker([p.lat,p.lon],{radius:i===0||i===pts.length-1?6:3,weight:2,color:'#50baff',fillOpacity:1}).bindTooltip(`${p.ident}${p.altitudeFt?` · ${Math.round(p.altitudeFt).toLocaleString()} ft`:''}`).addTo(map));map.fitBounds(route.getBounds(),{padding:[30,30]})}else map.setView([39,-96],4);
-    try{const rv=await fetch('https://api.rainviewer.com/public/weather-maps.json').then(r=>r.json());const frame=rv?.radar?.past?.at(-1);if(frame){const radar=L.tileLayer(`${rv.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`,{opacity,zIndex:440,maxZoom:10});overlays['Reflectivity radar']=radar;if(layer==='radar')radar.addTo(map)}}catch{}
-    const date=new Date().toISOString().slice(0,10);const gibs=(id:string,format='jpg',matrix='GoogleMapsCompatible_Level9')=>L.tileLayer(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${id}/default/${date}/${matrix}/{z}/{y}/{x}.${format}`,{opacity,zIndex:410,maxZoom:9,attribution:'NASA GIBS'});
-    const satellite=gibs('VIIRS_NOAA20_CorrectedReflectance_TrueColor','jpg','GoogleMapsCompatible_Level9');overlays['Satellite imagery']=satellite;if(layer==='satellite')satellite.addTo(map);
-    const infrared=gibs('MODIS_Terra_Cloud_Phase_Infrared_Day','png','GoogleMapsCompatible_Level6');overlays['Infrared / temperature']=infrared;if(layer==='infrared')infrared.addTo(map);
-    const cloudTemp=gibs('MODIS_Terra_Cloud_Top_Temperature_Day','png','GoogleMapsCompatible_Level6');overlays['Cloud-top temperature']=cloudTemp;if(layer==='cloudtemp')cloudTemp.addTo(map);
-    const tile=import.meta.env.VITE_OPENAIP_TILE_URL;if(aviation&&tile){const a=L.tileLayer(tile,{opacity:.76,zIndex:460,attribution:'Aviation overlay'});a.addTo(map);overlays['Aviation overlay']=a}
-    if(icing){icingPoints.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:p.severity==='moderate'?9:7,weight:2,color:p.severity==='moderate'?'#ff6d74':'#62c8ff',fillColor:p.severity==='moderate'?'#9e2730':'#155f87',fillOpacity:.78}).bindTooltip(`<b>Potential ${p.severity} icing</b><br>${p.ident} · ${Math.round(p.altitudeFt).toLocaleString()} ft<br>${p.tempC.toFixed(0)}°C · RH ${p.humidity.toFixed(0)}% · cloud ${p.cloud.toFixed(0)}%`).addTo(map))}
-    L.control.layers(bases,overlays,{collapsed:true,position:'topright'}).addTo(map)});return()=>{dead=true;if(mapRef.current){mapRef.current.remove();mapRef.current=null}}},[pts,flight.origin,flight.destination,opacity,layer,aviation,icing,icingPoints]);return <div ref={ref} className="route-radar-map"/>
+function nativeApi(): any {
+  return (window as any).aeroslateNative || (window as any).dispatchlinkNative;
 }
 
-function notamHeadline(item: ParsedNotam) {
-  const e = item.text.match(/(?:^|\n)E\)\s*([^\n]+)/i)?.[1]?.trim();
-  return (e || item.text.split(/\n+/).find(line => line.trim() && !/^[QABC]\)/i.test(line.trim())) || item.text)
-    .replace(/\bCLSD\b/gi, 'CLOSED').replace(/\bU\/S\b/gi, 'UNSERVICEABLE').replace(/\s+/g, ' ').trim();
-}
-function chartRelevantNotams(chart: FaaChart | null, notices: ParsedNotam[]) {
-  if (!chart) return [];
-  const title = chart.title.toUpperCase();
-  const runway = title.match(/(?:RWY|RUNWAY)\s*([0-9]{1,2}[LRC]?)/)?.[1];
-  const procedureWords = ['ILS','LOC','RNAV','RNP','VOR','DME','SID','STAR','DEPARTURE','ARRIVAL','APPROACH'];
-  const isAirportDiagram = /AIRPORT DIAGRAM|HOT SPOT/.test(title);
-  return notices.filter(item => {
-    if (item.station !== chart.airport || !['active','undated'].includes(item.temporalStatus)) return false;
-    const text = item.text.toUpperCase();
-    if (item.category === 'airport') return true;
-    if (isAirportDiagram) return ['runway','taxiway','ramp','lighting'].includes(item.category) || item.priority === 'critical';
-    if (runway && new RegExp(`(?:RWY|RUNWAY)\\s*0?${runway.replace(/^0/,'')}(?![0-9])`).test(text)) return true;
-    if (item.category === 'procedure') {
-      const words = procedureWords.filter(word => title.includes(word));
-      return words.some(word => text.includes(word)) || (!!runway && text.includes(runway));
-    }
-    if (item.category === 'navaid' || item.category === 'lighting') return procedureWords.some(word => title.includes(word) && text.includes(word));
-    return false;
-  }).sort((a,b) => (a.priority === 'critical' ? 0 : 1) - (b.priority === 'critical' ? 0 : 1)).slice(0, 16);
+function emptyNotes(): ChartNotes {
+  return { flight: '', departure: '', destination: '', alternate: '', chart: '', chartLabel: '', updatedAt: '' };
 }
 
-export function ChartsPage({ofp,flight}:{ofp:AnyRecord|null;flight:FlightSummary;source?:any;setSource?:any}){
-  const key=`aeroslate.chart-binder.${flight.origin}.${flight.destination}`;
-  const[binder,setBinder]=useState<BinderItem[]>(()=>loadLocal(key,[]));
-  const[view,setView]=useState<'map'|'charts'|'binder'>('map');
-  const[opacity,setOpacity]=useState(.58),[layer,setLayer]=useState('radar'),[aviation,setAviation]=useState(false),[icing,setIcing]=useState(true);
-  const[faaCharts,setFaaCharts]=useState<FaaChart[]>([]),[faaAirport,setFaaAirport]=useState(flight.origin),[chartBusy,setChartBusy]=useState(false),[selectedChart,setSelectedChart]=useState<FaaChart|null>(null),[expanded,setExpanded]=useState(false);
-  useEffect(()=>saveLocal(key,binder),[key,binder]);
-  useEffect(()=>setFaaAirport(flight.origin),[flight.origin]);
-  const loadFaa=async()=>{if(!faaAirport)return;setChartBusy(true);try{const r=await fetch(`/api/charts/faa?airport=${encodeURIComponent(faaAirport)}`);const j=await r.json();if(!r.ok)throw new Error(j.error||'Unable to load FAA charts');const rows:FaaChart[]=j.charts||[];setFaaCharts(rows);setSelectedChart(current=>rows.find(c=>c.id===current?.id)||rows.find(c=>c.type==='Airport diagram')||rows[0]||null)}catch{setFaaCharts([]);setSelectedChart(null)}finally{setChartBusy(false)}};
-  useEffect(()=>{if(view==='charts'&&faaAirport)void loadFaa()},[view,faaAirport]);
-  const chartGroups=useMemo(()=>faaCharts.reduce<Record<string,FaaChart[]>>((groups,chart)=>{(groups[chart.type]??=[]).push(chart);return groups},{}),[faaCharts]);
-  const workspaceSource=useMemo(()=>selectedChart?({id:selectedChart.id,title:selectedChart.title,url:`/api/charts/pdf?url=${encodeURIComponent(selectedChart.url)}`,kind:'pdf' as const}):null,[selectedChart?.id,selectedChart?.title,selectedChart?.url]);
-  const allNotams=useMemo(()=>getAllNotams(ofp),[ofp]);
-  const relevantNotams=useMemo(()=>chartRelevantNotams(selectedChart,allNotams),[selectedChart,allNotams]);
-  const addToBinder=()=>{if(!selectedChart)return;setBinder(items=>items.some(item=>(item.chartId||item.id)===selectedChart.id||item.url===selectedChart.url)?items:[...items,{id:crypto.randomUUID(),chartId:selectedChart.id,title:selectedChart.title,airport:selectedChart.airport,url:selectedChart.url,source:'FAA d-TPP',type:selectedChart.type}])};
-  const openBinderItem=(item:BinderItem)=>{setFaaAirport(item.airport);setSelectedChart({id:item.chartId||item.id,title:item.title,airport:item.airport,type:item.type||item.source,url:item.url});setView('charts')};
-  return <div className="charts-suite">
-    <div className="subnav-tabs"><button className={view==='map'?'active':''} onClick={()=>setView('map')}><Radar size={17}/>Map</button><button className={view==='charts'?'active':''} onClick={()=>setView('charts')}><MapIcon size={17}/>Charts</button><button className={view==='binder'?'active':''} onClick={()=>setView('binder')}><Layers size={17}/>Binder ({binder.length})</button></div>
-    {view==='map'&&<section className="card map-card"><header><div><Radar size={18}/><h3>Route weather & aviation layers</h3></div><div className="map-control-strip weather-layer-controls"><select value={layer} onChange={e=>setLayer(e.target.value)}><option value="none">No weather</option><option value="radar">Reflectivity radar</option><option value="satellite">Satellite imagery</option><option value="infrared">Infrared temperature</option><option value="cloudtemp">Cloud-top temperature</option></select><button className={icing?'active':''} onClick={()=>setIcing(v=>!v)}><Wind size={13}/> Route icing</button><button className={aviation?'active':''} onClick={()=>setAviation(v=>!v)}><Layers size={13}/> Aviation</button><label><span>Opacity</span><input type="range" min="0.15" max="0.9" step="0.05" value={opacity} onChange={e=>setOpacity(Number(e.target.value))}/></label></div></header><div className="card-body map-body"><RouteWeatherMap ofp={ofp} flight={flight} opacity={opacity} layer={layer} aviation={aviation} icing={icing}/><div className="map-legend"><span><Radar size={13}/> RainViewer reflectivity</span><span><CloudSun size={13}/> NASA GIBS imagery</span><span><Wind size={13}/> Icing is advisory model screening matched to planned fix altitude.</span></div></div></section>}
-    {view==='charts'&&<div className="aeroslate-chart-layout">
-      <section className="card chart-catalog-card"><header><div><MapIcon size={18}/><h3>Terminal charts</h3></div><span className="pill good">FAA CURRENT</span></header><div className="card-body chart-catalog-body"><div className="chart-search-row"><input value={faaAirport} onChange={e=>setFaaAirport(e.target.value.toUpperCase())} placeholder="U.S. airport ICAO"/><button className="primary chart-reload-button" onClick={()=>void loadFaa()} disabled={chartBusy}><RefreshCw size={16}/><span>{chartBusy?'Loading':'Load'}</span></button></div><div className="chart-airport-shortcuts"><button onClick={()=>setFaaAirport(flight.origin)}>{flight.origin}</button><button onClick={()=>setFaaAirport(flight.destination)}>{flight.destination}</button>{flight.alternate&&flight.alternate!=='----'&&<button onClick={()=>setFaaAirport(flight.alternate)}>{flight.alternate}</button>}</div><div className="chart-group-list">{Object.entries(chartGroups).map(([group,charts])=><details key={group} open={group==='Airport diagram'}><summary><strong>{group}</strong><span>{charts.length}</span></summary><div>{charts.map(chart=><button key={chart.id} className={selectedChart?.id===chart.id?'active':''} onClick={()=>setSelectedChart(chart)}><strong>{chart.title}</strong><small>{chart.airport}</small></button>)}</div></details>)}{!faaCharts.length&&!chartBusy&&<div className="empty-cell">No FAA terminal charts loaded for {faaAirport}. FAA d-TPP covers U.S. airports.</div>}</div></div></section>
-      <section className={`card chart-viewer-card redesigned-chart-viewer ${expanded?'chart-expanded':''}`}><header><div><MapIcon size={18}/><h3>{selectedChart?.title||'Select a chart'}</h3></div><div className="chart-header-actions">{selectedChart&&<button onClick={addToBinder}><FolderPlus size={15}/>Binder</button>}<button onClick={()=>setExpanded(v=>!v)}>{expanded?'Restore':'Expand'}</button></div></header><div className="chart-workspace-host">{selectedChart?<ChartWorkspace source={workspaceSource} watermark="SIMULATION / PLANNING"/>:<div className="empty-cell">Choose an airport diagram, departure, arrival, approach, or minimums page.</div>}</div>{selectedChart&&<details className={`chart-notam-drawer ${relevantNotams.some(n=>n.priority==='critical')?'has-critical':''}`}><summary><span><AlertTriangle size={16}/><strong>Chart NOTAMs</strong><small>{relevantNotams.length ? `${relevantNotams.length} relevant current item${relevantNotams.length===1?'':'s'}` : 'No directly matched current notice'}</small></span><ChevronDown size={15}/></summary><div>{relevantNotams.map(item=><article key={item.id} className={`chart-notam-item priority-${item.priority}`}><span>{item.category === 'ramp' ? 'Ramp / deicing' : item.category}</span><strong>{notamHeadline(item)}</strong><details><summary>Legal text</summary><pre>{item.text}</pre></details></article>)}{!relevantNotams.length&&<p>No current NOTAM was matched to this specific chart. Review the complete NOTAM briefing before flight.</p>}</div></details>}</section>
-    </div>}
-    {view==='binder'&&<section className="card binder-card"><header><div><Layers size={18}/><h3>Flight chart binder</h3></div><span className="pill neutral">{binder.length}</span></header><div className="card-body chart-binder-grid">{binder.map(item=><article key={item.id}><div><strong>{item.title}</strong><span>{item.airport} · {item.type||item.source}</span></div><button onClick={()=>openBinderItem(item)}><ExternalLink size={15}/>Open chart</button><button className="icon-button" onClick={()=>setBinder(values=>values.filter(x=>x.id!==item.id))}><Trash2 size={15}/></button></article>)}{!binder.length&&<div className="empty-cell">No charts in this binder.</div>}</div></section>}
+function flightKey(flight: FlightSummary) {
+  return `${flight.release || 'draft'}.${flight.origin || 'ORIG'}${flight.destination || 'DEST'}`;
+}
+
+function openNavigraph() {
+  const api = nativeApi();
+  if (api?.openProvider) return api.openProvider(NAVIGRAPH_CURRENT_FLIGHT, 'Navigraph Charts');
+  const browser = (window as any).Capacitor?.Plugins?.Browser;
+  if (browser?.open) return browser.open({ url: NAVIGRAPH_CURRENT_FLIGHT, presentationStyle: 'fullscreen' });
+  window.open(NAVIGRAPH_CURRENT_FLIGHT, 'aeroslate-navigraph', 'popup=yes,width=1500,height=1000');
+}
+
+export function ChartsPage({ flight }: { ofp: AnyRecord | null; flight: FlightSummary }) {
+  const native = isNativeApp();
+  const webviewRef = useRef<any>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(true);
+  const [scope, setScope] = useState<NoteScope>('flight');
+  const storageKey = useMemo(() => `aeroslate.navigraph.notes.${flightKey(flight)}`, [flight.release, flight.origin, flight.destination]);
+  const [notes, setNotes] = useState<ChartNotes>(() => loadLocal(storageKey, emptyNotes()));
+
+  useEffect(() => setNotes(loadLocal(storageKey, emptyNotes())), [storageKey]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => saveLocal(storageKey, { ...notes, updatedAt: new Date().toISOString() }), 350);
+    return () => window.clearTimeout(timer);
+  }, [notes, storageKey]);
+
+  const labels: Record<NoteScope, string> = {
+    flight: `${flight.origin}–${flight.destination}`,
+    departure: flight.origin || 'Departure',
+    destination: flight.destination || 'Destination',
+    alternate: flight.alternate || 'Alternate',
+    chart: notes.chartLabel || 'Named chart'
+  };
+
+  const updateNote = (value: string) => setNotes(current => ({ ...current, [scope]: value }));
+  const reload = () => {
+    if (native && webviewRef.current?.reload) webviewRef.current.reload();
+    else setReloadKey(value => value + 1);
+  };
+
+  return <div className={`navigraph-page ${expanded ? 'expanded' : ''}`}>
+    <div className="navigraph-topbar">
+      <div className="navigraph-heading">
+        <strong>Navigraph Charts</strong>
+        <span>{flight.origin} → {flight.destination}{flight.alternate && flight.alternate !== '—' ? ` · ALT ${flight.alternate}` : ''}</span>
+      </div>
+      <div className="navigraph-actions">
+        <button onClick={reload}><RefreshCw size={16} /><span>Reload</span></button>
+        <button onClick={() => setNotesOpen(value => !value)} className={notesOpen ? 'active' : ''}><NotebookPen size={16} /><span>Notes</span></button>
+        <button onClick={() => setExpanded(value => !value)}>{expanded ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}<span>{expanded ? 'Restore' : 'Expand'}</span></button>
+        <button onClick={() => void openNavigraph()}><ExternalLink size={16} /><span>Open</span></button>
+      </div>
+    </div>
+
+    <div className={`navigraph-workspace ${notesOpen ? 'with-notes' : ''}`}>
+      <section className="navigraph-provider-pane">
+        {native ? <webview
+          key={reloadKey}
+          ref={webviewRef}
+          className="navigraph-webview"
+          src={NAVIGRAPH_CURRENT_FLIGHT}
+          partition="persist:aeroslate-providers"
+          allowpopups="true"
+          webpreferences="contextIsolation=yes,sandbox=yes,nodeIntegration=no"
+        /> : <>
+          <iframe key={reloadKey} className="navigraph-iframe" src={NAVIGRAPH_CURRENT_FLIGHT} title="Navigraph Charts" allow="clipboard-read; clipboard-write; fullscreen" />
+          <div className="navigraph-web-help">
+            <span>When your browser blocks embedded provider pages, use Open to keep the authenticated Navigraph session in an in-app browser window.</span>
+            <button className="primary" onClick={() => void openNavigraph()}><ExternalLink size={15} /> Open Navigraph</button>
+          </div>
+        </>}
+      </section>
+
+      {notesOpen && <aside className="navigraph-notes-pane">
+        <header>
+          <div><NotebookPen size={17} /><strong>Chart notes</strong></div>
+          <small>Stored on this device for the active flight</small>
+        </header>
+        <div className="chart-note-tabs">
+          {(Object.keys(labels) as NoteScope[]).map(item => <button key={item} className={scope === item ? 'active' : ''} onClick={() => setScope(item)}>{labels[item]}</button>)}
+        </div>
+        {scope === 'chart' && <label className="chart-label-field"><span>Chart name or procedure</span><input value={notes.chartLabel} onChange={event => setNotes(current => ({ ...current, chartLabel: event.target.value }))} placeholder="Example: ILS RWY 27L" /></label>}
+        <textarea value={notes[scope]} onChange={event => updateNote(event.target.value)} placeholder={`Notes for ${labels[scope]}…`} />
+        <div className="notes-status"><Save size={14} /><span>Autosaved locally</span></div>
+        <div className="notes-guidance"><FileText size={15} /><p>These notes are stored separately from Navigraph. They persist across tab changes and app restarts, but do not alter or cache the Navigraph chart itself.</p></div>
+      </aside>}
+    </div>
   </div>;
 }
