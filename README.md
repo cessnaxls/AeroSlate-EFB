@@ -1,4 +1,4 @@
-# AeroSlate EFB 0.10.1 — Free Edition
+# AeroSlate EFB 0.11.5 0.10.1 — Free Edition
 
 AeroSlate is a Render/GitHub-hosted simulator EFB with SimBrief planning, FR24 paste parsing, trip scheduling, navlog, fuel monitoring, OOOI, records, NOTAM briefing, route weather, and public/official chart integrations.
 
@@ -91,3 +91,8 @@ manual ZFW = aircraft BOW + (passengers × 190 lb) + (bags × 40 lb) + freight
 ```
 
 The app includes a broad ICAO aircraft BOW/OEW reference catalog and family fallbacks. These are generic planning values; airline-specific interiors and individual airframes can differ.
+
+
+## 0.11.5 chart and briefing refinements
+
+Binder charts now reopen directly in the chart workspace. The chart desk uses a wide-screen catalog/viewer layout and a stacked portrait layout so toolbar controls and chart content remain visible. Current NOTAMs relevant to the selected airport diagram or procedure chart appear in an expandable chart NOTAM drawer. OFP scalar extraction prevents XML objects from appearing as `[object Object]`, and navlog weather is presented as wind, OAT, and ISA on separate lines.

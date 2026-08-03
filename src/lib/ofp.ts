@@ -108,7 +108,7 @@ export interface ParsedNotam {
   text: string;
   important: boolean;
   priority: 'critical' | 'amendment' | 'advisory';
-  category: 'airport' | 'runway' | 'taxiway' | 'lighting' | 'procedure' | 'navaid' | 'communication' | 'service' | 'airspace' | 'obstacle' | 'other';
+  category: 'airport' | 'runway' | 'taxiway' | 'ramp' | 'lighting' | 'procedure' | 'navaid' | 'communication' | 'service' | 'airspace' | 'obstacle' | 'other';
   validFrom: string | null;
   validTo: string | null;
   temporalStatus: 'active' | 'future' | 'past' | 'undated';
@@ -382,35 +382,55 @@ function parseNotamValidity(text: string): Pick<ParsedNotam, 'validFrom' | 'vali
 }
 
 function classifyNotam(text: string): Pick<ParsedNotam, 'important' | 'priority' | 'category'> {
-  const runway = /\bRWY\b|RUNWAY|DECLARED DISTANCE|TORA|TODA|ASDA|LDA|RVR/i.test(text);
-  const taxiway = /\bTWY\b|TAXIWAY|APRON/i.test(text);
-  const lighting = /PAPI|VASI|REIL|MALSR|ALSF|HIRL|MIRL|LIGHT(?:ING)?|BEACON/i.test(text);
-  const procedure = /\bAPCH\b|APPROACH|\bSID\b|\bSTAR\b|IAP|ILS|LOC|RNAV|RNP|MINIMA|MISSED APPROACH|PROCEDURE|FDC/i.test(text);
-  const navaid = /\bVOR\b|\bDME\b|\bNDB\b|GLIDESLOPE|GLIDE SLOPE|LOCALIZER|\bILS\b|NAVAID|MARKER BEACON/i.test(text);
-  const communication = /\bTWR\b|TOWER|ATIS|AWOS|ASOS|FREQ|FREQUENCY|RCO|COMM/i.test(text);
-  const service = /FUEL|ARFF|CUSTOMS|SERVICE|HOURS OF OPERATION|SNOW REMOVAL/i.test(text);
-  const airport = /AERODROME|AIRPORT|\bAD\b|HELIPORT/i.test(text);
-  const airspace = /AIRSPACE|TFR|RESTRICTED|PROHIBITED|DANGER AREA|MOA/i.test(text);
-  const obstacle = /\bTOWER\b|CRANE|OBST(?:ACLE)?|UNLIGHTED|LGTD/i.test(text) && !communication;
-  const closed = /\bCLSD\b|\bCLOSED\b/i.test(text);
-  const unserviceable = /UNSERVICEABLE|\bU\/S\b/i.test(text);
-  const outOfService = /OUT OF SERVICE|\bOOS\b|\bOTS\b|INOPERATIVE|\bINOP\b/i.test(text);
-  const notAvailable = /NOT AVBL|NOT AVAILABLE|SUSPENDED/i.test(text);
-  const notApplicable = /(?:PROC(?:EDURE)?|APCH|APPROACH|SID|STAR|ILS|LOC|RNAV|RNP)[^.;]{0,120}\bNA\b|NOT AUTHORIZED|NOT APPLICABLE/i.test(text);
-  const operationalChange = procedure && /AMDT|AMEND|AMENDED|REV(?:ISED)?|CHANGE|CHANGED|CORRECT|MINIMA|NOTE|INCREASE|RAISE|VISIBILITY|CEILING|DA\b|MDA\b|RVR\b/i.test(text);
+  const body = text.match(/(?:^|\n)E\)\s*([^\n]+)/i)?.[1]?.trim() || text;
+  const runway = /\bRWY\b|RUNWAY|DECLARED DISTANCE|TORA|TODA|ASDA|LDA|RVR/i.test(body);
+  const taxiway = /\bTWY\b|TAXIWAY/i.test(body);
+  const ramp = /DE[- ]?ICE|DEICING|DEICE PAD|APRON|RAMP|HARDSTAND|GATE|PARKING STAND/i.test(body);
+  const lighting = /PAPI|VASI|REIL|MALSR|ALSF|HIRL|MIRL|RWY END ID LGT|LIGHT(?:ING)?|BEACON/i.test(body);
+  const procedure = /\bAPCH\b|APPROACH|\bSID\b|\bSTAR\b|IAP|ILS|LOC|RNAV|RNP|MINIMA|MISSED APPROACH|PROCEDURE|FDC/i.test(body);
+  const navaid = /\bVOR\b|\bDME\b|\bNDB\b|GLIDESLOPE|GLIDE SLOPE|LOCALIZER|\bILS\b|NAVAID|MARKER BEACON/i.test(body);
+  const communication = /\bTWR\b|TOWER|ATIS|AWOS|ASOS|FREQ|FREQUENCY|RCO|COMM/i.test(body);
+  const service = /FUEL|ARFF|CUSTOMS|SERVICE|HOURS OF OPERATION|SNOW REMOVAL/i.test(body);
+  const airport = /AERODROME|AIRPORT|\bAD\b|HELIPORT/i.test(body);
+  const airspace = /AIRSPACE|TFR|RESTRICTED|PROHIBITED|DANGER AREA|MOA/i.test(body);
+  const obstacle = /\bTOWER\b|CRANE|OBST(?:ACLE)?|UNLIGHTED|LGTD/i.test(body) && !communication;
 
-  const airportClosed = /(?:AD|AERODROME|AIRPORT)[^.;]{0,90}(?:CLSD|CLOSED)/i.test(text);
-  const runwayClosed = /(?:RWY|RUNWAY)[^.;]{0,110}(?:CLSD|CLOSED)/i.test(text);
-  const taxiwayClosed = /(?:TWY|TAXIWAY)[^.;]{0,110}(?:CLSD|CLOSED)/i.test(text);
-  const operationalEquipment = runway || lighting || navaid;
-  const equipmentUnavailable = operationalEquipment && (unserviceable || outOfService || notAvailable);
-  const explicitProcedureUnavailable = /(?:APCH|APPROACH|SID|STAR|IAP|ILS|LOC|RNAV|RNP|PROCEDURE)[^.;\n]{0,140}(?:UNSERVICEABLE|U\/S|OUT OF SERVICE|OOS|INOP|NOT AVBL|NOT AVAILABLE|SUSPENDED)|(?:UNSERVICEABLE|U\/S|OUT OF SERVICE|OOS|INOP|NOT AVBL|NOT AVAILABLE|SUSPENDED)[^.;\n]{0,140}(?:APCH|APPROACH|SID|STAR|IAP|ILS|LOC|RNAV|RNP|PROCEDURE)/i.test(text);
-  const procedureUnavailable = procedure && !operationalChange && explicitProcedureUnavailable;
+  const closed = /\bCLSD\b|\bCLOSED\b/i.test(body);
+  const unserviceable = /UNSERVICEABLE|\bU\/S\b/i.test(body);
+  const outOfService = /OUT OF SERVICE|\bOOS\b|\bOTS\b|INOPERATIVE|\bINOP\b/i.test(body);
+  const notAvailable = /NOT AVBL|NOT AVAILABLE|SUSPENDED/i.test(body);
+  const unavailable = unserviceable || outOfService || notAvailable;
+  const notAuthorized = /(?:PROC(?:EDURE)?|APCH|APPROACH|SID|STAR|ILS|LOC|RNAV|RNP)[^.;]{0,120}\bNA\b|NOT AUTHORIZED/i.test(body);
+  const operationalChange = procedure && /AMDT|AMEND|AMENDED|REV(?:ISED)?|CHANGE|CHANGED|CORRECT|MINIMA|NOTE|INCREASE|RAISE|VISIBILITY|CEILING|DA\b|MDA\b|RVR\b/i.test(body);
 
-  const category: ParsedNotam['category'] = procedure ? 'procedure' : lighting ? 'lighting' : runway ? 'runway' : taxiway ? 'taxiway' : navaid ? 'navaid' : obstacle ? 'obstacle' : communication ? 'communication' : service ? 'service' : airport ? 'airport' : airspace ? 'airspace' : 'other';
-  const critical = airportClosed || runwayClosed || taxiwayClosed || equipmentUnavailable || procedureUnavailable;
-  // Procedure NA means not authorized; raised minima and procedural changes are restrictions—not outages.
-  const amendment = procedure && (notApplicable || operationalChange) && !procedureUnavailable;
+  // Classify the facility that is actually affected. A taxiway closure that merely references a runway remains a taxiway notice.
+  const taxiwayClosed = /(?:TWY|TAXIWAY)[^.;\n]{0,150}(?:CLSD|CLOSED)/i.test(body);
+  const rampClosed = /(?:DE[- ]?ICE(?:ING)?(?: PAD)?|APRON|RAMP|HARDSTAND|GATE|PARKING STAND)[^.;\n]{0,150}(?:CLSD|CLOSED|NOT AVBL|NOT AVAILABLE)/i.test(body);
+  const runwayClosed = /(?:^|[.;\n])\s*(?:RWY|RUNWAY)\s+[0-9A-Z\/ -]{1,24}(?:[^.;\n]{0,100})?(?:CLSD|CLOSED)/i.test(body)
+    || /(?:RWY|RUNWAY)[^.;\n]{0,80}(?:CLSD|CLOSED)(?![^.;\n]{0,80}(?:TWY|TAXIWAY))/i.test(body);
+  const airportClosed = /(?:AD|AERODROME|AIRPORT)[^.;\n]{0,90}(?:CLSD|CLOSED)/i.test(body);
+
+  let category: ParsedNotam['category'];
+  if (taxiwayClosed || (taxiway && closed)) category = 'taxiway';
+  else if (rampClosed || (ramp && closed)) category = 'ramp';
+  else if (runwayClosed) category = 'runway';
+  else if (lighting) category = 'lighting';
+  else if (procedure) category = 'procedure';
+  else if (navaid) category = 'navaid';
+  else if (taxiway) category = 'taxiway';
+  else if (ramp) category = 'ramp';
+  else if (runway) category = 'runway';
+  else if (obstacle) category = 'obstacle';
+  else if (communication) category = 'communication';
+  else if (service) category = 'service';
+  else if (airport) category = 'airport';
+  else if (airspace) category = 'airspace';
+  else category = 'other';
+
+  const equipmentUnavailable = ['lighting','navaid'].includes(category) && unavailable;
+  const procedureUnavailable = category === 'procedure' && unavailable && !operationalChange;
+  const critical = airportClosed || runwayClosed || taxiwayClosed || rampClosed || equipmentUnavailable || procedureUnavailable;
+  const amendment = category === 'procedure' && (notAuthorized || operationalChange) && !procedureUnavailable;
   const obstacleOnly = category === 'obstacle';
   const priority: ParsedNotam['priority'] = critical ? 'critical' : amendment ? 'amendment' : 'advisory';
   return { category, priority, important: !obstacleOnly && (critical || amendment) };

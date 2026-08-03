@@ -1640,3 +1640,67 @@ main { min-height: 100dvh; }
   .sidebar.collapsed .sidebar-status { display:initial !important; }
   .sidebar.collapsed nav button { justify-content:flex-start !important; }
 }
+
+/* AeroSlate 0.11.5 — responsive chart desk, chart-aware NOTAMs, and clearer navlog/OFP output */
+.aeroslate-chart-layout {
+  display:grid;
+  grid-template-columns:minmax(280px,320px) minmax(0,1fr);
+  gap:12px;
+  min-height:calc(100dvh - var(--safe-top) - 178px);
+  align-items:stretch;
+}
+.chart-catalog-card,
+.redesigned-chart-viewer { min-width:0; overflow:hidden; }
+.chart-catalog-card { display:flex; flex-direction:column; }
+.chart-catalog-body { display:flex; flex-direction:column; min-height:0; }
+.chart-catalog-body .chart-group-list { flex:1; min-height:0; max-height:calc(100dvh - 365px); }
+.redesigned-chart-viewer { display:grid; grid-template-rows:auto minmax(0,1fr) auto; min-height:calc(100dvh - var(--safe-top) - 178px); }
+.redesigned-chart-viewer > header { min-width:0; gap:10px; }
+.redesigned-chart-viewer > header > div:first-child { min-width:0; }
+.redesigned-chart-viewer > header h3 { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chart-header-actions { display:flex; gap:7px; flex:none; }
+.chart-header-actions button { white-space:nowrap; }
+.redesigned-chart-viewer .chart-workspace-host { min-height:0; height:auto; overflow:hidden; }
+.redesigned-chart-viewer .chart-workspace { height:100%; min-height:0; }
+.redesigned-chart-viewer .chart-scroll { min-height:0; }
+.chart-toolbar { display:grid; grid-template-columns:minmax(0,1fr); align-items:start; gap:6px; overflow:visible; padding:7px 9px; }
+.chart-toolbar .tool-group { min-width:0; display:flex; flex-wrap:wrap; }
+.chart-toolbar .tool-group.compact { overflow-x:auto; max-width:100%; padding-bottom:2px; }
+.chart-subbar { flex-wrap:wrap; padding-block:7px; }
+.chart-notam-drawer { border-top:1px solid var(--border); background:#08151f; }
+.chart-notam-drawer > summary { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 13px; cursor:pointer; list-style:none; }
+.chart-notam-drawer > summary span { display:flex; align-items:center; gap:8px; min-width:0; }
+.chart-notam-drawer > summary small { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chart-notam-drawer.has-critical > summary svg { color:#ff6e75; }
+.chart-notam-drawer > div { max-height:220px; overflow:auto; display:grid; gap:5px; padding:0 10px 10px; }
+.chart-notam-item { display:grid; grid-template-columns:110px minmax(0,1fr); gap:8px; padding:8px 9px; border:1px solid var(--border); border-radius:8px; background:#0a1a25; }
+.chart-notam-item.priority-critical { border-left:4px solid #df4952; }
+.chart-notam-item.priority-amendment { border-left:4px solid #d8aa32; }
+.chart-notam-item > span { color:var(--muted); text-transform:capitalize; font-size:9px; font-weight:800; }
+.chart-notam-item > strong { font-size:11px; line-height:1.35; }
+.chart-notam-item details { grid-column:1/-1; }
+.chart-notam-item details summary { color:#66bfe9; font-size:9px; cursor:pointer; }
+.chart-notam-item pre { white-space:pre-wrap; font:10px/1.45 var(--mono); color:#c8d6de; }
+.chart-binder-grid article { grid-template-columns:minmax(0,1fr) auto auto; }
+.navlog-weather-stack { display:grid; gap:2px; line-height:1.2; }
+.navlog-weather-stack strong { font-size:12px; }
+.navlog-weather-stack span { color:var(--muted); font-size:9px; white-space:nowrap; }
+.navlog-weather-stack .isa-dev { color:#73c7ff; }
+
+@media (max-width:1100px) {
+  .aeroslate-chart-layout { grid-template-columns:1fr; min-height:auto; }
+  .chart-catalog-card { min-height:auto; }
+  .chart-catalog-body .chart-group-list { max-height:34dvh; }
+  .redesigned-chart-viewer { min-height:64dvh; }
+}
+@media (max-width:700px) {
+  .chart-search-row { grid-template-columns:minmax(0,1fr) 92px; }
+  .chart-reload-button { min-width:92px; width:92px; padding-inline:8px; }
+  .chart-airport-shortcuts { overflow-x:auto; flex-wrap:nowrap; padding-bottom:3px; }
+  .redesigned-chart-viewer { min-height:68dvh; }
+  .redesigned-chart-viewer > header { align-items:flex-start; }
+  .chart-header-actions button { padding-inline:8px; }
+  .chart-notam-item { grid-template-columns:1fr; }
+  .chart-notam-item details { grid-column:auto; }
+  .chart-scroll { padding:12px; }
+}

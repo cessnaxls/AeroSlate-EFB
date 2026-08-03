@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.11.4",
-  "description": "AeroSlate EFB free edition with SimBrief manual-ZFW dispatch calculated from aircraft BOW, passenger/baggage load, and freight.",
+  "version": "0.11.5",
+  "description": "AeroSlate EFB free edition with SimBrief responsive chart desk, binder viewing, chart-aware NOTAMs, refined NOTAM classification, and corrected OFP/navlog presentation.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
