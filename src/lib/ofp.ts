@@ -278,15 +278,44 @@ function stringLeaves(value: unknown, depth = 0): string[] {
 export function getICAOFlightPlan(ofp: AnyRecord | null): string {
   if (!ofp) return '';
   const candidates: unknown[] = [
-    dig(ofp, 'text.atc'), dig(ofp, 'text.atc_text'), dig(ofp, 'text.icao_fpl'),
-    dig(ofp, 'atc.flight_plan'), dig(ofp, 'atc.fpl'), dig(ofp, 'general.atc_flight_plan'), dig(ofp, 'files.atc')
+    dig(ofp, 'text.atc'), dig(ofp, 'text.atc_text'), dig(ofp, 'text.icao_fpl'), dig(ofp, 'text.icao'),
+    dig(ofp, 'atc.flight_plan'), dig(ofp, 'atc.fpl'), dig(ofp, 'general.atc_flight_plan'),
+    dig(ofp, 'general.icao_fpl'), dig(ofp, 'files.atc'), dig(ofp, 'api_params.icao_fpl')
   ];
-  const all = [...candidates.flatMap(value => stringLeaves(value)), ...stringLeaves(dig(ofp, 'text'))];
-  const cleaned = all.map(cleanText).filter(Boolean);
-  const exact = cleaned.find(value => /\(FPL-[\s\S]*\)/i.test(value));
-  if (exact) return exact.match(/\(FPL-[\s\S]*?\)(?:\s|$)/i)?.[0]?.trim() || exact.trim();
-  const fpl = cleaned.find(value => /^FPL-|\bFPL-/i.test(value));
-  return (fpl || '').replace(/^.*?(?=\(?FPL-)/is, '').trim();
+  const all = [...candidates.flatMap(value => stringLeaves(value)), ...stringLeaves(dig(ofp, 'text'))]
+    .map(cleanText).filter(Boolean);
+  const normalize = (value: string) => value
+    .replace(/^.*?(?=\(?FPL-)/is, '')
+    .replace(/\s*\n\s*/g, '\n')
+    .replace(/\u2013|\u2014/g, '-')
+    .trim();
+  for (const raw of all) {
+    const value = normalize(raw);
+    const start = value.search(/\(?FPL-/i);
+    if (start < 0) continue;
+    const fragment = value.slice(start);
+    let depth = 0; let began = false;
+    for (let index = 0; index < fragment.length; index += 1) {
+      if (fragment[index] === '(') { depth += 1; began = true; }
+      if (fragment[index] === ')' && began) { depth -= 1; if (depth === 0) return fragment.slice(0, index + 1).replace(/^FPL-/, '(FPL-'); }
+    }
+    const lines = fragment.split('\n');
+    const relevant: string[] = [];
+    for (const line of lines) {
+      if (relevant.length && /^\s*(?:METAR|TAF|NOTAM|DISPATCH|NAVLOG|FUEL)\b/i.test(line)) break;
+      relevant.push(line);
+    }
+    const joined = relevant.join('\n').trim();
+    if (joined) return `${joined.startsWith('(') ? joined : `(${joined}`}${joined.endsWith(')') ? '' : ')'}`;
+  }
+  // Reconstruct from structured ICAO fields only when SimBrief did not provide the formatted message.
+  const callsign = String(dig(ofp, 'general.icao_airline') || '') + String(dig(ofp, 'general.flight_number') || '');
+  const aircraft = String(dig(ofp, 'aircraft.icaocode') || dig(ofp, 'aircraft.icao_code') || '');
+  const origin = String(dig(ofp, 'origin.icao_code') || ''); const dest = String(dig(ofp, 'destination.icao_code') || '');
+  const route = String(dig(ofp, 'general.route') || dig(ofp, 'general.route_ifps') || '');
+  const level = String(dig(ofp, 'general.initial_altitude') || '').replace(/\D/g, '');
+  if (callsign && aircraft && origin && dest && route) return `(FPL-${callsign}-IS\n-${aircraft}/M-SDE2E3FGHIJ1J4J5RWXYZ/LB1\n-${origin}${String(dig(ofp,'times.sched_out')||'').slice(-4)}\n-N${String(dig(ofp,'general.cruise_tas')||'').padStart(4,'0')}F${level.slice(0,3).padStart(3,'0')} ${route}\n-${dest}${String(dig(ofp,'times.est_time_enroute')||'').replace(/\D/g,'').slice(0,4)}\n-PBN/A1B1C1D1L1O1S2 DOF/${String(dig(ofp,'general.date')||'').replace(/\D/g,'').slice(-6)})`;
+  return '';
 }
 
 function notamText(value: unknown): string {
@@ -348,7 +377,7 @@ function classifyNotam(text: string): Pick<ParsedNotam, 'important' | 'priority'
 
   const category: ParsedNotam['category'] = procedure ? 'procedure' : lighting ? 'lighting' : runway ? 'runway' : taxiway ? 'taxiway' : navaid ? 'navaid' : obstacle ? 'obstacle' : communication ? 'communication' : service ? 'service' : airport ? 'airport' : airspace ? 'airspace' : 'other';
   const critical = airportClosed || runwayClosed || taxiwayClosed || equipmentUnavailable || procedureUnavailable;
-  // Procedure NA, raised minima, and procedural changes are restrictions—not outages.
+  // Procedure NA means not authorized; raised minima and procedural changes are restrictions—not outages.
   const amendment = procedure && (notApplicable || operationalChange) && !procedureUnavailable;
   const obstacleOnly = category === 'obstacle';
   const priority: ParsedNotam['priority'] = critical ? 'critical' : amendment ? 'amendment' : 'advisory';
@@ -515,7 +544,12 @@ function scalar(value: unknown): unknown {
 
 function textValue(value: unknown): string {
   const raw = scalar(value);
-  return raw === undefined || raw === null ? '' : String(raw).trim();
+  if (raw === undefined || raw === null) return '';
+  if (typeof raw === 'object') {
+    const leaves = stringLeaves(raw).map(item => item.trim()).filter(Boolean);
+    return leaves.join(' ').trim();
+  }
+  return String(raw).trim();
 }
 
 function numberValue(value: unknown): number | null {

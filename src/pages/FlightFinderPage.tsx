@@ -46,6 +46,9 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
   const [selectedFlight, setSelectedFlight] = useState<FlightCandidate | null>(() => loadLocal<FlightCandidate | null>('aeroslate.finder.flight', null));
   const [parseInfo, setParseInfo] = useState<Fr24ParseResult | null>(null);
   const [readingClipboard, setReadingClipboard] = useState(false);
+  const [flightQuery, setFlightQuery] = useState('');
+  const [equipFilter, setEquipFilter] = useState('ALL');
+  const [airlineFilter, setAirlineFilter] = useState('ALL');
   const flightTableRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => { saveLocal('aeroslate.finder.country', country); saveLocal('aeroslate.finder.size', size); }, [country, size]);
@@ -69,6 +72,11 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
     if (!q) return filteredAirports.slice(0, 40);
     return airports.filter(airport => [airport.icao, airport.iata, airport.name, airport.city, airport.country].some(value => String(value).toLowerCase().includes(q))).slice(0, 80);
   }, [airportQuery, airports, filteredAirports]);
+
+
+  const airlineOptions = useMemo(() => [...new Set(flights.map(row => row.flightNumber.match(/^([A-Z]{3})/)?.[1]).filter(Boolean) as string[])].sort(), [flights]);
+  const equipOptions = useMemo(() => [...new Set(flights.map(row => row.aircraft).filter(Boolean))].sort(), [flights]);
+  const visibleFlights = useMemo(() => { const q=flightQuery.trim().toUpperCase(); return flights.filter(row => (airlineFilter==='ALL'||row.flightNumber.startsWith(airlineFilter)) && (equipFilter==='ALL'||row.aircraft===equipFilter) && (!q||`${row.flightNumber} ${row.departure} ${row.arrival} ${row.registration}`.toUpperCase().includes(q))); }, [flights, flightQuery, airlineFilter, equipFilter]);
 
   const randomAirport = () => {
     if (!filteredAirports.length) { notify('No airports match that country.'); return; }
@@ -152,10 +160,10 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
     </section>
 
     <section className="card span-full flights-card">
-      <header><div><Plane size={18} /><h3>Available flights</h3></div><span className="pill neutral">{flights.length} rows</span></header>
+      <header><div><Plane size={18} /><h3>Available flights</h3></div><span className="pill neutral">{visibleFlights.length} / {flights.length}</span></header><div className="flight-filter-bar"><input value={flightQuery} onChange={event=>setFlightQuery(event.target.value)} placeholder="Flight, route, or registration"/><select value={airlineFilter} onChange={event=>setAirlineFilter(event.target.value)}><option value="ALL">All airlines</option>{airlineOptions.map(item=><option key={item}>{item}</option>)}</select><select value={equipFilter} onChange={event=>setEquipFilter(event.target.value)}><option value="ALL">All equipment</option>{equipOptions.map(item=><option key={item}>{item}</option>)}</select></div>
       <div className="card-body table-wrap flight-table-wrap" ref={flightTableRef}>
         <table className="data-table flight-table responsive-flight-table"><thead><tr><th>Flight</th><th>Route</th><th>EQUIP</th><th>REG</th><th>Schedule</th><th>ETE</th><th></th></tr></thead><tbody>
-          {flights.map(row => <tr key={row.id} data-flight-id={row.id} className={selectedFlight?.id === row.id ? 'selected' : ''} onClick={() => setSelectedFlight(row)}>
+          {visibleFlights.map(row => <tr key={row.id} data-flight-id={row.id} className={selectedFlight?.id === row.id ? 'selected' : ''} onClick={() => setSelectedFlight(row)}>
             <td className="flight-cell"><strong>{row.flightNumber}</strong><small>{row.date}</small></td>
             <td className="route-cell"><strong>{row.departure}</strong><span>→</span><strong>{row.arrival}</strong></td>
             <td className="equip-cell">{row.aircraft || '—'}</td>

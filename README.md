@@ -1,6 +1,17 @@
-# AeroSlate EFB 0.8.0 — Free Edition
+# AeroSlate EFB 0.9.0 — Free Edition
 
-AeroSlate is a local-first simulator EFB for MSFS 2020 and X-Plane 11/12 with SimBrief planning, flight discovery, operational logs, charts, route weather, OOOI, fuel monitoring and encrypted GitHub Gist synchronization.
+AeroSlate is a local-first, Render-free-tier EFB for flight simulation with SimBrief planning, FR24 schedule parsing, structured TLR, active navlog, simulator telemetry, records, trips, public charts, and an interactive route/radar map.
+
+## 0.9 highlights
+
+- Correct `NA` procedure status: **Not authorized**.
+- More reliable complete ICAO `(FPL-...)` extraction.
+- Comprehensive plaintext OFP briefing.
+- ISA deviation in the navlog.
+- Side-by-side structured takeoff and landing TLR.
+- Dark adjustable radar map and optional aviation tile layer.
+- Flight filters, compact portrait rows, 1–5 leg rig generation, and month planner.
+- Preflight and postflight tabs removed.
 
 ## Deploy on Render free
 
@@ -35,3 +46,7 @@ Pressing **Trip** in Flight Finder saves immediately to the same local encrypted
 ## Simulator bridge
 
 MSFS uses the included SimConnect bridge. X-Plane 11/12 uses the included UDP/RREF bridge. Run the bridge on the simulator computer and point it at the Render URL using the same `SIM_LINK_TOKEN` configured on Render.
+
+## Chart data note
+
+AeroSlate can present and bind chart PDFs from official/public sources. The FAA publishes current U.S. terminal procedures as downloadable d-TPP PDFs. Worldwide coverage requires separate public AIP catalogs or a licensed chart API; there is no single unrestricted worldwide chart API bundled with AeroSlate. An optional aviation map-tile URL can be configured with `VITE_OPENAIP_TILE_URL`.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Activity, BookOpenCheck, Calculator, CalendarDays, Check, CheckCircle2, ChevronRight, ClipboardCheck, CloudSun, FileText, Fuel, Gauge, HelpCircle, Import,
+  Activity, BookOpenCheck, Calculator, CalendarDays, Check, ChevronRight, CloudSun, FileText, Fuel, Gauge, HelpCircle, Import,
   LayoutDashboard, Link2, Map, MapPin, Menu, PanelLeftClose, PanelLeftOpen, Plane, RefreshCw, Route, Search, Settings, Timer, X
 } from 'lucide-react';
 import { AeroSlateLogo } from './components/AeroSlateLogo';
@@ -24,11 +24,10 @@ import { RecordsPage } from './pages/RecordsPage';
 import { GatePage } from './pages/GatePage';
 import { TripsPage } from './pages/TripsPage';
 import { HelpPage } from './pages/HelpPage';
-import { OperationsLogPage } from './pages/OperationsLogPage';
 import { appendLedgerRecord, emptyLedger, getOrCreateDeviceId, normalizeLedger } from './lib/cloudLedger';
 import { generateDispatchPayload } from './lib/dispatchlink';
 
-type Page = 'dashboard' | 'finder' | 'trips' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'preflight' | 'sim' | 'times' | 'postflight' | 'gates' | 'flightlogs' | 'dutylogs' | 'help' | 'settings';
+type Page = 'dashboard' | 'finder' | 'trips' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'sim' | 'times' | 'gates' | 'flightlogs' | 'dutylogs' | 'help' | 'settings';
 interface RuntimeStatus { simLinked: boolean; mode: 'standalone' | 'sim-linked'; providerMode: 'official-web-session'; }
 interface NavItem { id: Page; label: string; shortLabel: string; icon: typeof LayoutDashboard; group: 'Plan' | 'Brief' | 'Fly' | 'Record' | 'System'; }
 const NAV_ITEMS: NavItem[] = [
@@ -42,10 +41,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'weather', label: 'WX / NOTAMs', shortLabel: 'Weather', icon: CloudSun, group: 'Brief' },
   { id: 'fuel', label: 'Fuel', shortLabel: 'Fuel', icon: Fuel, group: 'Brief' },
   { id: 'performance', label: 'Runway', shortLabel: 'Runway', icon: Calculator, group: 'Brief' },
-  { id: 'preflight', label: 'Preflight', shortLabel: 'Preflight', icon: ClipboardCheck, group: 'Fly' },
   { id: 'sim', label: 'Live data', shortLabel: 'Live', icon: Activity, group: 'Fly' },
   { id: 'times', label: 'OOOI', shortLabel: 'OOOI', icon: Timer, group: 'Fly' },
-  { id: 'postflight', label: 'Postflight', shortLabel: 'Post', icon: CheckCircle2, group: 'Fly' },
   { id: 'flightlogs', label: 'Flights', shortLabel: 'Flights', icon: BookOpenCheck, group: 'Record' },
   { id: 'dutylogs', label: 'Duty', shortLabel: 'Duty', icon: Timer, group: 'Record' },
   { id: 'gates', label: 'Gates', shortLabel: 'Gates', icon: MapPin, group: 'Fly' },
@@ -148,10 +145,8 @@ export default function App() {
         {page === 'navlog' && <NavlogPage ofp={ofp} flight={flight} />}
         {page === 'weather' && <WeatherPage ofp={ofp} flight={flight} />}
         {page === 'fuel' && <FuelPage ofp={ofp} flight={flight} />}
-        {page === 'preflight' && <OperationsLogPage mode="preflight" flight={flight} notify={notify} />}
         {page === 'sim' && <SimPage />}
         {page === 'times' && <OOOIPage release={flight.release} origin={flight.origin} destination={flight.destination} schedOut={flight.schedOut} schedIn={flight.schedIn} />}
-        {page === 'postflight' && <OperationsLogPage mode="postflight" flight={flight} notify={notify} />}
         {page === 'flightlogs' && <RecordsPage flight={flight} mode="logbook" />}
         {page === 'dutylogs' && <RecordsPage flight={flight} mode="duty" />}
         {page === 'gates' && <GatePage ofp={ofp} flight={flight} notify={notify} />}

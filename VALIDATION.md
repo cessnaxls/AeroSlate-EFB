@@ -1,10 +1,14 @@
-# AeroSlate EFB 0.8.0 validation
+# Validation — AeroSlate EFB 0.9.0
 
-Passed in the build workspace:
-- TypeScript project check (`tsc -b`)
+Passed:
+- TypeScript project check (`npm run check`)
+- FR24 parser regression: 100 desktop airport rows, 100 compact airport rows, 33 aircraft-history cards, and 33 aircraft-history table rows
+- Workflow regression: 7,692 airports, 237 countries, chart/map workflow, clipboard parser, NOTAM priorities, and structured TLR
 - Node server syntax check
 - Electron main-process syntax check
-- Four-format FR24 parser regression
-- Updated workflow regression for public chart sources, radar map references, NOTAM classification and structured TLR
+- Python bridge byte-compilation
+- Preflight/postflight removal check
+- NOTAM `NA` terminology check
+- ZIP integrity test
 
-The final Vite bundle was not executed because this workspace's internal npm registry does not provide `@vitejs/plugin-react`. GitHub Actions and Render install from their normal registry.
+The final Vite bundle was not executed in this workspace because the package registry did not provide a runnable local `vite` binary. GitHub Actions and Render perform the normal dependency installation and production build.

@@ -1382,3 +1382,29 @@ main { min-height: 100dvh; }
  .ops-log-list p { grid-column:1/-1; }
  .binder-add-row { grid-template-columns:1fr; }
 }
+
+/* AeroSlate 0.9 operational refinements */
+.flight-primary > span { font-size: 18px !important; line-height: 1; letter-spacing: .8px; }
+.isa-dev { color:#73c7ff !important; }
+.tlr-phase-stack { grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; align-items:start; }
+.tlr-condition-strip span:last-child { text-transform:capitalize; }
+.flight-filter-bar { display:grid; grid-template-columns:minmax(220px,1fr) 160px 170px; gap:8px; padding:9px 12px; border-bottom:1px solid var(--border); background:#0b1721; }
+.flight-filter-bar input,.flight-filter-bar select { min-height:38px; }
+.map-control-strip { display:flex; gap:6px; align-items:center; }
+.map-control-strip button { min-height:30px; padding:5px 9px; font-size:12px; }
+.map-control-strip label { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--muted); }
+.map-control-strip input { width:80px; }
+.route-radar-map .leaflet-control-layers,.route-radar-map .leaflet-bar a { background:#0b1721!important;color:#dceaf4!important;border-color:#263b4b!important; }
+.trip-builder-grid { display:grid; grid-template-columns:1.4fr 1fr; gap:18px; align-items:end; }
+.trip-builder-grid>div { display:grid; gap:8px; }
+.rig-builder { grid-template-columns:1fr auto!important; align-items:end; }
+.planner-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
+.planner-grid>b { color:var(--muted); text-align:center; font-size:10px; padding:4px; }
+.planner-day { min-height:94px; border:1px solid var(--border); border-radius:8px; padding:6px; background:#09151f; overflow:hidden; }
+.planner-day>span { font-size:11px; color:var(--muted); }
+.planner-day article { display:grid; grid-template-columns:1fr auto; margin-top:4px; padding:4px; border-radius:5px; background:#10293a; }
+.planner-day article strong,.planner-day article small { grid-column:1; font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.planner-day article button { grid-column:2; grid-row:1/3; min-height:24px; padding:3px; }
+.weather-ofp-summary { display:grid; gap:10px; }.weather-ofp-summary span{font-size:10px;color:var(--muted);text-transform:uppercase}.weather-ofp-summary p{font-family:var(--mono);font-size:12px;line-height:1.45;margin:3px 0 0}.route-airport-grid{margin-top:12px}
+@media(max-width:900px){.tlr-phase-stack{grid-template-columns:1fr!important}.flight-filter-bar{grid-template-columns:1fr 1fr}.flight-filter-bar input{grid-column:1/-1}.trip-builder-grid{grid-template-columns:1fr}.planner-day{min-height:72px}}
+@media(max-width:700px){.responsive-flight-table tbody tr{height:44px!important}.responsive-flight-table th,.responsive-flight-table td{padding:5px 7px!important;font-size:11px}.responsive-flight-table td small{font-size:8px!important;margin-top:0!important}.flight-row-actions button{min-height:30px!important;padding:4px 7px!important}.flight-filter-bar{grid-template-columns:1fr}.flight-filter-bar input{grid-column:auto}.flight-primary>span{font-size:15px!important}.planner-grid{min-width:680px}.planner-card .card-body{overflow-x:auto}}

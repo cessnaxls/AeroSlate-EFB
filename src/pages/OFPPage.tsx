@@ -1,26 +1,29 @@
-import { Clipboard, FileText, Gauge, Plane, Route, ShieldCheck } from 'lucide-react';
-import { asArray, dig, getICAOFlightPlan, type AnyRecord, type FlightSummary } from '../lib/ofp';
-
+import { Clipboard, FileText, Gauge, Plane, Route, ShieldCheck, Clock3, CloudSun } from 'lucide-react';
+import { asArray, dig, getICAOFlightPlan, getWeather, type AnyRecord, type FlightSummary } from '../lib/ofp';
 interface Props { ofp: AnyRecord | null; flight: FlightSummary; notify: (message: string) => void; }
-const text = (value: unknown, fallback='—') => value === undefined || value === null || value === '' ? fallback : String(value);
-const num = (value: unknown, units='') => { const n=Number(value); return Number.isFinite(n) ? `${n.toLocaleString()}${units}` : '—'; };
-
-export function OFPPage({ ofp, flight, notify }: Props) {
-  const atc=getICAOFlightPlan(ofp);
-  const copy=async()=>{ if(!atc) return notify('No ICAO flight plan was included in this OFP.'); await navigator.clipboard.writeText(atc); notify('ICAO flight plan copied.'); };
-  const alternates=asArray(dig(ofp,'alternate')).map((a:any)=>a?.icao_code).filter(Boolean).join(', ') || flight.alternate;
-  const remarks=text(dig(ofp,'general.dx_rmk','params.manualrmk'),'No dispatcher remarks.');
-  const fuel=[['Ramp',dig(ofp,'fuel.plan_ramp')],['Taxi',dig(ofp,'fuel.taxi')],['Trip',dig(ofp,'fuel.enroute_burn')],['Contingency',dig(ofp,'fuel.contingency')],['Alternate',dig(ofp,'fuel.alternate_burn')],['Reserve',dig(ofp,'fuel.reserve')],['Extra',dig(ofp,'fuel.extra')],['Landing',dig(ofp,'fuel.plan_landing')]];
-  const weights=[['Pax',dig(ofp,'weights.pax_count')],['Payload',dig(ofp,'weights.payload')],['Cargo',dig(ofp,'weights.cargo')],['ZFW',dig(ofp,'weights.est_zfw')],['TOW',dig(ofp,'weights.est_tow')],['LDW',dig(ofp,'weights.est_ldw')],['MTOW',dig(ofp,'weights.max_tow')],['MLW',dig(ofp,'weights.max_ldw')]];
-  return <div className="ofp-briefing-page">
-    <section className="card ofp-hero"><div className="card-body"><div className="ofp-title-block"><span>{flight.airline}{flight.flightNumber}</span><strong>{flight.origin} → {flight.destination}</strong><small>{flight.aircraft} · {flight.registration} · Release {flight.release}</small></div><div className="button-row"><button onClick={copy}><Clipboard size={16}/> Copy ICAO FPL</button></div></div></section>
-    <div className="content-grid two ofp-professional-grid">
-      <section className="card"><header><div><Gauge size={18}/><h3>Flight overview</h3></div></header><div className="card-body status-list"><div><span>STD / STA</span><strong>{flight.schedOut} / {flight.schedIn}</strong></div><div><span>Block / ETE</span><strong>{flight.blockTime} / {flight.ete}</strong></div><div><span>Distance</span><strong>{flight.distance}</strong></div><div><span>Cruise / CI</span><strong>{flight.cruiseAltitude} / {flight.costIndex}</strong></div><div><span>Runways</span><strong>{flight.departureRunway} / {flight.arrivalRunway}</strong></div><div><span>Alternate</span><strong>{alternates}</strong></div></div></section>
-      <section className="card"><header><div><Route size={18}/><h3>Route</h3></div></header><div className="card-body"><div className="route-briefing-text">{flight.route}</div></div></section>
-      <section className="card"><header><div><Plane size={18}/><h3>Fuel plan</h3></div></header><div className="card-body ofp-kpi-grid">{fuel.map(([k,v])=><div key={String(k)}><span>{k}</span><strong>{num(v,` ${flight.units}`)}</strong></div>)}</div></section>
-      <section className="card"><header><div><ShieldCheck size={18}/><h3>Weights & load</h3></div></header><div className="card-body ofp-kpi-grid">{weights.map(([k,v])=><div key={String(k)}><span>{k}</span><strong>{k==='Pax'?num(v):num(v,` ${flight.units}`)}</strong></div>)}</div></section>
-      <section className="card span-2"><header><div><FileText size={18}/><h3>ICAO flight plan</h3></div><button onClick={copy}><Clipboard size={15}/> Copy</button></header><div className="card-body"><pre className="flightplan-text compact-fpl">{atc || 'No ICAO flight plan available.'}</pre></div></section>
-      <section className="card span-2"><header><div><FileText size={18}/><h3>Dispatcher remarks</h3></div></header><div className="card-body"><div className="block-text">{remarks}</div></div></section>
-    </div>
-  </div>;
+const text=(v:unknown,f='—')=>v===undefined||v===null||v===''?f:String(v);
+const num=(v:unknown,u='')=>{const n=Number(v);return Number.isFinite(n)?`${n.toLocaleString()}${u}`:'—'};
+const time=(v:unknown)=>{const n=Number(v);if(Number.isFinite(n)&&n>1000000000)return new Date(n*1000).toISOString().slice(11,16)+'z';return text(v)};
+function List({items}:{items:[string,unknown][]}){return <div className="status-list">{items.map(([k,v])=><div key={k}><span>{k}</span><strong>{text(v)}</strong></div>)}</div>}
+export function OFPPage({ofp,flight,notify}:Props){
+ const atc=getICAOFlightPlan(ofp); const copy=async()=>{if(!atc)return notify('No ICAO flight plan was included in this OFP.');await navigator.clipboard.writeText(atc);notify('ICAO flight plan copied.');};
+ const alternates=asArray(dig(ofp,'alternate')).map((a:any)=>a?.icao_code||a?.icao).filter(Boolean).join(', ')||flight.alternate;
+ const remarks=text(dig(ofp,'general.dx_rmk','params.manualrmk','general.remarks'),'No dispatcher remarks.');
+ const fuel:[string,unknown][]=[['Ramp',dig(ofp,'fuel.plan_ramp')],['Taxi',dig(ofp,'fuel.taxi')],['Takeoff',dig(ofp,'fuel.plan_takeoff')],['Trip',dig(ofp,'fuel.enroute_burn')],['Contingency',dig(ofp,'fuel.contingency')],['Alternate',dig(ofp,'fuel.alternate_burn')],['Reserve',dig(ofp,'fuel.reserve')],['Extra',dig(ofp,'fuel.extra')],['Landing',dig(ofp,'fuel.plan_landing')]];
+ const weights:[string,unknown][]=[['Passengers',dig(ofp,'weights.pax_count')],['Passenger weight',dig(ofp,'weights.pax_weight')],['Baggage',dig(ofp,'weights.bag_count')],['Cargo',dig(ofp,'weights.cargo')],['Payload',dig(ofp,'weights.payload')],['ZFW',dig(ofp,'weights.est_zfw')],['TOW',dig(ofp,'weights.est_tow')],['LDW',dig(ofp,'weights.est_ldw')],['MTOW',dig(ofp,'weights.max_tow')],['MLW',dig(ofp,'weights.max_ldw')]];
+ const depwx=getWeather(ofp,'origin').metar, arrwx=getWeather(ofp,'destination').metar;
+ return <div className="ofp-briefing-page">
+  <section className="card ofp-hero"><div className="card-body"><div className="ofp-title-block"><span>{flight.airline}{flight.flightNumber}</span><strong>{flight.origin} → {flight.destination}</strong><small>{flight.aircraft} · {flight.registration} · Release {flight.release}</small></div><button onClick={copy}><Clipboard size={16}/> Copy ICAO FPL</button></div></section>
+  <div className="content-grid two ofp-professional-grid">
+   <section className="card"><header><div><Gauge size={18}/><h3>Dispatch overview</h3></div></header><div className="card-body"><List items={[["Release",flight.release],["Flight date",flight.flightDate],["Callsign",flight.callsign],["OFP layout",dig(ofp,'params.units')||dig(ofp,'params.airline')],["Dispatcher",dig(ofp,'general.dx_name')],["Status",dig(ofp,'fetch.status')||'Generated']]}/></div></section>
+   <section className="card"><header><div><Clock3 size={18}/><h3>Schedule & flight profile</h3></div></header><div className="card-body"><List items={[["STD / STA",`${flight.schedOut} / ${flight.schedIn}`],["Block / ETE",`${flight.blockTime} / ${flight.ete}`],["Air distance",flight.distance],["Cruise altitude",flight.cruiseAltitude],["Cost index",flight.costIndex],["Cruise TAS / Mach",`${text(dig(ofp,'general.cruise_tas'))} / ${text(dig(ofp,'general.cruise_mach'))}`]]}/></div></section>
+   <section className="card span-2"><header><div><Route size={18}/><h3>Route & airports</h3></div></header><div className="card-body"><div className="route-briefing-text">{flight.route}</div><div className="ofp-kpi-grid route-airport-grid"><div><span>Departure</span><strong>{flight.origin} · RWY {flight.departureRunway}</strong></div><div><span>Destination</span><strong>{flight.destination} · RWY {flight.arrivalRunway}</strong></div><div><span>Alternate(s)</span><strong>{alternates}</strong></div><div><span>SID / STAR</span><strong>{text(dig(ofp,'origin.plan_rwy'))} / {text(dig(ofp,'destination.plan_rwy'))}</strong></div></div></div></section>
+   <section className="card"><header><div><Plane size={18}/><h3>Aircraft & configuration</h3></div></header><div className="card-body"><List items={[["Type",`${flight.aircraft} · ${text(dig(ofp,'aircraft.name'))}`],["Registration",flight.registration],["Fin / SELCAL",`${text(dig(ofp,'aircraft.fin'))} / ${text(dig(ofp,'aircraft.selcal'))}`],["Engines",dig(ofp,'aircraft.engines')],["Ceiling",num(dig(ofp,'aircraft.max_ceiling'),' ft')],["Units",flight.units]]}/></div></section>
+   <section className="card"><header><div><CloudSun size={18}/><h3>Weather snapshot</h3></div></header><div className="card-body weather-ofp-summary"><div><span>{flight.origin} METAR</span><p>{depwx}</p></div><div><span>{flight.destination} METAR</span><p>{arrwx}</p></div></div></section>
+   <section className="card"><header><div><Plane size={18}/><h3>Fuel plan</h3></div></header><div className="card-body ofp-kpi-grid">{fuel.map(([k,v])=><div key={k}><span>{k}</span><strong>{num(v,` ${flight.units}`)}</strong></div>)}</div></section>
+   <section className="card"><header><div><Gauge size={18}/><h3>Weights & load</h3></div></header><div className="card-body ofp-kpi-grid">{weights.map(([k,v])=><div key={k}><span>{k}</span><strong>{k==='Passengers'||k==='Baggage'?num(v):num(v,` ${flight.units}`)}</strong></div>)}</div></section>
+   <section className="card span-2"><header><div><FileText size={18}/><h3>ICAO flight plan</h3></div><button onClick={copy}><Clipboard size={15}/> Copy</button></header><div className="card-body"><pre className="flightplan-text compact-fpl">{atc||'No ICAO flight plan available.'}</pre></div></section>
+   <section className="card span-2"><header><div><ShieldCheck size={18}/><h3>Operational remarks</h3></div></header><div className="card-body"><div className="block-text">{remarks}</div></div></section>
+  </div>
+ </div>;
 }

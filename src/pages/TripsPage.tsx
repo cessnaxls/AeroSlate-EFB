@@ -1,64 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CloudUpload, Plane, Save, Send } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronRight, CloudUpload, Plane, Save, Send, Shuffle } from 'lucide-react';
 import { buildSimbriefDispatch, generateDispatchPayload, type FlightCandidate } from '../lib/dispatchlink';
 import { loadLocal, saveLocal } from '../lib/storage';
-import {
-  appendLedgerRecord, emptyLedger, getOrCreateDeviceId, normalizeLedger, synchronizeLedger,
-  type AeroSlateLedger, type GitHubCloudConfig, type RecordData
-} from '../lib/cloudLedger';
-
-interface Props {
-  candidate: FlightCandidate | null;
-  onDispatch: (url: string, flight: FlightCandidate, staticId: string) => void;
-  notify: (message: string) => void;
-}
-interface CloudPrefs { gistId: string; token: string; passphrase: string; autoSync: boolean; rememberSecrets: boolean; }
-const LEDGER_KEY = 'aeroslate.records.ledger.v2';
-const CLOUD_KEY = 'aeroslate.records.github.v1';
-
-function payloadFor(flight: FlightCandidate) { return generateDispatchPayload(flight); }
-function tripFlight(data: RecordData): FlightCandidate {
-  return {
-    id: String(data.candidateId), date: String(data.date), aircraft: String(data.aircraft), registration: String(data.registration),
-    flightNumber: String(data.flightNumber), departure: String(data.departure), arrival: String(data.arrival), std: String(data.std),
-    sta: String(data.sta), ete: String(data.ete), rawStd: String(data.rawStd || ''), rawSta: String(data.rawSta || '')
-  };
-}
-
-export function TripsPage({ candidate, onDispatch, notify }: Props) {
-  const [ledger, setLedger] = useState<AeroSlateLedger>(() => normalizeLedger(loadLocal(LEDGER_KEY, emptyLedger())));
-  const [busy, setBusy] = useState(false);
-  const deviceId = useMemo(() => getOrCreateDeviceId(), []);
-  const storedCloud = loadLocal<Partial<CloudPrefs>>(CLOUD_KEY, {});
-  const cloud: CloudPrefs = { gistId: storedCloud.gistId || '', token: storedCloud.rememberSecrets ? storedCloud.token || '' : '', passphrase: storedCloud.rememberSecrets ? storedCloud.passphrase || '' : '', autoSync: storedCloud.autoSync ?? true, rememberSecrets: storedCloud.rememberSecrets ?? false };
-  useEffect(() => saveLocal(LEDGER_KEY, ledger), [ledger]);
-
-  const addTrip = async () => {
-    if (!candidate) return notify('Select a parsed flight in Flight Finder first.');
-    const load = payloadFor(candidate);
-    const data: RecordData = { candidateId: candidate.id, date: candidate.date, flightNumber: candidate.flightNumber, departure: candidate.departure,
-      arrival: candidate.arrival, aircraft: candidate.aircraft, registration: candidate.registration, std: candidate.std, sta: candidate.sta, ete: candidate.ete,
-      rawStd: candidate.rawStd || '', rawSta: candidate.rawSta || '', status: 'Scheduled', ...load };
-    const result = await appendLedgerRecord(ledger, 'trip', data, deviceId); setLedger(result.ledger);
-    notify(`Scheduled ${candidate.flightNumber} · ${load.pax} pax, ${load.bags} bags${load.freight ? `, ${load.freight.toLocaleString()} lb freight` : ''}.`);
-    if (cloud.autoSync && cloud.token && cloud.passphrase.length >= 12) {
-      try { setBusy(true); const sync = await synchronizeLedger({ token: cloud.token, gistId: cloud.gistId, passphrase: cloud.passphrase }, result.ledger); setLedger(sync.ledger); saveLocal(CLOUD_KEY, { ...storedCloud, gistId: sync.gistId }); }
-      catch { notify('Trip saved locally. Open Flight Logs to reconnect the free GitHub Gist sync.'); }
-      finally { setBusy(false); }
-    }
-  };
-  const sync = async () => {
-    if (!cloud.token || cloud.passphrase.length < 12) return notify('Configure GitHub Gist sync in Flight Logs first.');
-    try { setBusy(true); const result = await synchronizeLedger({ token: cloud.token, gistId: cloud.gistId, passphrase: cloud.passphrase } as GitHubCloudConfig, ledger); setLedger(result.ledger); saveLocal(CLOUD_KEY, { ...storedCloud, gistId: result.gistId }); notify(`Trips synchronized · ${result.ledger.trips.length} scheduled.`); }
-    catch (e) { notify(e instanceof Error ? e.message : 'Trip sync failed.'); } finally { setBusy(false); }
-  };
-  const trips = ledger.trips.slice().sort((a,b) => `${a.data.date} ${a.data.std}`.localeCompare(`${b.data.date} ${b.data.std}`));
-  return <div className="trips-page">
-    <section className="card trip-scheduler"><header><div><CalendarDays size={18}/><h3>Trip calendar</h3></div><button onClick={() => void sync()} disabled={busy}><CloudUpload size={16}/>{busy ? 'Syncing…' : 'Sync Gist'}</button></header>
-      <div className="card-body trip-add-row"><div><strong>{candidate ? `${candidate.flightNumber} · ${candidate.departure}–${candidate.arrival}` : 'No selected flight'}</strong><span>{candidate ? `${candidate.date} · ${candidate.std}–${candidate.sta} · ${candidate.aircraft} ${candidate.registration}` : 'Select a flight in Flight Finder, then schedule it here.'}</span></div><button className="primary" onClick={() => void addTrip()} disabled={!candidate}><Save size={16}/> Add to trips</button></div></section>
-    <section className="card"><header><div><Plane size={18}/><h3>Scheduled trips</h3></div><span className="pill neutral">{trips.length}</span></header><div className="card-body trip-list">
-      {trips.map(entry => { const f=tripFlight(entry.data); return <article key={entry.id}><div className="trip-date"><strong>{String(entry.data.date)}</strong><span>{String(entry.data.std)}–{String(entry.data.sta)}</span></div><div className="trip-route"><strong>{String(entry.data.flightNumber)} · {String(entry.data.departure)} → {String(entry.data.arrival)}</strong><span>{String(entry.data.aircraft)} · {String(entry.data.registration)}</span></div><div className="trip-load"><strong>{String(entry.data.pax)} pax</strong><span>{String(entry.data.bags)} bags · {Number(entry.data.freight || 0).toLocaleString()} lb freight</span></div><button className="primary compact" onClick={() => { const plan=buildSimbriefDispatch(f,{ pax:Number(entry.data.pax), cargo:Number(entry.data.freight), remarks:`AeroSlate scheduled load: ${entry.data.bags} bags (${Number(entry.data.bagWeight).toLocaleString()} lb).` }); onDispatch(plan.url,f,plan.staticId); }}><Send size={14}/> Dispatch</button></article>; })}
-      {!trips.length && <div className="empty-cell">No scheduled trips yet. Add a parsed flight to create your calendar.</div>}
-    </div></section>
-  </div>;
+import { appendLedgerRecord, emptyLedger, getOrCreateDeviceId, normalizeLedger, synchronizeLedger, type AeroSlateLedger, type GitHubCloudConfig, type RecordData } from '../lib/cloudLedger';
+interface Props{candidate:FlightCandidate|null;onDispatch:(url:string,flight:FlightCandidate,staticId:string)=>void;notify:(message:string)=>void}
+interface CloudPrefs{gistId:string;token:string;passphrase:string;autoSync:boolean;rememberSecrets:boolean}
+const LEDGER_KEY='aeroslate.records.ledger.v2', CLOUD_KEY='aeroslate.records.github.v1';
+function tripFlight(d:RecordData):FlightCandidate{return{id:String(d.candidateId),date:String(d.date),aircraft:String(d.aircraft),registration:String(d.registration),flightNumber:String(d.flightNumber),departure:String(d.departure),arrival:String(d.arrival),std:String(d.std),sta:String(d.sta),ete:String(d.ete),rawStd:String(d.rawStd||''),rawSta:String(d.rawSta||'')}}
+function isoDate(d:Date){return d.toISOString().slice(0,10)}
+export function TripsPage({candidate,onDispatch,notify}:Props){
+ const [ledger,setLedger]=useState<AeroSlateLedger>(()=>normalizeLedger(loadLocal(LEDGER_KEY,emptyLedger())));const [busy,setBusy]=useState(false);const [month,setMonth]=useState(()=>new Date());const [legs,setLegs]=useState(3);const deviceId=useMemo(()=>getOrCreateDeviceId(),[]);const stored=loadLocal<Partial<CloudPrefs>>(CLOUD_KEY,{});const cloud:CloudPrefs={gistId:stored.gistId||'',token:stored.rememberSecrets?stored.token||'':'',passphrase:stored.rememberSecrets?stored.passphrase||'':'',autoSync:stored.autoSync??true,rememberSecrets:stored.rememberSecrets??false};useEffect(()=>saveLocal(LEDGER_KEY,ledger),[ledger]);
+ const saveCandidates=async(list:FlightCandidate[],rigId='')=>{let next=ledger;for(const f of list){const load=generateDispatchPayload(f);const data:RecordData={candidateId:f.id,date:f.date,flightNumber:f.flightNumber,departure:f.departure,arrival:f.arrival,aircraft:f.aircraft,registration:f.registration,std:f.std,sta:f.sta,ete:f.ete,rawStd:f.rawStd||'',rawSta:f.rawSta||'',status:'Scheduled',rigId,...load};next=(await appendLedgerRecord(next,'trip',data,deviceId)).ledger;}setLedger(next);notify(`${list.length}-leg trip added to the itinerary.`);};
+ const addTrip=()=>candidate?void saveCandidates([candidate]):notify('Select a parsed flight in Flight Finder first.');
+ const generateRig=()=>{const flights=loadLocal<FlightCandidate[]>('aeroslate.finder.flights',[]);if(!flights.length)return notify('Paste flights in Flight Finder first.');let current=candidate||flights[Math.floor(Math.random()*flights.length)];const result=[current];for(let i=1;i<Math.min(5,Math.max(1,legs));i++){const options=flights.filter(f=>f.departure===current.arrival&&!result.some(x=>x.id===f.id));if(!options.length)break;current=options[Math.floor(Math.random()*options.length)];result.push(current);}void saveCandidates(result,crypto.randomUUID());};
+ const sync=async()=>{if(!cloud.token||cloud.passphrase.length<12)return notify('Configure GitHub Gist sync in Flight Logs first.');try{setBusy(true);const r=await synchronizeLedger({token:cloud.token,gistId:cloud.gistId,passphrase:cloud.passphrase} as GitHubCloudConfig,ledger);setLedger(r.ledger);saveLocal(CLOUD_KEY,{...stored,gistId:r.gistId});notify('Trip calendar synchronized.');}catch(e){notify(e instanceof Error?e.message:'Sync failed.')}finally{setBusy(false)}};
+ const trips=ledger.trips.slice().sort((a,b)=>`${a.data.date} ${a.data.std}`.localeCompare(`${b.data.date} ${b.data.std}`));const year=month.getFullYear(),m=month.getMonth();const first=new Date(year,m,1),days=new Date(year,m+1,0).getDate(),start=first.getDay();const cells=Array.from({length:Math.ceil((start+days)/7)*7},(_,i)=>{const day=i-start+1;return day>0&&day<=days?new Date(year,m,day):null});
+ return <div className="trips-page"><section className="card trip-scheduler"><header><div><CalendarDays size={18}/><h3>Trip builder</h3></div><button onClick={()=>void sync()} disabled={busy}><CloudUpload size={16}/>{busy?'Syncing…':'Sync Gist'}</button></header><div className="card-body trip-builder-grid"><div><strong>{candidate?`${candidate.flightNumber} · ${candidate.departure}–${candidate.arrival}`:'No selected flight'}</strong><span>{candidate?`${candidate.date} · ${candidate.std}–${candidate.sta}`:'Select a flight in Flight Finder.'}</span><button className="primary" onClick={addTrip} disabled={!candidate}><Save size={16}/> Add single leg</button></div><div className="rig-builder"><label><span>Random rig length</span><select value={legs} onChange={e=>setLegs(Number(e.target.value))}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} leg{n===1?'':'s'}</option>)}</select></label><button onClick={generateRig}><Shuffle size={16}/> Generate connected rig</button></div></div></section>
+ <section className="card planner-card"><header><div><CalendarDays size={18}/><h3>{month.toLocaleString(undefined,{month:'long',year:'numeric'})}</h3></div><div><button className="icon-button" onClick={()=>setMonth(new Date(year,m-1,1))}><ChevronDown style={{transform:'rotate(90deg)'}}/></button><button className="icon-button" onClick={()=>setMonth(new Date(year,m+1,1))}><ChevronRight/></button></div></header><div className="card-body planner-grid">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=><b key={d}>{d}</b>)}{cells.map((d,i)=><div className={`planner-day ${!d?'blank':''}`} key={i}>{d&&<><span>{d.getDate()}</span>{trips.filter(t=>String(t.data.date).slice(0,10)===isoDate(d)).map(t=><article key={t.id}><strong>{String(t.data.flightNumber)}</strong><small>{String(t.data.departure)}–{String(t.data.arrival)}</small><button onClick={()=>{const f=tripFlight(t.data),p=buildSimbriefDispatch(f,{pax:Number(t.data.pax),cargo:Number(t.data.freight),remarks:`AeroSlate scheduled load: ${t.data.bags} bags.`});onDispatch(p.url,f,p.staticId)}}><Send size={11}/></button></article>)}</>}</div>)}</div></section>
+ <section className="card"><header><div><Plane size={18}/><h3>Itinerary</h3></div><span className="pill neutral">{trips.length}</span></header><div className="card-body trip-list">{trips.map(e=>{const f=tripFlight(e.data);return <article key={e.id}><div className="trip-date"><strong>{String(e.data.date)}</strong><span>{String(e.data.std)}–{String(e.data.sta)}</span></div><div className="trip-route"><strong>{String(e.data.flightNumber)} · {String(e.data.departure)} → {String(e.data.arrival)}</strong><span>{String(e.data.aircraft)} · {String(e.data.registration)}</span></div><div className="trip-load"><strong>{String(e.data.pax)} pax</strong><span>{String(e.data.bags)} bags · {Number(e.data.freight||0).toLocaleString()} lb freight</span></div><button className="primary compact" onClick={()=>{const p=buildSimbriefDispatch(f,{pax:Number(e.data.pax),cargo:Number(e.data.freight),remarks:`AeroSlate scheduled load: ${e.data.bags} bags.`});onDispatch(p.url,f,p.staticId)}}><Send size={14}/> Dispatch</button></article>})}{!trips.length&&<div className="empty-cell">No trips scheduled.</div>}</div></section></div>;
 }

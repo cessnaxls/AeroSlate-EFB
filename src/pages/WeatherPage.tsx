@@ -7,7 +7,8 @@ function categoryLabel(category: ParsedNotam['category']) {
 }
 function statusLabel(item: ParsedNotam) {
   if (/\b(?:CLSD|CLOSED)\b/i.test(item.text)) return 'CLOSED';
-  if (/\b(?:NA|NOT APPLICABLE|NOT AUTHORIZED)\b/i.test(item.text) && item.category === 'procedure') return 'Not applicable';
+  if (/\bNA\b|NOT AUTHORIZED/i.test(item.text) && item.category === 'procedure') return 'Not authorized';
+  if (/NOT APPLICABLE/i.test(item.text) && item.category === 'procedure') return 'Not applicable';
   if (item.category === 'procedure' && /INCREASE|RAISE|VISIBILITY|CEILING|MINIMA|AMDT|AMEND|REVISED|CHANGE/i.test(item.text)) return 'Minima / procedure change';
   if (item.priority === 'amendment') return 'Procedure change';
   if (/UNSERVICEABLE|\bU\/S\b/i.test(item.text)) return 'Unserviceable';

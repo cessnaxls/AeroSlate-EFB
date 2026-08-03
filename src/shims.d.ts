@@ -34,3 +34,6 @@ declare module 'pdfjs-dist' {
 }
 declare module 'pdfjs-dist/build/pdf.worker.min.mjs?url' { const url: string; export default url; }
 declare namespace JSX { interface IntrinsicAttributes { key?: any } interface IntrinsicElements { [elemName: string]: any; } }
+
+interface ImportMetaEnv { readonly VITE_OPENAIP_TILE_URL?: string }
+interface ImportMeta { readonly env: ImportMetaEnv }

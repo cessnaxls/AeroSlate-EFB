@@ -1,12 +1,30 @@
-# AeroSlate EFB 0.8.0
+# AeroSlate EFB 0.9.0
 
-## Changed
-- Rebuilt every Flight Finder row as one aligned table row in portrait and landscape. Route, equipment, registration, schedule, ETE and actions now share a common vertical center.
-- The Trip action now saves immediately to the local encrypted ledger and opens Trips; it no longer only navigates to a page with an unsaved candidate.
-- Replaced the OFP PDF workspace with a native professional SimBrief briefing containing overview, route, fuel, weights, ICAO FPL and dispatcher remarks.
-- Removed FRAT.
-- Replaced preflight and postflight checklist pages with timestamped operational activity logs similar to operator activity feeds.
-- Replaced Scratchpad with a departure/arrival gate page. It uses OFP gate data first and supports a live AeroDataBox provider adapter when a key is configured.
-- Removed Navigraph. Added a public/official chart suite with ChartFox, FAA d-TPP search, per-flight binders and direct chart URLs.
-- Added a draggable/zoomable Leaflet route map with SimBrief waypoint overlay, light/dark basemaps and public RainViewer radar where available.
-- Tightened the Navlog viewport so only the table scrolls; Rows mode is vertical-only and Columns mode is horizontal-only.
+## Operational corrections
+- Procedure `NA` is displayed as **Not authorized**, not “Not applicable.”
+- Improved ICAO flight-plan extraction from nested SimBrief XML/JSON and multiline `(FPL-...)` content.
+- Empty/object TLR obstacle values no longer render as `[object Object]`.
+- Added ISA deviation to every navlog waypoint when SimBrief supplies it.
+
+## Interface
+- Flight number in the top flight bar now matches the route airport typography.
+- Structured takeoff and landing analysis panels display side-by-side when space permits.
+- Runway surface conditions are title-cased.
+- Portrait flight rows use the same compact height as landscape rows.
+- Flight Finder now filters by free text, airline ICAO code, and equipment.
+- Preflight and postflight tabs were removed.
+
+## OFP
+- Rebuilt the plaintext OFP as a professional operational briefing.
+- Added dispatch identity, schedule/profile, route and airports, aircraft/configuration, weather snapshot, fuel, weights/load, ICAO FPL, and operational remarks without a PDF dependency.
+
+## Map and charts
+- Dark map is the default.
+- Added compact radar enable/disable and opacity controls.
+- Added an optional aviation-tile overlay configured through `VITE_OPENAIP_TILE_URL`.
+- Retained official/public chart binder support.
+
+## Trips
+- Added 1–5 leg connected random rig generation from parsed schedules.
+- Added a month-style trip planner.
+- Each calendar trip can be dispatched directly to SimBrief with its stored randomized payload.
