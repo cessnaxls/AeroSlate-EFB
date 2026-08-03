@@ -920,3 +920,120 @@ main { min-height: 100dvh; }
   .operational-airport > header { align-items: flex-start; flex-direction: column; }
 }
 .route-line svg { transform: none; margin: 0; }
+
+/* AeroSlate 0.5.2 — fixed safe-area sidebar and complete briefing polish */
+.sidebar {
+  width: 232px;
+  padding: 0 10px calc(12px + var(--safe-bottom));
+  overflow: hidden;
+  background: linear-gradient(180deg, #0b1722 0%, #08121b 100%);
+}
+.brand {
+  flex: 0 0 auto;
+  position: relative;
+  top: auto;
+  margin: 0 -10px;
+  padding: calc(15px + var(--safe-top)) 18px 15px;
+  min-height: calc(73px + var(--safe-top));
+  background: #0c1823;
+  border-bottom: 1px solid rgba(49,78,98,.78);
+  box-shadow: 0 8px 24px rgba(0,0,0,.24);
+  z-index: 5;
+}
+.sidebar nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 13px 2px 14px;
+  gap: 9px;
+  scrollbar-width: thin;
+  scrollbar-color: #314b5e transparent;
+}
+.nav-group { gap: 2px; }
+.nav-group + .nav-group { padding-top: 3px; border-top: 1px solid rgba(40,61,77,.38); }
+.nav-group > span { padding: 6px 10px 5px; color: #658095; }
+.sidebar nav button {
+  min-height: 40px;
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-weight: 520;
+}
+.sidebar nav button.active {
+  background: linear-gradient(90deg, rgba(39,150,211,.27), rgba(24,75,104,.13));
+  box-shadow: inset 3px 0 #43b5ff, 0 4px 14px rgba(0,0,0,.12);
+}
+.sidebar-status {
+  flex: 0 0 auto;
+  position: relative;
+  bottom: auto;
+  margin-top: 0;
+  padding: 12px 9px 3px;
+  background: #08121b;
+  border-top: 1px solid rgba(41,64,80,.8);
+}
+
+.flight-ident { align-items: center; gap: 18px; }
+.flight-primary { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.flight-primary > span { color: var(--blue); font-weight: 800; font-size: 13px; letter-spacing: .8px; white-space: nowrap; }
+.flight-primary strong { display: flex; align-items: center; gap: 7px; font-size: 18px; white-space: nowrap; }
+.flight-aircraft { display: flex; align-items: center; gap: 7px; color: #a8bece; white-space: nowrap; }
+.flight-aircraft span { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid #253d4e; border-radius: 7px; background: #0b1924; font-size: 11px; }
+.flight-aircraft b { color: #67849a; font-size: 8px; letter-spacing: .7px; }
+
+.notam-briefing-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding: 13px 15px;
+  border: 1px solid #2a526b;
+  border-radius: 13px;
+  background: linear-gradient(120deg,#0d2636,#0b1823);
+}
+.notam-briefing-overview > div:first-child { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.notam-briefing-overview svg { color: #53c4ff; flex: none; }
+.notam-briefing-overview span { display: grid; gap: 2px; }
+.notam-briefing-overview small { color: var(--muted); }
+.notam-overview-metrics { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.notam-overview-metrics span { display: inline-flex; grid-auto-flow: column; align-items: baseline; gap: 4px; padding: 5px 8px; border-radius: 999px; border: 1px solid #304758; background: #0a1721; color: #a8bdcc; font-size: 9px; }
+.notam-overview-metrics b { color: white; font-size: 11px; }
+.notam-overview-metrics .danger { border-color: #7b363b; background: #321719; color: #ffc2c2; }
+.notam-overview-metrics .caution { border-color: #77602c; background: #302810; color: #ffe19a; }
+.notam-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); background: #0a1721; }
+.notam-toolbar .notam-filter-bar { padding: 0; border: 0; flex: 1; }
+.notam-search { min-width: min(300px, 34vw); display: flex; align-items: center; gap: 7px; padding: 0 9px; border: 1px solid var(--border); border-radius: 8px; background: #07131c; }
+.notam-search svg { color: var(--muted); flex: none; }
+.notam-search input { width: 100%; min-height: 34px; padding: 7px 0; border: 0; box-shadow: none; background: transparent; font-size: 12px; }
+.full-notam.priority-critical { border-left: 3px solid #e9535c; background: rgba(87,25,29,.18); }
+.full-notam.priority-amendment { border-left: 3px solid #d9ad43; background: rgba(86,68,19,.15); }
+
+@media (max-width: 980px) {
+  .flight-ident { gap: 9px; }
+  .flight-primary { gap: 8px; }
+  .flight-aircraft { gap: 4px; }
+  .flight-aircraft span { padding: 4px 6px; font-size: 10px; }
+  .topbar-actions { gap: 8px; }
+}
+@media (max-width: 700px) {
+  .flight-ident { flex: 1; min-width: 0; flex-direction: column; align-items: flex-start; gap: 3px; }
+  .flight-primary { width: 100%; gap: 7px; }
+  .flight-primary > span { font-size: 10px; }
+  .flight-primary strong { font-size: 14px; }
+  .flight-aircraft { width: 100%; }
+  .flight-aircraft span { min-height: 0; padding: 2px 5px; font-size: 9px; }
+  .flight-aircraft b { font-size: 7px; }
+  .zulu-clock { display: none; }
+  .notam-briefing-overview { align-items: flex-start; flex-direction: column; }
+  .notam-overview-metrics { justify-content: flex-start; }
+  .notam-toolbar { align-items: stretch; flex-direction: column; }
+  .notam-search { width: 100%; min-width: 0; }
+}
+@media (max-height: 620px) and (orientation: landscape) {
+  .brand { min-height: calc(62px + var(--safe-top)); padding-top: calc(10px + var(--safe-top)); padding-bottom: 10px; }
+  .brand-mark, .brand-mark svg { width: 39px; height: 39px; }
+  .sidebar nav { padding-top: 8px; gap: 5px; }
+  .nav-group > span { padding-top: 3px; padding-bottom: 3px; }
+  .sidebar nav button { min-height: 34px; padding-block: 6px; }
+}

@@ -1,3 +1,15 @@
+# AeroSlate EFB 0.5.2
+
+## Changed
+
+- Rebuilt the sidebar as a fixed safe-area shell: brand at the physical top-left, independently scrolling navigation, and anchored connection status.
+- Improved sidebar grouping, active states, spacing, and short-landscape behavior without changing its width.
+- Added persistent EQUIP and REG badges to the top flight header in portrait and landscape.
+- Expanded NOTAM extraction across SimBrief general, airport, FIR, enroute, briefing, weather, and navlog branches.
+- Retained every complete imported notice and deduplicated exact duplicates rather than filtering the legal briefing by operational keywords.
+- Added station inference from ICAO A) fields, station-level counts, complete-briefing search, and clearer critical/amendment highlighting.
+- Preserved all tower, obstacle, airspace, and general advisories in the complete imported briefing while keeping the quick-glance scan focused.
+
 # AeroSlate EFB 0.5.1
 
 ## Flight finder and FR24 tail workflow

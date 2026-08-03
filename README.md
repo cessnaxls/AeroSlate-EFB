@@ -1,8 +1,17 @@
-# AeroSlate EFB 0.5.1 — Free Render Edition
+# AeroSlate EFB 0.5.2 — Free Render Edition
 
 AeroSlate is a responsive, local-first electronic flight bag for **Microsoft Flight Simulator 2020 and X-Plane 11/12**. The hosted service deploys on Render's free web-service plan. SimBrief supplies the dispatch/OFP data, the official Navigraph Charts website is presented as an authenticated provider workspace, and the local simulator bridge supplies live telemetry and simulator Zulu time.
 
 > **Flight-simulation and recordkeeping aid.** AeroSlate is not an approved source for real-world navigation, certified takeoff/landing performance, operational control, or operator flight-time-limit calculations.
+
+
+## 0.5.2 interface and briefing changes
+
+- The AeroSlate brand cap is fixed at the top-left safe area; only the menu list scrolls.
+- The sidebar keeps its existing width and brand footprint while using cleaner grouping, spacing, selection states, and an anchored status footer.
+- EQUIP and REG are always visible in the flight header in portrait and landscape layouts.
+- The NOTAM importer scans all known SimBrief NOTAM branches, retains each complete imported notice, deduplicates exact duplicates, and determines the station from the notice A) field when available.
+- The Weather & NOTAM page separates a quick operational scan from the complete imported briefing, grouped by station with search and category filters. No imported tower, obstacle, airspace, or advisory notice is removed from the complete set.
 
 ## What changed in 0.5.0
 
@@ -219,7 +228,7 @@ npm run native:dist
 
 The resulting installer/archive is placed in `release/`. GitHub Actions also includes the native build workflow.
 
-## 0.5.1 operational workflow additions
+## 0.5.2 operational workflow additions
 
 Parsed airport flights now include **Build** and **Tail** actions. Tail opens the matching FR24 aircraft-history page, and **Random tail on FR24** selects a registration from the current list. Copy that aircraft page and use **Paste & Parse** again to switch from an airport schedule to a tail rotation.
 

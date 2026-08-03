@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.5.1",
-  "description": "A free-tier responsive flight-simulation EFB with FR24 tail workflows, persistent embedded SimBrief/Navigraph workspaces, active navlog ETA/ATA, and pilot-prioritized NOTAM briefing.",
+  "version": "0.5.2",
+  "description": "A free-tier responsive flight-simulation EFB with FR24 tail workflows, persistent embedded SimBrief/Navigraph workspaces, active navlog ETA/ATA, and complete imported NOTAM briefing, pilot-priority summaries, and a polished fixed-safe-area sidebar.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {

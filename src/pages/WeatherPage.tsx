@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ChevronDown, CloudSun, Filter } from 'lucide-react';
+import { AlertTriangle, ChevronDown, CloudSun, Filter, Search, ShieldCheck } from 'lucide-react';
 import { getAllNotams, getWeather, type AnyRecord, type FlightSummary, type ParsedNotam } from '../lib/ofp';
 
 function categoryLabel(category: ParsedNotam['category']) {
@@ -28,13 +28,20 @@ export function WeatherPage({ ofp, flight }: { ofp: AnyRecord | null; flight: Fl
   const allNotams = useMemo(() => getAllNotams(ofp), [ofp]);
   const important = useMemo(() => allNotams.filter(item => item.important).sort((a, b) => a.station.localeCompare(b.station) || operationalRank(a) - operationalRank(b)), [allNotams]);
   const [filter, setFilter] = useState<'all' | ParsedNotam['category']>('all');
-  const visible = allNotams.filter(item => filter === 'all' || item.category === filter);
+  const [query, setQuery] = useState('');
+  const visible = allNotams.filter(item => (filter === 'all' || item.category === filter) && (!query.trim() || `${item.station} ${item.text}`.toLowerCase().includes(query.trim().toLowerCase())));
   const grouped = visible.reduce<Record<string, ParsedNotam[]>>((acc, item) => { (acc[item.station] ||= []).push(item); return acc; }, {});
   const operationalGroups = important.reduce<Record<string, ParsedNotam[]>>((acc, item) => { (acc[item.station] ||= []).push(item); return acc; }, {});
   const criticalCount = important.filter(item => item.priority === 'critical').length;
   const amendmentCount = important.filter(item => item.priority === 'amendment').length;
 
+  const stationCount = Object.keys(allNotams.reduce<Record<string, true>>((acc, item) => { acc[item.station] = true; return acc; }, {})).length;
+
   return <div className="weather-page">
+    <section className="notam-briefing-overview">
+      <div><ShieldCheck size={20} /><span><strong>Complete imported briefing</strong><small>Every full NOTAM supplied by the current SimBrief OFP is retained below.</small></span></div>
+      <div className="notam-overview-metrics"><span><b>{allNotams.length}</b> notices</span><span><b>{stationCount}</b> stations</span><span className={criticalCount ? 'danger' : ''}><b>{criticalCount}</b> critical</span><span className={amendmentCount ? 'caution' : ''}><b>{amendmentCount}</b> procedure changes</span></div>
+    </section>
     <section className="briefing-section card">
       <details open>
         <summary><div><CloudSun size={18} /><span><strong>Weather briefing</strong><small>{stations.length} station{stations.length === 1 ? '' : 's'}</small></span></div><ChevronDown size={17} /></summary>
@@ -60,10 +67,10 @@ export function WeatherPage({ ofp, flight }: { ofp: AnyRecord | null; flight: Fl
 
     <section className="briefing-section card all-notams">
       <details>
-        <summary><div><Filter size={18} /><span><strong>Complete imported NOTAM set</strong><small>All {allNotams.length} notices retained; obstacle and tower notices remain here</small></span></div><div className="summary-badges"><span className="pill neutral">{allNotams.length}</span><ChevronDown size={17} /></div></summary>
-        <div className="notam-filter-bar">{(['all', 'runway', 'procedure', 'airport', 'navaid', 'airspace', 'other'] as const).map(item => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item === 'all' ? `All ${allNotams.length}` : categoryLabel(item)}</button>)}</div>
+        <summary><div><Filter size={18} /><span><strong>Complete imported NOTAM set</strong><small>All {allNotams.length} imported notices retained; review this section for the complete briefing</small></span></div><div className="summary-badges"><span className="pill neutral">{allNotams.length}</span><ChevronDown size={17} /></div></summary>
+        <div className="notam-toolbar"><div className="notam-filter-bar">{(['all', 'runway', 'procedure', 'airport', 'navaid', 'airspace', 'other'] as const).map(item => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item === 'all' ? `All ${allNotams.length}` : categoryLabel(item)}</button>)}</div><label className="notam-search"><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search station or NOTAM text" /></label></div>
         <div className="card-body notam-groups">
-          {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([station, items]) => <details key={station} className="notam-station"><summary><span><strong>{station}</strong><small>{items.length} NOTAM{items.length === 1 ? '' : 's'}</small></span><ChevronDown size={15} /></summary><div>{items.map(item => <article key={item.id}><div><span className={`notam-category ${item.category}`}>{categoryLabel(item.category)}</span>{item.priority !== 'advisory' && <span className={`notam-status ${item.priority}`}>{statusLabel(item)}</span>}</div><p>{item.text}</p></article>)}</div></details>) }
+          {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([station, items]) => <details key={station} className="notam-station"><summary><span><strong>{station}</strong><small>{items.length} NOTAM{items.length === 1 ? '' : 's'} · {items.filter(item => item.priority === 'critical').length} critical · {items.filter(item => item.priority === 'amendment').length} changed</small></span><ChevronDown size={15} /></summary><div>{items.sort((a, b) => operationalRank(a) - operationalRank(b)).map(item => <article key={item.id} className={`full-notam priority-${item.priority}`}><div><span className={`notam-category ${item.category}`}>{categoryLabel(item.category)}</span>{item.priority !== 'advisory' && <span className={`notam-status ${item.priority}`}>{statusLabel(item)}</span>}</div><p>{item.text}</p></article>)}</div></details>) }
           {!allNotams.length && <div className="empty-inline"><AlertTriangle size={18} /> No NOTAM text was found in the imported OFP. Regenerate with NOTAMs and FIR NOTAMs enabled, then synchronize the OFP again.</div>}
         </div>
       </details>

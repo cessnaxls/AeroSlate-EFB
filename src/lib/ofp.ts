@@ -227,14 +227,31 @@ function notamText(value: unknown): string {
   if (typeof value === 'string' || typeof value === 'number') return cleanText(String(value));
   if (!value || typeof value !== 'object') return '';
   const object = value as Record<string, unknown>;
-  for (const key of ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text']) {
-    if (object[key]) {
+  for (const key of ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text', 'full_text', 'body']) {
+    if (object[key] !== undefined && object[key] !== null && object[key] !== '') {
       const candidate = stringLeaves(object[key]).join(' ');
       if (candidate) return cleanText(candidate);
     }
   }
-  const joined = stringLeaves(value).join(' ');
-  return /\b(?:RWY|TWY|NOTAM|SID|STAR|ILS|VOR|DME|AIRSPACE|APCH|TOWER|OBST)\b/i.test(joined) ? cleanText(joined) : '';
+  return cleanText(stringLeaves(value).join(' '));
+}
+
+function looksLikeCompleteNotam(text: string): boolean {
+  const value = text.trim();
+  if (value.length < 8) return false;
+  if (/^(?:true|false|null|undefined|general|origin|destination|alternate)$/i.test(value)) return false;
+  return /\b(?:NOTAM|RWY|TWY|AD |AERODROME|AIRPORT|APCH|APPROACH|SID|STAR|ILS|LOC|RNAV|RNP|VOR|DME|NDB|NAVAID|AIRSPACE|TFR|TOWER|OBST|CRANE|CLSD|CLOSED|OOS|INOP|UNSERVICEABLE|Q\)|A\)|B\)|C\)|E\))\b/i.test(value)
+    || /\b[A-Z]\d{4}\/\d{2}\b/.test(value)
+    || /\b(?:FROM|TO|VALID|EFFECTIVE)\b.*\b(?:UTC|Z)\b/i.test(value);
+}
+
+function normalizeNotamStation(text: string, fallback: string): string {
+  const candidates = [
+    text.match(/(?:^|\s)A\)\s*([A-Z]{4})(?:\s|$)/i)?.[1],
+    text.match(/\b([A-Z]{4})\s+(?:AD|AERODROME|AIRPORT|RWY|TWY)\b/i)?.[1],
+    text.match(/^([A-Z]{4})\b/)?.[1]
+  ].filter(Boolean) as string[];
+  return (candidates[0] || fallback || 'GENERAL').toUpperCase();
 }
 
 function classifyNotam(text: string): Pick<ParsedNotam, 'important' | 'priority' | 'category'> {
@@ -245,14 +262,14 @@ function classifyNotam(text: string): Pick<ParsedNotam, 'important' | 'priority'
   const airspace = /AIRSPACE|TFR|RESTRICTED|PROHIBITED|DANGER AREA/i.test(text);
   const closed = /\bCLSD\b|\bCLOSED\b/i.test(text);
   const outOfService = /OUT OF SERVICE|\bOOS\b|UNSERVICEABLE|\bU\/S\b|\bOTS\b|NOT AVBL|NOT AVAILABLE|SUSPENDED|INOPERATIVE|\bINOP\b/i.test(text);
-  const notApplicable = /(?:PROC(?:EDURE)?|APCH|APPROACH|SID|STAR|ILS|LOC|RNAV|RNP)[^.;]{0,80}\bNA\b|NOT AUTHORIZED|NOT APPLICABLE/i.test(text);
+  const notApplicable = /(?:PROC(?:EDURE)?|APCH|APPROACH|SID|STAR|ILS|LOC|RNAV|RNP)[^.;]{0,100}\bNA\b|NOT AUTHORIZED|NOT APPLICABLE/i.test(text);
   const amendment = procedure && /AMDT|AMEND|AMENDED|REV(?:ISED)?|CHANGE|CHANGED|CORRECT|MINIMA|NOTE/i.test(text);
 
-  const airportClosed = /(?:AD|AERODROME|AIRPORT)[^.;]{0,45}(?:CLSD|CLOSED)/i.test(text);
-  const runwayClosed = /(?:RWY|RUNWAY)[^.;]{0,60}(?:CLSD|CLOSED)/i.test(text);
-  const taxiwayClosed = /(?:TWY|TAXIWAY)[^.;]{0,60}(?:CLSD|CLOSED)/i.test(text);
-  const runwayEquipmentOut = /(?:PAPI|VASI|REIL|RVR|MALSR|ALSF|HIRL|MIRL|RUNWAY LIGHT|RWY LIGHT)[^.;]{0,80}(?:OUT OF SERVICE|OOS|UNSERVICEABLE|U\/S|OTS|NOT AVBL|INOP)/i.test(text);
-  const approachEquipmentOut = /(?:ILS|LOCALIZER|LOC |GLIDESLOPE|GLIDE SLOPE|DME|NDB|VOR)[^.;]{0,90}(?:OUT OF SERVICE|OOS|UNSERVICEABLE|U\/S|OTS|NOT AVBL|INOP)/i.test(text);
+  const airportClosed = /(?:AD|AERODROME|AIRPORT)[^.;]{0,70}(?:CLSD|CLOSED)/i.test(text);
+  const runwayClosed = /(?:RWY|RUNWAY)[^.;]{0,90}(?:CLSD|CLOSED)/i.test(text);
+  const taxiwayClosed = /(?:TWY|TAXIWAY)[^.;]{0,90}(?:CLSD|CLOSED)/i.test(text);
+  const runwayEquipmentOut = /(?:PAPI|VASI|REIL|RVR|MALSR|ALSF|HIRL|MIRL|RUNWAY LIGHT|RWY LIGHT)[^.;]{0,120}(?:OUT OF SERVICE|OOS|UNSERVICEABLE|U\/S|OTS|NOT AVBL|INOP)/i.test(text);
+  const approachEquipmentOut = /(?:ILS|LOCALIZER|LOC\b|GLIDESLOPE|GLIDE SLOPE|DME|NDB|VOR)[^.;]{0,140}(?:OUT OF SERVICE|OOS|UNSERVICEABLE|U\/S|OTS|NOT AVBL|INOP)/i.test(text);
   const procedureUnavailable = procedure && (notApplicable || outOfService);
 
   const obstacleOnly = /\b(?:TOWER|CRANE|OBST(?:ACLE)?)\b/i.test(text) && !runway && !procedure && !navaid && !airport;
@@ -272,43 +289,48 @@ export function getAllNotams(ofp: AnyRecord | null): ParsedNotam[] {
   };
   const results: ParsedNotam[] = [];
   const seen = new Set<string>();
+
+  const add = (raw: unknown, fallbackStation: string, path: string) => {
+    const text = notamText(raw);
+    if (!looksLikeCompleteNotam(text)) return false;
+    const normalized = text.replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').trim();
+    const dedupeKey = normalized.toUpperCase().replace(/\s+/g, ' ');
+    if (seen.has(dedupeKey)) return true;
+    seen.add(dedupeKey);
+    const station = normalizeNotamStation(normalized, fallbackStation);
+    const classification = classifyNotam(normalized);
+    results.push({ id: `${station}-${results.length}-${path}`, station, text: normalized, ...classification });
+    return true;
+  };
+
   const visit = (value: unknown, station: string, path: string, depth = 0) => {
-    if (depth > 9 || value === null || value === undefined) return;
+    if (depth > 10 || value === null || value === undefined) return;
     if (Array.isArray(value)) { value.forEach((item, index) => visit(item, station, `${path}.${index}`, depth + 1)); return; }
     if (typeof value === 'object') {
       const object = value as Record<string, unknown>;
-      const directKeys = ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text'];
-      const hasDirectText = directKeys.some(key => object[key] !== undefined && object[key] !== null && object[key] !== '');
-      const text = hasDirectText ? notamText(object) : '';
-      if (text && text.length > 7 && /\b(?:RWY|TWY|NOTAM|CLSD|APCH|SID|STAR|ILS|VOR|DME|AIRSPACE|AD |AERODROME|TFR|TOWER|OBST|CRANE|NAV)\b/i.test(text)) {
-        const normalized = text.replace(/\s+/g, ' ').trim();
-        if (!seen.has(normalized)) {
-          seen.add(normalized);
-          const classification = classifyNotam(normalized);
-          results.push({ id: `${station}-${results.length}-${path}`, station, text: normalized, ...classification });
-        }
-        return;
-      }
+      const directKeys = ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text', 'full_text', 'body'];
+      const direct = directKeys.find(key => object[key] !== undefined && object[key] !== null && object[key] !== '');
+      if (direct && add(object[direct], station, path)) return;
       Object.entries(object).forEach(([key, child]) => {
-        const nextStation = stationHints[key.toLowerCase()] || (/^[A-Z]{4}$/.test(key) ? key : station);
+        const lower = key.toLowerCase();
+        const nextStation = stationHints[lower] || (/^[A-Z]{4}$/.test(key) ? key : station);
         visit(child, nextStation, `${path}.${key}`, depth + 1);
       });
       return;
     }
-    const text = notamText(value);
-    if (text && text.length > 7 && /\b(?:RWY|TWY|NOTAM|CLSD|APCH|SID|STAR|ILS|VOR|DME|AIRSPACE|AD |AERODROME|TFR|TOWER|OBST|CRANE|NAV)\b/i.test(text)) {
-      const normalized = text.replace(/\s+/g, ' ').trim();
-      if (!seen.has(normalized)) {
-        seen.add(normalized);
-        const classification = classifyNotam(normalized);
-        results.push({ id: `${station}-${results.length}-${path}`, station, text: normalized, ...classification });
-      }
-    }
+    add(value, station, path);
   };
 
-  visit(dig(ofp, 'notams'), 'GENERAL', 'notams');
+  // SimBrief has used several NOTAM branches over time. Scan each known branch,
+  // while deduplicating identical notices, so the complete imported briefing is retained.
+  for (const [path, station] of [
+    ['notams', 'GENERAL'], ['notam', 'GENERAL'], ['briefing.notams', 'GENERAL'], ['weather.notams', 'GENERAL'],
+    ['fir_notams', 'FIR'], ['enroute_notams', 'ENROUTE'], ['navlog.notams', 'ENROUTE']
+  ] as const) visit(dig(ofp, path), station, path);
   for (const key of ['origin', 'destination', 'alternate'] as const) {
-    visit(dig(ofp, `${key}.notams`, `${key}.notam`), stationHints[key], key);
+    for (const suffix of ['notams', 'notam', 'notam_text', 'notam_list']) {
+      visit(dig(ofp, `${key}.${suffix}`), stationHints[key], `${key}.${suffix}`);
+    }
   }
   return results;
 }
