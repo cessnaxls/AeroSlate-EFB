@@ -1,67 +1,63 @@
-# AeroSlate EFB 0.9.2 — Free Edition
+# AeroSlate EFB 0.10.0 — Free Edition
 
-AeroSlate is a local-first, Render-free-tier EFB for flight simulation with SimBrief planning, FR24 schedule parsing, structured TLR, active navlog, simulator telemetry, records, trips, public charts, and an interactive route/radar map.
+AeroSlate is a Render/GitHub-hosted simulator EFB with SimBrief planning, FR24 paste parsing, trip scheduling, navlog, fuel monitoring, OOOI, records, NOTAM briefing, route weather, and public/official chart integrations.
 
-## 0.9 highlights
+## Deploy on Render Free
 
-- Correct `NA` procedure status: **Not authorized**.
-- More reliable complete ICAO `(FPL-...)` extraction.
-- Comprehensive plaintext OFP briefing.
-- ISA deviation in the navlog.
-- Side-by-side structured takeoff and landing TLR.
-- Dark adjustable radar map and optional aviation tile layer.
-- Flight filters, compact portrait rows, 1–5 leg rig generation, and month planner.
-- Preflight and postflight tabs removed.
+1. Upload this repository to GitHub.
+2. In Render, create a Blueprint from the repository.
+3. Confirm that `render.yaml` shows `plan: free` and no disk.
+4. Deploy.
 
-## Deploy on Render free
+The free Render filesystem is ephemeral. Trips and records are local-first and can optionally synchronize to an encrypted private GitHub Gist.
 
-The included `render.yaml` uses the free web-service plan and no persistent disk. Push the project to GitHub and create or refresh a Render Blueprint.
+## 0.10.0 highlights
 
-## Charts and map
+### Portrait flight actions
+The flight table keeps Build, Trip, and Tail side by side at their full button size. Narrow devices pan the fixed-width table horizontally rather than shrinking or stacking controls.
 
-AeroSlate no longer uses Navigraph. The Charts page provides:
-- ChartFox worldwide flight-simulation chart directory
-- Official FAA d-TPP search for US terminal procedures
-- A flight-specific binder for official/public chart PDF and AIP URLs
-- A draggable and zoomable route map using OpenStreetMap/CARTO tiles
-- SimBrief navlog route overlay
-- RainViewer public weather-radar tiles when available
+### Trip rigs and day planner
+The Trips page can generate an independent random 1–5 leg connected rig from the current parsed flight pool. The preview can be regenerated or accepted. Selecting a calendar day opens a 30-minute Zulu day view with scheduled legs positioned by time.
 
-Chart coverage, currency and redistribution rights remain controlled by each publishing authority. Always verify effective dates.
+### Pilot-focused NOTAMs
+The first NOTAM panel is a quick operational scan organized by route station. It shows current closures, unavailable equipment, and procedure/minima changes. The complete imported legal briefing remains available below with effective-time, type, station, and text filters.
 
-## Live gate lookup
+### Weather layers
+The route map includes:
 
-The Gates page always reads any terminal/gate fields included in the current SimBrief OFP. Optional live gate lookup can be enabled by adding this Render environment variable:
+- RainViewer reflectivity radar
+- NASA GIBS true-color satellite imagery
+- NASA GIBS infrared cloud phase
+- NASA GIBS cloud-top temperature
+- Optional aviation tiles via `VITE_OPENAIP_TILE_URL`
+- Route icing screening using Open-Meteo pressure-level temperature, humidity, and cloud data
 
-```text
-AERODATABOX_RAPIDAPI_KEY=your_key
+The icing display is an advisory model screen matched to planned route altitude and crossing time. It is not an approved aviation forecast or dispatch product.
+
+### Integrated FAA charts
+AeroSlate now exposes server endpoints that retrieve the current FAA d-TPP catalog for a US airport and proxy the selected official PDF into the in-app chart viewer.
+
+- `/api/charts/faa?airport=KMIA`
+- `/api/charts/pdf?url=<official FAA PDF URL>`
+
+Outside the United States, add official state-AIP or other legally public chart URLs to the binder. There is no single unrestricted worldwide procedure-chart API.
+
+## Optional environment values
+
+```env
+PORT=3000
+SIM_LINK_TOKEN=change-me
+VITE_OPENAIP_TILE_URL=
+AERODATABOX_RAPIDAPI_KEY=
 ```
 
-Without a provider key, AeroSlate clearly reports that live gate data is unavailable and offers the current flight-status page instead. Gate assignments are dynamic and may change at any time.
+## Development
 
-## Trip storage
-
-Pressing **Trip** in Flight Finder saves immediately to the same local encrypted ledger used by Flight Logs and Duty Logs. Configure the private GitHub Gist vault in Flight Logs to synchronize trips and records between devices.
-
-## Simulator bridge
-
-MSFS uses the included SimConnect bridge. X-Plane 11/12 uses the included UDP/RREF bridge. Run the bridge on the simulator computer and point it at the Render URL using the same `SIM_LINK_TOKEN` configured on Render.
-
-## Chart data note
-
-AeroSlate can present and bind chart PDFs from official/public sources. The FAA publishes current U.S. terminal procedures as downloadable d-TPP PDFs. Worldwide coverage requires separate public AIP catalogs or a licensed chart API; there is no single unrestricted worldwide chart API bundled with AeroSlate. An optional aviation map-tile URL can be configured with `VITE_OPENAIP_TILE_URL`.
-
-
-## 0.9.2 operational fixes
-
-The trip calendar now refreshes from the shared local ledger, schedules flights on a selected date, generates continuous 1–5-leg rigs, and exposes dispatch/removal controls. Flight row actions remain horizontal on portrait displays.
-
-NOTAMs now support Current, Future, Past, and All effective-time views. Standard B)/C) validity timestamps are parsed where present; undated items remain visible in Current so the complete briefing is not accidentally hidden.
-
-The Active Navlog actual-fuel field no longer contains an overlapping icon.
-
-
-## Trip planner
-
-Trips are saved locally first and do not require GitHub Gist or an internet connection. The Trip button, Add single leg, and connected-rig generator all write to the same itinerary store. AeroSlate then copies records into the audit ledger and optional encrypted Gist in the background. Existing ledger trips are migrated automatically.
-
+```bash
+npm install
+npm run check
+npm run test:parser
+npm run test:workflow
+npm run build
+npm start
+```

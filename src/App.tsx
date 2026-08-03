@@ -111,13 +111,12 @@ export default function App() {
     saveLocal('aeroslate.dispatch.url', url); saveLocal('aeroslate.dispatch.flight', selected); saveLocal('aeroslate.dispatch.staticId', staticId); setPage('simbrief'); notify(`Prepared ${selected.flightNumber} for SimBrief.`);
   };
   const loadDemo = () => { setOfp(demoOFP); saveLocal('aeroslate.lastOFP', demoOFP); notify('Demo OFP loaded.'); setPage('dashboard'); };
-  const scheduleTrip = useCallback(async (candidate: FlightCandidate) => {
+  const scheduleTrip = useCallback(async (candidate: FlightCandidate): Promise<boolean> => {
     setSelectedCandidate(candidate); saveLocal('aeroslate.finder.flight', candidate);
     const local = addTripsLocal([candidate], String(candidate.date).slice(0, 10));
-    if (!local.added.length) { notify(`${candidate.flightNumber} is already in Trips.`); setPage('trips'); return; }
+    if (!local.added.length) { notify(`${candidate.flightNumber} is already in Trips.`); window.setTimeout(() => setPage('trips'), 450); return false; }
     const trip = local.added[0];
-    notify(`${candidate.flightNumber} added to Trips · ${trip.pax} pax, ${trip.bags} bags.`);
-    setPage('trips');
+    window.setTimeout(() => setPage('trips'), 850);
     try {
       const key='aeroslate.records.ledger.v2';
       const ledger=normalizeLedger(loadLocal(key,emptyLedger()));
@@ -129,6 +128,7 @@ export default function App() {
     } catch (error) {
       console.warn('Trip audit copy could not be written; local trip remains saved.', error);
     }
+    return true;
   },[notify]);
 
   const navigate = (next: Page) => { setPage(next); setMenuOpen(false); };
@@ -152,7 +152,7 @@ export default function App() {
         <div className={`page-panel ${page === 'ofp' ? 'active' : ''}`}><OFPPage ofp={ofp} flight={flight} notify={notify} /></div>
         <div className={`page-panel ${page === 'performance' ? 'active' : ''}`}><RunwayAnalysisPage ofp={ofp} flight={flight} onOpenOFP={() => setPage('ofp')} notify={notify} /></div>
         {page === 'dashboard' && <Dashboard ofp={ofp} flight={flight} setPage={setPage} />}
-        {page === 'finder' && <FlightFinderPage onDispatch={openDispatch} onSelect={setSelectedCandidate} onSchedule={flight => void scheduleTrip(flight)} notify={notify} />}
+        {page === 'finder' && <FlightFinderPage onDispatch={openDispatch} onSelect={setSelectedCandidate} onSchedule={scheduleTrip} notify={notify} />}
         {page === 'trips' && <TripsPage candidate={selectedCandidate} onDispatch={openDispatch} notify={notify} />}
         {page === 'navlog' && <NavlogPage ofp={ofp} flight={flight} />}
         {page === 'weather' && <WeatherPage ofp={ofp} flight={flight} />}

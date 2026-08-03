@@ -22,7 +22,7 @@ function secureEqual(supplied, expected) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'aeroslate-efb', version: '0.8.0', time: new Date().toISOString() }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'aeroslate-efb', version: '0.10.0', time: new Date().toISOString() }));
 app.get('/api/runtime', (_req, res) => res.json({
   simLinked: simLinked(),
   mode: simLinked() ? 'sim-linked' : 'standalone',
@@ -98,6 +98,59 @@ app.get('/api/document', async (req, res) => {
     const response = await fetch(url, { redirect: 'follow' }); if (!response.ok) return res.status(response.status).end();
     res.set('content-type', response.headers.get('content-type') || 'application/octet-stream').set('cache-control', 'private, max-age=300').send(Buffer.from(await response.arrayBuffer()));
   } catch { res.status(400).json({ error: 'Invalid document URL.' }); }
+});
+
+
+
+function decodeHtml(value = '') {
+  return String(value).replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+}
+function stripHtml(value = '') { return decodeHtml(String(value).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()); }
+function chartType(title = '') {
+  const text = title.toUpperCase();
+  if (text.includes('AIRPORT DIAGRAM')) return 'Airport diagram';
+  if (text.includes('DEPARTURE') || text.includes('DP') || text.includes('SID')) return 'Departure';
+  if (text.includes('ARRIVAL') || text.includes('STAR')) return 'Arrival';
+  if (text.includes('MINIMUM')) return 'Minimums';
+  if (text.includes('TAKEOFF')) return 'Takeoff minimums';
+  return 'Approach';
+}
+app.get('/api/charts/faa', async (req, res) => {
+  const airport = String(req.query.airport || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{3,4}$/.test(airport)) return res.status(400).json({ error: 'Enter a valid US airport identifier.' });
+  const ident = airport.length === 4 && airport.startsWith('K') ? airport.slice(1) : airport;
+  try {
+    const url = `https://www.faa.gov/air_traffic/flight_info/aeronav/digital_products/dtpp/search/results/?ident=${encodeURIComponent(ident)}`;
+    const response = await fetch(url, { headers: { 'user-agent': 'AeroSlate-EFB/0.10.0' } });
+    if (!response.ok) return res.status(response.status).json({ error: `FAA chart catalog returned HTTP ${response.status}.` });
+    const html = await response.text();
+    const charts = [];
+    const seen = new Set();
+    const rx = /<a[^>]+href=["']([^"']+\.pdf(?:\?[^"']*)?)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let match;
+    while ((match = rx.exec(html))) {
+      let href = decodeHtml(match[1]);
+      if (href.startsWith('/')) href = `https://www.faa.gov${href}`;
+      if (!href.startsWith('http')) href = new URL(href, url).toString();
+      if (!/\.(pdf)(?:\?|$)/i.test(href) || seen.has(href)) continue;
+      const title = stripHtml(match[2]) || 'FAA terminal procedure';
+      if (!title || /legend|general information/i.test(title)) continue;
+      seen.add(href);
+      charts.push({ id: crypto.createHash('sha1').update(href).digest('hex').slice(0, 16), airport: airport.length === 3 ? `K${airport}` : airport, title, type: chartType(title), url: href });
+    }
+    charts.sort((a, b) => ({'Airport diagram':0,'Departure':1,'Arrival':2,'Approach':3,'Minimums':4,'Takeoff minimums':5}[a.type] ?? 9) - ({'Airport diagram':0,'Departure':1,'Arrival':2,'Approach':3,'Minimums':4,'Takeoff minimums':5}[b.type] ?? 9) || a.title.localeCompare(b.title));
+    res.set('cache-control', 'public, max-age=21600').json({ airport: airport.length === 3 ? `K${airport}` : airport, source: 'FAA d-TPP', charts });
+  } catch (error) { res.status(502).json({ error: 'Unable to retrieve the FAA chart catalog.' }); }
+});
+app.get('/api/charts/pdf', async (req, res) => {
+  try {
+    const url = new URL(String(req.query.url || ''));
+    const allowed = url.protocol === 'https:' && (url.hostname === 'aeronav.faa.gov' || url.hostname === 'www.faa.gov' || url.hostname.endsWith('.faa.gov'));
+    if (!allowed || !/\.pdf(?:$|\?)/i.test(url.href)) return res.status(400).json({ error: 'Only official FAA chart PDFs can be proxied.' });
+    const response = await fetch(url, { redirect: 'follow', headers: { 'user-agent': 'AeroSlate-EFB/0.10.0' } });
+    if (!response.ok) return res.status(response.status).end();
+    res.set('content-type', 'application/pdf').set('cache-control', 'public, max-age=21600').set('content-disposition', 'inline').send(Buffer.from(await response.arrayBuffer()));
+  } catch { res.status(400).json({ error: 'Invalid FAA chart URL.' }); }
 });
 
 app.use(express.static(path.join(rootDir, 'dist'), { maxAge: '1h', index: false }));

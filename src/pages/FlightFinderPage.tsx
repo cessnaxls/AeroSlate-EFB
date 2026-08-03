@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarPlus, Clipboard, ExternalLink, MapPinned, Plane, RefreshCw, Search, Shuffle } from 'lucide-react';
+import { CalendarPlus, Check, Clipboard, ExternalLink, MapPinned, Plane, RefreshCw, Search, Shuffle } from 'lucide-react';
 import airportCatalog from '../data/airports.catalog.json';
 import { airportMap, buildSimbriefDispatch, generateDispatchPayload, parseFr24PasteDetailed, type Airport, type FlightCandidate, type Fr24ParseResult, type Fr24PasteFormat } from '../lib/dispatchlink';
 import { loadLocal, saveLocal } from '../lib/storage';
@@ -7,7 +7,7 @@ import { loadLocal, saveLocal } from '../lib/storage';
 interface Props {
   onDispatch: (url: string, flight: FlightCandidate, staticId: string) => void;
   onSelect?: (flight: FlightCandidate | null) => void;
-  onSchedule?: (flight: FlightCandidate) => void;
+  onSchedule?: (flight: FlightCandidate) => boolean | Promise<boolean>;
   notify: (message: string) => void;
 }
 
@@ -50,6 +50,7 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
   const [equipFilter, setEquipFilter] = useState('ALL');
   const [airlineFilter, setAirlineFilter] = useState('ALL');
   const flightTableRef = useRef<HTMLDivElement | null>(null);
+  const [tripAddedId, setTripAddedId] = useState('');
 
   useEffect(() => { saveLocal('aeroslate.finder.country', country); saveLocal('aeroslate.finder.size', size); }, [country, size]);
   useEffect(() => saveLocal('aeroslate.finder.airport', selectedAirport), [selectedAirport]);
@@ -170,7 +171,7 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
             <td className="reg-cell">{row.registration || '—'}</td>
             <td className="schedule-cell"><span title={row.rawStd ? `Pasted: ${row.rawStd}` : undefined}><small>STD</small>{row.std}</span><span title={row.rawSta ? `Pasted: ${row.rawSta}` : undefined}><small>STA</small>{row.sta}</span></td>
             <td className="ete-cell">{row.ete}</td>
-            <td className="dispatch-cell"><div className="flight-row-actions"><button className="primary compact" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button>{onSchedule && <button className="compact schedule-button" title="Add to trip calendar" onClick={event => { event.stopPropagation(); onSchedule(row); }}><CalendarPlus size={14} /> Trip</button>}<button className="compact tail-button" disabled={!fr24TailUrl(row.registration)} title={row.registration ? `Open ${row.registration} on Flightradar24` : 'No registration available'} onClick={event => { event.stopPropagation(); const url = fr24TailUrl(row.registration); if (url) window.open(url, 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900'); }}><ExternalLink size={14} /> Tail</button></div></td>
+            <td className="dispatch-cell"><div className="flight-row-actions"><button className="primary compact build-action" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button>{onSchedule && <button className={`compact schedule-button ${tripAddedId === row.id ? 'trip-added' : ''}`} title="Add to trip calendar" onClick={async event => { event.stopPropagation(); const added = await onSchedule(row); if (added) { setTripAddedId(row.id); notify('Leg added to trip'); window.setTimeout(() => setTripAddedId(current => current === row.id ? '' : current), 1800); } }}><span className="trip-button-icon">{tripAddedId === row.id ? <Check size={15} /> : <CalendarPlus size={14} />}</span> Trip</button>}<button className="compact tail-button" disabled={!fr24TailUrl(row.registration)} title={row.registration ? `Open ${row.registration} on Flightradar24` : 'No registration available'} onClick={event => { event.stopPropagation(); const url = fr24TailUrl(row.registration); if (url) window.open(url, 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900'); }}><ExternalLink size={14} /> Tail</button></div></td>
           </tr>)}
           {!flights.length && <tr><td colSpan={7} className="empty-cell">Copy a supported FR24 page, then press <strong>Paste & Parse</strong>.</td></tr>}
         </tbody></table>
