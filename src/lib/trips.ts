@@ -5,6 +5,7 @@ import type { LedgerEntry, RecordData } from './cloudLedger';
 
 export const TRIPS_KEY = 'aeroslate.trips.v1';
 export const TRIPS_UPDATED_EVENT = 'aeroslate-trips-updated';
+export const ADDED_TRIP_KEYS_KEY = 'aeroslate.addedTripKeys.v1';
 
 export function normalizeTripDate(value: unknown, fallback = new Date()): string {
   const raw = String(value || '').trim();
@@ -42,6 +43,7 @@ export interface PlannedTrip {
   bagWeight: number;
   freight: number;
   createdAt: string;
+  sourceKey?: string;
 }
 
 function uuid(): string {
@@ -59,9 +61,24 @@ export function saveTrips(trips: PlannedTrip[]): void {
   window.dispatchEvent(new CustomEvent(TRIPS_UPDATED_EVENT));
 }
 
-export function tripCandidateKey(flight: Pick<FlightCandidate, 'flightNumber'|'departure'|'arrival'|'std'|'date'|'registration'>): string {
+export function tripCandidateKey(flight: Pick<FlightCandidate, 'flightNumber'|'departure'|'arrival'|'std'|'date'|'registration'> & { sourceKey?: string }): string {
+  if (flight.sourceKey) return String(flight.sourceKey).toUpperCase();
   return [flight.flightNumber, flight.departure, flight.arrival, flight.std, normalizeTripDate(flight.date), flight.registration].join('|').toUpperCase();
 }
+
+export function loadAddedTripKeys(): Set<string> {
+  const saved = loadLocal<string[]>(ADDED_TRIP_KEYS_KEY, []);
+  const keys = new Set(Array.isArray(saved) ? saved.map(value => String(value).toUpperCase()) : []);
+  for (const trip of loadTrips()) keys.add(tripCandidateKey(trip));
+  return keys;
+}
+
+export function rememberAddedTripKey(key: string): void {
+  const keys = loadAddedTripKeys();
+  keys.add(String(key).toUpperCase());
+  saveLocal(ADDED_TRIP_KEYS_KEY, [...keys]);
+}
+
 
 export function plannedTripFromFlight(flight: FlightCandidate, date: string, rigId = '', existingLoad?: Partial<PlannedTrip>, unscheduled = false): PlannedTrip {
   const payload = existingLoad?.pax != null ? existingLoad : generateDispatchPayload(flight);
@@ -85,7 +102,8 @@ export function plannedTripFromFlight(flight: FlightCandidate, date: string, rig
     bags: Number(payload.bags || 0),
     bagWeight: Number(payload.bagWeight || 0),
     freight: Number(payload.freight || 0),
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    sourceKey: tripCandidateKey(flight)
   };
 }
 
@@ -99,6 +117,7 @@ export function addTripsLocal(flights: FlightCandidate[], date: string, rigId = 
     if (exists) continue;
     const trip = plannedTripFromFlight(flight, scheduledDate, rigId, undefined, unscheduled);
     current.push(trip);
+    rememberAddedTripKey(trip.sourceKey || key);
     added.push(trip);
   }
   if (added.length) saveTrips(current);
@@ -159,7 +178,8 @@ export function mergeLedgerTrips(entries: LedgerEntry[]): PlannedTrip[] {
       bags: Number(d.bags || 0),
       bagWeight: Number(d.bagWeight || 0),
       freight: Number(d.freight || 0),
-      createdAt: entry.createdAt
+      createdAt: entry.createdAt,
+      sourceKey: String(d.sourceKey || '') || undefined
     };
     map.set(key, trip);
   }

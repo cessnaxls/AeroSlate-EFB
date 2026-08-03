@@ -49,10 +49,10 @@ try {
   const dispatchPlan = dispatch.buildSimbriefDispatch({ id:'1', date:'03 Aug 2026', aircraft:'A20N', registration:'N377FR', flightNumber:'FFT2615', departure:'KLGA', arrival:'KMCO', std:'18:00z', sta:'21:03z', ete:'3:03' }, { pax:130, bags:105, bagWeight:4200, payload:28900, freight:1200 });
   const dispatchParams = new URL(dispatchPlan.url).searchParams;
   assert.equal(dispatchParams.get('pax'), '130');
-  assert.equal(dispatchParams.get('payload'), '28900');
-  assert.equal(dispatchParams.get('cargo'), '1200');
-  assert.equal(JSON.parse(dispatchParams.get('acdata')).paxwgt, 190);
-  assert.equal(JSON.parse(dispatchParams.get('acdata')).bagwgt, Number((4200/130).toFixed(3)));
+  assert.equal(dispatchParams.get('payload'), '13109');
+  assert.equal(dispatchParams.get('cargo'), '544');
+  assert.equal(dispatchParams.get('as_payload_lbs'), '28900');
+  assert.equal(dispatchParams.get('as_freight_lbs'), '1200');
   assert.equal(dispatchParams.get('freight'), null, 'SimBrief documents Freight as the cargo parameter');
   const sample = {
     origin: { icao_code: 'KIND', notams: [
@@ -88,3 +88,14 @@ try {
   fs.rmSync(buildDir, { recursive: true, force: true });
 }
 console.log(`Workflow regression passed: airports=${airports.length}, countries=${new Set(airports.map(item => item.country)).size}, FAA chart API, multi-layer route weather, clipboard parser, NOTAM priorities, structured TLR`);
+
+// v0.11.2 source regressions
+{
+  const dispatchSource = fs.readFileSync(path.join(root, 'src/lib/dispatchlink.ts'), 'utf8');
+  assert.match(dispatchSource, /poundsToKilograms/);
+  assert.match(dispatchSource, /as_payload_lbs/);
+  assert.match(dispatchSource, /as_freight_lbs/);
+  const finderSource = fs.readFileSync(path.join(root, 'src/pages/FlightFinderPage.tsx'), 'utf8');
+  assert.match(finderSource, /rememberAddedTripKey/);
+  assert.match(finderSource, /loadAddedTripKeys/);
+}

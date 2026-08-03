@@ -728,6 +728,10 @@ function stableId(value: string): string {
   return `AEROSLATE_${Math.abs(hash >>> 0).toString(36).toUpperCase()}`;
 }
 
+function poundsToKilograms(value: number): number {
+  return Math.max(0, Math.round(value / 2.2046226218));
+}
+
 function durationParts(value: string): [string, string] {
   const match = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
   return match ? [match[1], match[2]] : ['', ''];
@@ -775,16 +779,22 @@ export function buildSimbriefDispatch(flight: FlightCandidate, extras: { pax?: n
   // also override the per-passenger and per-bag assumptions through acdata.
   // This makes the generated load sheet reproduce AeroSlate's exact
   // passenger + baggage payload while keeping freight separate.
-  if (extras.pax != null && extras.pax > 0) {
-    const bagWeightPerPassenger = Math.max(0, Number(extras.bagWeight || 0) / extras.pax);
-    params.set('acdata', JSON.stringify({ paxwgt: 190, bagwgt: Number(bagWeightPerPassenger.toFixed(3)) }));
-  }
+  // SimBrief's custom-options URL accepts manual mass values in kilograms,
+  // even when the visible form is set to pounds. Preserve AeroSlate's pound
+  // values in private query keys for the native form-filler and convert only
+  // the provider-facing payload/cargo parameters.
   if (payload != null) {
-    const roundedPayload = String(Math.max(0, Math.round(payload)));
-    params.set('payload', roundedPayload);
-    params.set('manualpayload', roundedPayload);
+    const payloadLb = Math.max(0, Math.round(payload));
+    const payloadKg = poundsToKilograms(payloadLb);
+    params.set('payload', String(payloadKg));
+    params.set('manualpayload', String(payloadKg));
+    params.set('as_payload_lbs', String(payloadLb));
   }
-  if (freight != null) params.set('cargo', String(Math.max(0, Math.round(freight))));
+  if (freight != null) {
+    const freightLb = Math.max(0, Math.round(freight));
+    params.set('cargo', String(poundsToKilograms(freightLb)));
+    params.set('as_freight_lbs', String(freightLb));
+  }
   if (extras.remarks) params.set('manualrmk', extras.remarks);
   if (extras.pilotId && /^\d+$/.test(extras.pilotId)) params.set('pid', extras.pilotId);
   return { url: `https://dispatch.simbrief.com/options/custom?${params.toString()}`, staticId };

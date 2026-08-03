@@ -17,8 +17,8 @@ export function SimBriefDispatchPage({ url, flight, staticId, loading, onImport 
       const params = new URL(url).searchParams;
       return {
         passengers: params.get('pax') || undefined,
-        payload: params.get('payload') || params.get('manualpayload') || undefined,
-        freight: params.get('cargo') || undefined
+        payload: params.get('as_payload_lbs') || params.get('payload') || params.get('manualpayload') || undefined,
+        freight: params.get('as_freight_lbs') || params.get('cargo') || undefined
       };
     } catch { return {}; }
   })();

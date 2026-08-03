@@ -3,7 +3,7 @@ import { CalendarPlus, Check, Clipboard, ExternalLink, MapPinned, Plane, Refresh
 import airportCatalog from '../data/airports.catalog.json';
 import { airportMap, buildSimbriefDispatch, generateDispatchPayload, parseFr24PasteDetailed, type Airport, type FlightCandidate, type Fr24ParseResult, type Fr24PasteFormat } from '../lib/dispatchlink';
 import { loadLocal, saveLocal } from '../lib/storage';
-import { loadTrips, tripCandidateKey, TRIPS_UPDATED_EVENT } from '../lib/trips';
+import { loadAddedTripKeys, rememberAddedTripKey, tripCandidateKey, TRIPS_UPDATED_EVENT } from '../lib/trips';
 
 interface Props {
   onDispatch: (url: string, flight: FlightCandidate, staticId: string) => void;
@@ -51,11 +51,11 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
   const [equipFilter, setEquipFilter] = useState('ALL');
   const [airlineFilter, setAirlineFilter] = useState('ALL');
   const flightTableRef = useRef<HTMLDivElement | null>(null);
-  const [addedTripKeys, setAddedTripKeys] = useState<Set<string>>(() => new Set(loadTrips().map(t => tripCandidateKey(t))));
+  const [addedTripKeys, setAddedTripKeys] = useState<Set<string>>(() => loadAddedTripKeys());
 
 
   useEffect(() => {
-    const refresh = () => setAddedTripKeys(new Set(loadTrips().map(t => tripCandidateKey(t))));
+    const refresh = () => setAddedTripKeys(loadAddedTripKeys());
     window.addEventListener(TRIPS_UPDATED_EVENT, refresh);
     window.addEventListener('storage', refresh);
     return () => { window.removeEventListener(TRIPS_UPDATED_EVENT, refresh); window.removeEventListener('storage', refresh); };
@@ -184,7 +184,7 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
             <td className="reg-cell">{row.registration || '—'}</td>
             <td className="schedule-cell"><span title={row.rawStd ? `Pasted: ${row.rawStd}` : undefined}><small>STD</small>{row.std}</span><span title={row.rawSta ? `Pasted: ${row.rawSta}` : undefined}><small>STA</small>{row.sta}</span></td>
             <td className="ete-cell">{row.ete}</td>
-            <td className="dispatch-cell"><div className="flight-row-actions"><button className="primary compact build-action" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button>{onSchedule && <button className={`compact schedule-button ${addedTripKeys.has(tripCandidateKey(row)) ? 'trip-added' : ''}`} title="Add to unscheduled trips" onClick={async event => { event.stopPropagation(); const added = await onSchedule(row); if (added) { setAddedTripKeys(new Set(loadTrips().map(item => tripCandidateKey(item)))); notify('Leg added to trip'); } }}><span className="trip-button-icon">{addedTripKeys.has(tripCandidateKey(row)) ? <Check size={15} /> : <CalendarPlus size={14} />}</span> Trip</button>}<button className="compact tail-button" disabled={!fr24TailUrl(row.registration)} title={row.registration ? `Open ${row.registration} on Flightradar24` : 'No registration available'} onClick={event => { event.stopPropagation(); const url = fr24TailUrl(row.registration); if (url) window.open(url, 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900'); }}><ExternalLink size={14} /> Tail</button></div></td>
+            <td className="dispatch-cell"><div className="flight-row-actions"><button className="primary compact build-action" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button>{onSchedule && <button className={`compact schedule-button ${addedTripKeys.has(tripCandidateKey(row)) ? 'trip-added' : ''}`} title="Add to unscheduled trips" onClick={async event => { event.stopPropagation(); const key = tripCandidateKey(row); setAddedTripKeys(previous => new Set(previous).add(key)); rememberAddedTripKey(key); const added = await onSchedule(row); if (added) notify('Leg added to trip'); else setAddedTripKeys(loadAddedTripKeys()); }}><span className="trip-button-icon">{addedTripKeys.has(tripCandidateKey(row)) ? <Check size={15} /> : <CalendarPlus size={14} />}</span> Trip</button>}<button className="compact tail-button" disabled={!fr24TailUrl(row.registration)} title={row.registration ? `Open ${row.registration} on Flightradar24` : 'No registration available'} onClick={event => { event.stopPropagation(); const url = fr24TailUrl(row.registration); if (url) window.open(url, 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900'); }}><ExternalLink size={14} /> Tail</button></div></td>
           </tr>)}
           {!flights.length && <tr><td colSpan={7} className="empty-cell">Copy a supported FR24 page, then press <strong>Paste & Parse</strong>.</td></tr>}
         </tbody></table>
