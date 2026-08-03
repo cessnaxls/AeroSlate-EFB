@@ -1,7 +1,7 @@
-# AeroSlate EFB 0.11.3
+# AeroSlate EFB 0.11.4
 
-- Removed unsupported SimBrief `payload` and `manualpayload` query parameters.
-- Corrected `cargo` to SimBrief's thousands-of-pounds API convention.
-- Uses documented `acdata.paxwgt` compensation so SimBrief's visible Payload matches AeroSlate passenger plus baggage weight.
-- Keeps exact AeroSlate pound values for the native form-filler and OFP display.
-- Retains persistent independent green Trip buttons.
+- Added a broad SimBrief aircraft BOW/OEW reference catalog with ICAO-family fallbacks.
+- SimBrief dispatch now sends the generated passenger count and freight as before, plus `manualzfw`.
+- Manual ZFW is calculated as aircraft BOW + passenger weight + baggage weight + freight.
+- Removed passenger-weight compensation through `acdata.paxwgt`; normal SimBrief passenger assumptions remain visible while the planning ZFW is forced to the AeroSlate load.
+- Added regression coverage for A20N BOW, payload, freight, and manual-ZFW units.

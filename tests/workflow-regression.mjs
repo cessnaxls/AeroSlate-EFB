@@ -42,7 +42,7 @@ try {
   const dispatchPath = path.join(buildDir, 'lib', 'dispatchlink.js');
   if (fs.existsSync(dispatchPath)) {
     const airlineData = fs.readFileSync(path.join(root, 'src/data/airline-codes.json'), 'utf8');
-    fs.writeFileSync(dispatchPath, fs.readFileSync(dispatchPath, 'utf8').replace(/import airlineCodes from ['"]\.\.\/data\/airlineCodes['"];?/, `const airlineCodes = ${airlineData};`));
+    fs.writeFileSync(dispatchPath, fs.readFileSync(dispatchPath, 'utf8').replace(/import airlineCodes from ['"]\.\.\/data\/airlineCodes['"]\;?/, `const airlineCodes = ${airlineData};`).replace('../data/aircraftWeights', '../data/aircraftWeights.js'));
   }
   const ofp = await import(`${pathToFileURL(path.join(buildDir, 'lib', 'ofp.js')).href}?test=${Date.now()}`);
   const dispatch = await import(`${pathToFileURL(dispatchPath).href}?test=${Date.now()}`);
@@ -52,8 +52,10 @@ try {
   assert.equal(dispatchParams.get('payload'), null, 'manual payload is not a documented SimBrief URL parameter');
   assert.equal(dispatchParams.get('manualpayload'), null);
   assert.equal(dispatchParams.get('cargo'), '1.2', 'cargo is sent in thousands of pounds');
-  const acdata = JSON.parse(dispatchParams.get('acdata'));
-  assert.equal(acdata.paxwgt, 167.308, 'pax weight offsets SimBrief standard baggage to reproduce exact AeroSlate payload');
+  assert.equal(dispatchParams.get('acdata'), null, 'manual ZFW avoids altering SimBrief passenger-weight assumptions');
+  assert.equal(dispatchParams.get('manualzfw'), '128.1', 'manual ZFW is BOW + passenger/bag payload + freight, in thousands of pounds');
+  assert.equal(dispatchParams.get('as_bow_lbs'), '98000');
+  assert.equal(dispatchParams.get('as_zfw_lbs'), '128100');
   assert.equal(dispatchParams.get('as_payload_lbs'), '28900');
   assert.equal(dispatchParams.get('as_freight_lbs'), '1200');
   assert.equal(dispatchParams.get('freight'), null, 'SimBrief documents Freight as the cargo parameter');
@@ -97,7 +99,8 @@ console.log(`Workflow regression passed: airports=${airports.length}, countries=
   const dispatchSource = fs.readFileSync(path.join(root, 'src/lib/dispatchlink.ts'), 'utf8');
   assert.match(dispatchSource, /poundsToThousands/);
   assert.match(dispatchSource, /as_payload_lbs/);
-  assert.match(dispatchSource, /simbriefBagAllowancePerPax = 55/);
+  assert.match(dispatchSource, /calculateManualZfwLb/);
+  assert.match(dispatchSource, /params\.set\('manualzfw'/);
   assert.match(dispatchSource, /as_freight_lbs/);
   const finderSource = fs.readFileSync(path.join(root, 'src/pages/FlightFinderPage.tsx'), 'utf8');
   assert.match(finderSource, /rememberAddedTripKey/);

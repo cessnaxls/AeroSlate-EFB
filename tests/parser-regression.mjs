@@ -23,7 +23,7 @@ try {
 
   const compiledParserPath = path.join(buildDir, 'lib', 'dispatchlink.js');
   const airlineData = fs.readFileSync(path.join(root, 'src/data/airline-codes.json'), 'utf8');
-  const compiledParser = fs.readFileSync(compiledParserPath, 'utf8').replace(/import airlineCodes from ['"]\.\.\/data\/airlineCodes['"];?/, `const airlineCodes = ${airlineData};`);
+  const compiledParser = fs.readFileSync(compiledParserPath, 'utf8').replace(/import airlineCodes from ['"]\.\.\/data\/airlineCodes['"]\;?/, `const airlineCodes = ${airlineData};`).replace('../data/aircraftWeights', '../data/aircraftWeights.js');
   fs.writeFileSync(compiledParserPath, compiledParser);
   const parser = await import(`${pathToFileURL(compiledParserPath).href}?test=${Date.now()}`);
   const airports = parser.airportMap(parser.parseAirportsDat(fs.readFileSync(path.join(root, 'public/data/airports.dat'), 'utf8')));

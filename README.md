@@ -81,3 +81,13 @@ The FAA chart PDF is rendered once per selected chart/page. Drawing occurs on a 
 ## SimBrief payload handling in 0.11.3
 
 AeroSlate no longer sends the undocumented `payload` or `manualpayload` URL fields. It uses the documented `pax`, `cargo`, and `acdata.paxwgt` inputs instead. Freight is sent as thousands of pounds, and passenger weight is adjusted to offset SimBrief's standard baggage allowance so the visible SimBrief Payload matches AeroSlate's generated passenger-plus-baggage total.
+
+## SimBrief manual ZFW dispatch
+
+AeroSlate sends the generated passenger count with `pax`, freight with `cargo`, and the calculated zero-fuel weight with SimBrief's documented `manualzfw` input. The calculation is:
+
+```text
+manual ZFW = aircraft BOW + (passengers × 190 lb) + (bags × 40 lb) + freight
+```
+
+The app includes a broad ICAO aircraft BOW/OEW reference catalog and family fallbacks. These are generic planning values; airline-specific interiors and individual airframes can differ.

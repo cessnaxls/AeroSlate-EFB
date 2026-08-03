@@ -1,3 +1,4 @@
+import { calculateManualZfwLb } from '../data/aircraftWeights';
 import airlineCodes from '../data/airlineCodes';
 export interface Airport {
   id: number;
@@ -774,26 +775,36 @@ export function buildSimbriefDispatch(flight: FlightCandidate, extras: { pax?: n
   if (extras.pax != null) params.set('pax', String(Math.max(0, Math.round(extras.pax))));
   const payload = extras.payload;
   const freight = extras.freight ?? extras.cargo;
-  // The documented SimBrief API has no manual `payload` input. Passing the
-  // website field name in a custom URL produces incorrect values, so do not
-  // send payload/manualpayload at all. SimBrief does support `paxwgt` inside
-  // acdata and `cargo` in thousands of pounds. Its standard LBS load model
-  // assigns 55 lb of checked baggage per passenger; offset that standard
-  // baggage allowance through paxwgt so the resulting visible Payload equals
-  // AeroSlate's exact (pax × 190 lb) + (bags × 40 lb) total.
-  if (payload != null) {
-    const payloadLb = Math.max(0, Math.round(payload));
-    params.set('as_payload_lbs', String(payloadLb));
-    if (extras.pax && extras.pax > 0) {
-      const simbriefBagAllowancePerPax = 55;
-      const adjustedPaxWeight = Math.max(0, (payloadLb / extras.pax) - simbriefBagAllowancePerPax);
-      params.set('acdata', JSON.stringify({ paxwgt: Number(adjustedPaxWeight.toFixed(3)) }));
-    }
-  }
+  const freightLb = Math.max(0, Math.round(Number(freight || 0)));
   if (freight != null) {
-    const freightLb = Math.max(0, Math.round(freight));
+    // SimBrief's documented cargo and manualzfw inputs use thousands of pounds
+    // when the OFP units are LBS.
     params.set('cargo', poundsToThousands(freightLb));
     params.set('as_freight_lbs', String(freightLb));
+  }
+
+  // SimBrief does not expose a direct manual Payload input. Preserve the
+  // requested passenger and freight values, then force the correct total
+  // loaded weight through the documented manualzfw input:
+  //   ZFW = generic aircraft BOW + pax weight + bag weight + freight.
+  // The BOW catalog is keyed by every common SimBrief ICAO type and includes
+  // family fallbacks. A registration-specific override can be added later
+  // without changing this dispatch contract.
+  const manualZfw = calculateManualZfwLb({
+    type: normalizeSimbriefType(flight.aircraft),
+    pax: extras.pax,
+    paxWeightLb: extras.pax != null ? Math.max(0, Math.round(extras.pax)) * 190 : undefined,
+    bags: extras.bags,
+    bagWeightLb: extras.bagWeight,
+    freightLb
+  });
+  if (manualZfw) {
+    params.set('manualzfw', poundsToThousands(manualZfw.zfwLb));
+    params.set('as_bow_lbs', String(manualZfw.bowLb));
+    params.set('as_payload_lbs', String(payload != null ? Math.max(0, Math.round(payload)) : manualZfw.payloadLb - freightLb));
+    params.set('as_zfw_lbs', String(manualZfw.zfwLb));
+  } else if (payload != null) {
+    params.set('as_payload_lbs', String(Math.max(0, Math.round(payload))));
   }
   if (extras.remarks) params.set('manualrmk', extras.remarks);
   if (extras.pilotId && /^\d+$/.test(extras.pilotId)) params.set('pid', extras.pilotId);

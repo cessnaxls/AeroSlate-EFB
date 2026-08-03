@@ -1,11 +1,8 @@
-# Validation — 0.11.3
+# Validation
 
-Passed:
-- TypeScript project check
-- Workflow regression suite
-- All four FR24 parser fixtures
-- SimBrief payload compensation regression
-- SimBrief cargo thousands-of-pounds regression
-- Node server and Electron syntax checks
-- Python simulator bridge compilation
-- ZIP integrity test
+- TypeScript project check passed.
+- FR24 parser regression passed.
+- Workflow regression passed, including manual-ZFW calculation.
+- Server and Electron syntax checks passed.
+- Simulator bridge Python compilation passed.
+- ZIP integrity passed.
