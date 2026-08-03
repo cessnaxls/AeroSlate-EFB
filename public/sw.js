@@ -1,4 +1,4 @@
-const CACHE = 'aeroslate-efb-shell-v5';
+const CACHE = 'aeroslate-efb-shell-v6';
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/']))));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', event => {

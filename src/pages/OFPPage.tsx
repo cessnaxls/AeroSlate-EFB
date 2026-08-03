@@ -32,10 +32,10 @@ export function OFPPage({ ofp, flight, notify }: Props) {
       <button className={view === 'document' ? 'active' : ''} onClick={() => setView('document')}><FileText size={17} /> Briefing PDF</button>
       <button className={view === 'summary' ? 'active' : ''} onClick={() => setView('summary')}><Gauge size={17} /> Dispatch summary</button>
     </div>
-    {view === 'document' && <div className="embedded-document">
+    <div className={`workspace-pane ${view === 'document' ? 'active' : ''}`}><div className="embedded-document">
       <ChartWorkspace source={source} />
-    </div>}
-    {view === 'summary' && <div className="content-grid two">
+    </div></div>
+    <div className={`workspace-pane ${view === 'summary' ? 'active' : ''}`}><div className="content-grid two">
       <section className="card span-2"><header><div><FileText size={18} /><h3>Operational flight plan</h3></div></header><div className="card-body"><div className="ofp-header"><div><span>{flight.airline}{flight.flightNumber}</span><strong>{flight.origin} → {flight.destination}</strong><small>{flight.aircraft} / {flight.registration}</small></div><div className="button-row"><button className="primary" onClick={() => setView('document')}><FileText size={17} /> View full OFP</button><button onClick={copyFpl}><Clipboard size={16} /> Copy ICAO FPL</button></div></div></div></section>
       <section className="card"><header><div><Gauge size={18} /><h3>Dispatch parameters</h3></div></header><div className="card-body status-list">
         <div><span>Release</span><strong>{flight.release}</strong></div><div><span>Callsign</span><strong>{flight.callsign || '—'}</strong></div>
@@ -45,6 +45,6 @@ export function OFPPage({ ofp, flight, notify }: Props) {
       <section className="card"><header><div><Route size={18} /><h3>Route</h3></div></header><div className="card-body"><div className="monospace block-text">{flight.route}</div></div></section>
       <section className="card span-2"><header><div><Plane size={18} /><h3>ICAO flight plan</h3></div><button onClick={copyFpl}><Clipboard size={15} /> Copy</button></header><div className="card-body"><pre className="flightplan-text">{atc || 'No ICAO flight plan available.'}</pre></div></section>
       <section className="card span-2"><header><div><FileText size={18} /><h3>Dispatcher remarks</h3></div></header><div className="card-body"><div className="block-text">{remarks}</div></div></section>
-    </div>}
+    </div></div>
   </div>;
 }

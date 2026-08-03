@@ -1,7 +1,7 @@
 {
   "name": "AeroSlate EFB",
   "short_name": "AeroSlate",
-  "description": "A responsive SimBrief- and Navigraph-backed electronic flight bag for flight simulation.",
+  "description": "AeroSlate EFB: SimBrief dispatch, persistent Navigraph workspace, live simulator data, flight briefing, and records.",
   "start_url": "/",
   "scope": "/",
   "id": "/",

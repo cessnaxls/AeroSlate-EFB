@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.4.2",
-  "description": "A free-tier, responsive SimBrief- and Navigraph-backed all-in-one flight-simulation EFB with encrypted GitHub cloud record sync.",
+  "version": "0.5.0",
+  "description": "A free-tier, responsive all-in-one flight-simulation EFB with persistent embedded SimBrief and Navigraph provider workspaces.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
@@ -20,10 +20,10 @@
     "test:parser": "node tests/parser-regression.mjs",
     "mobile:sync": "npx cap sync",
     "mobile:android": "npx cap open android",
-    "mobile:ios": "npx cap open ios"
+    "mobile:ios": "npx cap open ios",
+    "test:workflow": "node tests/workflow-regression.mjs"
   },
   "dependencies": {
-    "cookie-session": "^2.1.1",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "lucide-react": "^0.468.0",

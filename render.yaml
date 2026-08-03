@@ -11,9 +11,5 @@ services:
         value: 20
       - key: ELECTRON_SKIP_BINARY_DOWNLOAD
         value: "1"
-      - key: SESSION_SECRET
-        generateValue: true
-      - key: NAVIGRAPH_CHARTS_APPROVED
-        value: "false"
       - key: SIM_LINK_TOKEN
         generateValue: true

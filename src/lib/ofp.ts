@@ -41,6 +41,7 @@ export interface ParsedNotam {
   station: string;
   text: string;
   important: boolean;
+  priority: 'critical' | 'amendment' | 'advisory';
   category: 'runway' | 'procedure' | 'airport' | 'airspace' | 'navaid' | 'other';
 }
 
@@ -233,18 +234,23 @@ function notamText(value: unknown): string {
     }
   }
   const joined = stringLeaves(value).join(' ');
-  return /\b(?:RWY|TWY|NOTAM|SID|STAR|ILS|VOR|DME|AIRSPACE|APCH)\b/i.test(joined) ? cleanText(joined) : '';
+  return /\b(?:RWY|TWY|NOTAM|SID|STAR|ILS|VOR|DME|AIRSPACE|APCH|TOWER|OBST)\b/i.test(joined) ? cleanText(joined) : '';
 }
 
-function classifyNotam(text: string): Pick<ParsedNotam, 'important' | 'category'> {
-  const runway = /\bRWY\b|RUNWAY|DECLARED DISTANCE|TORA|TODA|ASDA|LDA/i.test(text);
-  const closure = /\bCLSD\b|CLOSED|UNSERVICEABLE|U\/S|NOT AVBL|SUSPENDED|WORK IN PROGRESS/i.test(text);
+function classifyNotam(text: string): Pick<ParsedNotam, 'important' | 'priority' | 'category'> {
+  const runway = /\bRWY\b|RUNWAY|DECLARED DISTANCE|TORA|TODA|ASDA|LDA|PAPI|VASI|REIL|RVR/i.test(text);
+  const closure = /\bCLSD\b|CLOSED|UNSERVICEABLE|U\/S|OUT OF SERVICE|OTS|NOT AVBL|NOT AVAILABLE|SUSPENDED|INOPERATIVE|INOP/i.test(text);
   const procedure = /\bAPCH\b|APPROACH|\bSID\b|\bSTAR\b|IAP|ILS|LOC|RNAV|RNP|MINIMA|MISSED APPROACH|PROCEDURE/i.test(text);
-  const navaid = /\bVOR\b|\bDME\b|\bNDB\b|GLIDESLOPE|LOCALIZER|NAVAID/i.test(text);
-  const airport = /AD CLSD|AERODROME|APRON|\bTWY\b|TAXIWAY|LIGHTING/i.test(text);
+  const amendment = procedure && /AMDT|AMEND|AMENDED|REV(?:ISED)?|CHANGE|CHANGED|CORRECT|MINIMA|NOTE|PROC(?:EDURE)? NA|NOT AUTHORIZED/i.test(text);
+  const navaid = /\bVOR\b|\bDME\b|\bNDB\b|GLIDESLOPE|GLIDE SLOPE|LOCALIZER|NAVAID|MARKER BEACON/i.test(text);
+  const airport = /AD CLSD|AERODROME|AIRPORT|APRON|\bTWY\b|TAXIWAY|LIGHTING|MALSR|ALSF|HIRL|MIRL/i.test(text);
   const airspace = /AIRSPACE|TFR|RESTRICTED|PROHIBITED|DANGER AREA/i.test(text);
+  const obstacleOnly = /\b(?:TOWER|CRANE|OBST(?:ACLE)?)\b/i.test(text) && !runway && !procedure && !navaid && !airport;
   const category: ParsedNotam['category'] = procedure ? 'procedure' : runway ? 'runway' : navaid ? 'navaid' : airport ? 'airport' : airspace ? 'airspace' : 'other';
-  return { category, important: (runway && closure) || procedure || (navaid && closure) || /AD CLSD|AERODROME CLOSED|TFR|CRANE|OBST/i.test(text) };
+  const operationalEquipment = runway || procedure || navaid || airport;
+  const critical = operationalEquipment && closure;
+  const priority: ParsedNotam['priority'] = critical ? 'critical' : amendment ? 'amendment' : 'advisory';
+  return { category, priority, important: !obstacleOnly && (critical || amendment) };
 }
 
 export function getAllNotams(ofp: AnyRecord | null): ParsedNotam[] {
@@ -265,7 +271,7 @@ export function getAllNotams(ofp: AnyRecord | null): ParsedNotam[] {
       const directKeys = ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text'];
       const hasDirectText = directKeys.some(key => object[key] !== undefined && object[key] !== null && object[key] !== '');
       const text = hasDirectText ? notamText(object) : '';
-      if (text && text.length > 7 && /\b(?:RWY|TWY|NOTAM|CLSD|APCH|SID|STAR|ILS|VOR|DME|AIRSPACE|AD |AERODROME|TFR|OBST|CRANE|NAV)\b/i.test(text)) {
+      if (text && text.length > 7 && /\b(?:RWY|TWY|NOTAM|CLSD|APCH|SID|STAR|ILS|VOR|DME|AIRSPACE|AD |AERODROME|TFR|TOWER|OBST|CRANE|NAV)\b/i.test(text)) {
         const normalized = text.replace(/\s+/g, ' ').trim();
         if (!seen.has(normalized)) {
           seen.add(normalized);
@@ -281,7 +287,7 @@ export function getAllNotams(ofp: AnyRecord | null): ParsedNotam[] {
       return;
     }
     const text = notamText(value);
-    if (text && text.length > 7 && /\b(?:RWY|TWY|NOTAM|CLSD|APCH|SID|STAR|ILS|VOR|DME|AIRSPACE|AD |AERODROME|TFR|OBST|CRANE|NAV)\b/i.test(text)) {
+    if (text && text.length > 7 && /\b(?:RWY|TWY|NOTAM|CLSD|APCH|SID|STAR|ILS|VOR|DME|AIRSPACE|AD |AERODROME|TFR|TOWER|OBST|CRANE|NAV)\b/i.test(text)) {
       const normalized = text.replace(/\s+/g, ' ').trim();
       if (!seen.has(normalized)) {
         seen.add(normalized);

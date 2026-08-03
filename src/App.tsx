@@ -23,8 +23,8 @@ import { OOOIPage } from './pages/OOOIPage';
 import { RecordsPage } from './pages/RecordsPage';
 import { ScratchpadPage } from './pages/ScratchpadPage';
 
-type Page = 'dashboard' | 'finder' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'sim' | 'times' | 'records' | 'scratchpad' | 'settings';
-interface RuntimeStatus { simLinked: boolean; chartsApproved: boolean; navigraphConfigured: boolean; navigraphSignedIn: boolean; mode: 'standalone' | 'sim-linked'; navigraphUsername?: string; }
+type Page = 'dashboard' | 'finder' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'sim' | 'times' | 'flightlogs' | 'dutylogs' | 'scratchpad' | 'settings';
+interface RuntimeStatus { simLinked: boolean; mode: 'standalone' | 'sim-linked'; providerMode: 'official-web-session'; }
 interface NavItem { id: Page; label: string; shortLabel: string; icon: typeof LayoutDashboard; group: 'Plan' | 'Brief' | 'Fly' | 'Record' | 'System'; }
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Flight deck', shortLabel: 'Home', icon: LayoutDashboard, group: 'Plan' },
@@ -38,7 +38,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'performance', label: 'Runway analysis', shortLabel: 'Runway', icon: Calculator, group: 'Brief' },
   { id: 'sim', label: 'Simulator data', shortLabel: 'Live', icon: Activity, group: 'Fly' },
   { id: 'times', label: 'OOOI & schedule', shortLabel: 'OOOI', icon: Timer, group: 'Fly' },
-  { id: 'records', label: 'Logbook & duty', shortLabel: 'Records', icon: BookOpenCheck, group: 'Record' },
+  { id: 'flightlogs', label: 'Flight logs', shortLabel: 'Flights', icon: BookOpenCheck, group: 'Record' },
+  { id: 'dutylogs', label: 'Duty logs', shortLabel: 'Duty', icon: Timer, group: 'Record' },
   { id: 'scratchpad', label: 'Scratchpad', shortLabel: 'Notes', icon: NotebookPen, group: 'Record' },
   { id: 'settings', label: 'Connections & app', shortLabel: 'More', icon: Settings, group: 'System' }
 ];
@@ -65,7 +66,7 @@ export default function App() {
   const [simbriefKey, setSimbriefKey] = useState(() => loadLocal('aeroslate.simbriefKey', loadLocal('dispatchlink.simbriefKey', '')));
   const [simbriefMode, setSimbriefMode] = useState<'username' | 'userid'>(() => loadLocal('aeroslate.simbriefMode', loadLocal<'username' | 'userid'>('dispatchlink.simbriefMode', 'username')));
   const [loadingOFP, setLoadingOFP] = useState(false); const [message, setMessage] = useState('');
-  const [runtime, setRuntime] = useState<RuntimeStatus>({ simLinked: false, chartsApproved: false, navigraphConfigured: false, navigraphSignedIn: false, mode: 'standalone' });
+  const [runtime, setRuntime] = useState<RuntimeStatus>({ simLinked: false, mode: 'standalone', providerMode: 'official-web-session' });
   const [clock, setClock] = useState(new Date()); const [chartSource, setChartSource] = useState<ChartSource | null>(null);
   const [dispatchUrl, setDispatchUrl] = useState(() => loadLocal('aeroslate.dispatch.url', loadLocal('dispatchlink.dispatch.url', '')));
   const [dispatchFlight, setDispatchFlight] = useState<FlightCandidate | null>(() => loadLocal('aeroslate.dispatch.flight', loadLocal<FlightCandidate | null>('dispatchlink.dispatch.flight', null)));
@@ -115,18 +116,20 @@ export default function App() {
       <header className="topbar"><button className="menu-button" onClick={() => setMenuOpen(true)}><Menu /></button><div className="flight-ident"><span>{flight.airline}{flight.flightNumber || '—'}</span><strong>{flight.origin} <Plane size={16} /> {flight.destination}</strong><small>{flight.aircraft} · {flight.registration}</small></div><div className="topbar-actions"><div className="zulu-clock"><span>ZULU</span><strong>{clock.toISOString().slice(11, 19)}</strong></div><button className="primary top-import" onClick={() => void importOFP()} disabled={loadingOFP}>{loadingOFP ? <RefreshCw className="spin" size={16} /> : <Import size={16} />} {loadingOFP ? 'Syncing' : 'Import OFP'}</button></div></header>
       {message && <div className="toast toast-auto" role="status">{message}<span className="toast-progress" /></div>}
       <div className="page-content">
+        {/* Provider and document workspaces stay mounted so authenticated sessions, OFP position, and tool state survive tab changes. */}
+        <div className={`page-panel ${page === 'simbrief' ? 'active' : ''}`}><SimBriefDispatchPage url={dispatchUrl} flight={dispatchFlight} staticId={dispatchStaticId} loading={loadingOFP} onImport={importOFP} /></div>
+        <div className={`page-panel ${page === 'charts' ? 'active' : ''}`}><ChartsPage ofp={ofp} flight={flight} source={chartSource} setSource={setChartSource} /></div>
+        <div className={`page-panel ${page === 'ofp' ? 'active' : ''}`}><OFPPage ofp={ofp} flight={flight} notify={notify} /></div>
+        <div className={`page-panel ${page === 'performance' ? 'active' : ''}`}><RunwayAnalysisPage ofp={ofp} flight={flight} onOpenOFP={() => setPage('ofp')} notify={notify} /></div>
         {page === 'dashboard' && <Dashboard ofp={ofp} flight={flight} setPage={setPage} />}
         {page === 'finder' && <FlightFinderPage onDispatch={openDispatch} notify={notify} />}
-        {page === 'simbrief' && <SimBriefDispatchPage url={dispatchUrl} flight={dispatchFlight} staticId={dispatchStaticId} loading={loadingOFP} onImport={importOFP} />}
-        {page === 'charts' && <ChartsPage ofp={ofp} flight={flight} source={chartSource} setSource={setChartSource} />}
-        {page === 'ofp' && <OFPPage ofp={ofp} flight={flight} notify={notify} />}
         {page === 'navlog' && <NavlogPage ofp={ofp} flight={flight} />}
         {page === 'weather' && <WeatherPage ofp={ofp} flight={flight} />}
         {page === 'fuel' && <FuelPage ofp={ofp} flight={flight} />}
-        {page === 'performance' && <RunwayAnalysisPage ofp={ofp} flight={flight} onOpenOFP={() => setPage('ofp')} notify={notify} />}
         {page === 'sim' && <SimPage />}
         {page === 'times' && <OOOIPage release={flight.release} origin={flight.origin} destination={flight.destination} schedOut={flight.schedOut} schedIn={flight.schedIn} />}
-        {page === 'records' && <RecordsPage flight={flight} />}
+        {page === 'flightlogs' && <RecordsPage flight={flight} mode="logbook" />}
+        {page === 'dutylogs' && <RecordsPage flight={flight} mode="duty" />}
         {page === 'scratchpad' && <ScratchpadPage flight={flight} notify={notify} />}
         {page === 'settings' && <SettingsPage simbriefKey={simbriefKey} setSimbriefKey={setSimbriefKey} mode={simbriefMode} setMode={setSimbriefMode} loading={loadingOFP} importOFP={async () => { await importOFP(); }} loadDemo={loadDemo} runtime={runtime} refreshRuntime={refreshRuntime} notify={notify} />}
       </div>
@@ -146,7 +149,7 @@ function Dashboard({ ofp, flight, setPage }: { ofp: AnyRecord | null; flight: Re
       <Card title="Active flight" icon={Plane} className="span-2"><div className="route-display"><div><span>{flight.origin}</span><small>{flight.originName}</small></div><div className="route-line"><Plane /><span>{flight.distance}</span></div><div><span>{flight.destination}</span><small>{flight.destinationName}</small></div></div><div className="route-string">{flight.route}</div><div className="button-row"><button className="primary" onClick={() => setPage(ofp ? 'ofp' : 'simbrief')}><FileText size={16} /> {ofp ? 'Open OFP' : 'Generate OFP'}</button><button onClick={() => setPage('charts')}><Map size={16} /> Charts</button><button onClick={() => setPage('performance')}><Calculator size={16} /> Runway analysis</button></div></Card>
       <Card title="Ready state" icon={Check}><div className="status-list"><div><span>OFP</span><Pill tone={ofp ? 'good' : 'warn'}>{ofp ? 'LOADED' : 'PENDING'}</Pill></div><div><span>Runway analysis</span><Pill tone={tlr.available ? 'good' : ofp ? 'warn' : 'neutral'}>{tlr.available ? 'IN OFP' : 'TOOLS READY'}</Pill></div><div><span>Alternate</span><strong>{flight.alternate}</strong></div><div><span>Simulator</span><Pill tone="neutral">OPEN LIVE PAGE</Pill></div></div></Card>
       <Card title="Weather" icon={CloudSun} className="span-2"><div className="wx-snapshot"><div><Pill tone="blue">{flight.origin}</Pill><p>{originWx}</p></div><div><Pill tone="blue">{flight.destination}</Pill><p>{destinationWx}</p></div></div><button className="text-button" onClick={() => setPage('weather')}>Weather and all NOTAMs <ChevronRight size={16} /></button></Card>
-      <Card title="Next actions" icon={Gauge}><div className="next-actions"><button onClick={() => setPage('navlog')}><Route size={18} /><span><strong>Navlog</strong><small>Planned or active</small></span></button><button onClick={() => setPage('times')}><Timer size={18} /><span><strong>OOOI</strong><small>Automatic or NOW</small></span></button><button onClick={() => setPage('records')}><BookOpenCheck size={18} /><span><strong>Records</strong><small>Logbook and duty</small></span></button></div></Card>
+      <Card title="Next actions" icon={Gauge}><div className="next-actions"><button onClick={() => setPage('navlog')}><Route size={18} /><span><strong>Navlog</strong><small>Planned or active</small></span></button><button onClick={() => setPage('times')}><Timer size={18} /><span><strong>OOOI</strong><small>Automatic or NOW</small></span></button><button onClick={() => setPage('flightlogs')}><BookOpenCheck size={18} /><span><strong>Flight logs</strong><small>Duty logs linked separately</small></span></button></div></Card>
     </div>
   </div>;
 }

@@ -93,7 +93,7 @@ export function ProviderPortal({ title, url, windowName, description, prefill = 
   }
 
   return <div className="provider-browser-fallback provider-browser-ready">
-    <div><h2>{title}</h2><p>{description || 'Open this authenticated provider in AeroSlate’s in-app browser.'}</p><p className="provider-limit">SimBrief and Navigraph prevent ordinary web pages from safely reproducing their authenticated interfaces. The AeroSlate desktop shell embeds them directly; supported mobile wrappers use an in-app browser overlay so AeroSlate remains open.</p></div>
-    <button className="primary" onClick={() => void openProvider()}><ExternalLink size={17} /> Open inside app</button>
+    <div><h2>{title}</h2><p>{description || 'Open the authenticated provider workspace without closing AeroSlate.'}</p><div className="provider-session-card"><strong>Persistent provider session</strong><span>Mobile builds use an in-app browser sheet. The AeroSlate desktop app displays this workspace directly in the pane and keeps it loaded while you change tabs.</span></div></div>
+    <button className="primary" onClick={() => void openProvider()}><ExternalLink size={17} /> Open {title} in AeroSlate</button>
   </div>;
 }

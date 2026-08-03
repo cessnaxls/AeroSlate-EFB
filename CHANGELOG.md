@@ -1,42 +1,65 @@
-# AeroSlate EFB 0.4.2
+# AeroSlate EFB 0.5.0
 
-## GitHub Actions build fix
+## Flight Finder
 
-- Fixed Web Crypto `BufferSource` type errors in `cloudLedger.ts` under TypeScript 5.9 DOM declarations.
-- Copies typed-array input into owned `ArrayBuffer` objects before PBKDF2, AES-GCM, and SHA-256 Web Crypto calls.
-- Pins TypeScript to 5.8.3 so local, GitHub Actions, and Render checks use the same compiler instead of silently advancing through a caret range.
-- No encryption format or runtime behavior changed; existing encrypted Gist vaults remain compatible.
+- Compiled the complete `airports.dat` catalog into the application bundle: 7,692 airports in 237 countries.
+- Removed the runtime dependency that left country and airport lists blank after deployment.
+- Added reliable country, airport-size, search, and random-airport workflows.
+- Removed the persistent paste textarea.
+- Added one-button **Paste & Parse** clipboard import for all four supported FR24 layouts.
+- Removed the Source column from Available Flights.
+- Renamed Aircraft and Registration columns to **EQUIP** and **REG**.
+- Reworked narrow-screen rows into compact cards so the table does not require horizontal scrolling.
 
-## 0.4.2 Free — 2026-08-02
+## Persistent provider workspaces
 
-### Free Render deployment
+- Removed the direct Navigraph Charts API/OAuth implementation and related server routes/configuration.
+- Uses the official Navigraph Charts website as the chart provider session.
+- Keeps SimBrief Dispatch, Navigraph Charts, SimBrief Tools, and OFP workspaces mounted when changing AeroSlate tabs.
+- Keeps Navigraph loaded when switching between Navigraph and the AeroSlate binder.
+- Keeps the OFP PDF loaded when switching between document and summary views.
+- Retains a persistent Electron provider partition for authenticated SimBrief and Navigraph sessions.
+- Simplified web/PWA fallback messaging and retained a named provider session instead of replacing AeroSlate.
 
-- Changed the Blueprint web-service plan from `starter` to `free`.
-- Removed the persistent disk declaration and `DATA_DIR` environment variable.
-- Removed server-side record-file storage so the app never implies that Render's ephemeral filesystem is durable.
-- Uses Render's automatically supplied `RENDER_EXTERNAL_URL` when `APP_BASE_URL` is not set.
-- The Blueprint now requires no database, disk, or payment-backed instance.
+## Navlog and fuel trend
 
-### Local-first encrypted records
+- Stacked TAS, GS, and Mach in a compact waypoint-speed cell.
+- Calculates planned remaining fuel sequentially by subtracting each leg burn from the prior total.
+- Displays remaining fuel in muted text below Fuel Leg.
+- Added actual-versus-planned fuel variance to Active Navlog.
+- Added current Active Navlog fuel-trend status.
 
-- Flight and duty entries are written to device storage before any network operation.
-- Added per-device append-only SHA-256 audit chains so multiple devices can merge without rewriting previous device chains.
-- Added encrypted private GitHub Gist synchronization.
-- Ledger encryption uses AES-256-GCM with a PBKDF2-SHA256 derived key and a random salt/IV for every upload.
-- The GitHub token and passphrase remain in the client and are not sent to the Render service.
-- Added automatic sync after record save, manual sync, cloud pull/merge, encrypted backup export, and backup restore.
-- Added local CSV export for both flight and duty records.
-- Added a clear local/cloud status and record counts.
-- Added optional device-side remembering of the GitHub token/passphrase.
+## Weather and NOTAMs
 
-### Compatibility and validation
+- Made weather, individual weather stations, operational NOTAMs, complete NOTAMs, and station groups collapsible.
+- Added red priority for relevant airport/runway/procedure/navaid closures and unserviceability.
+- Added yellow priority for instrument-procedure and minima amendments.
+- Retains tower, crane, obstacle, and other notices in the complete briefing without promoting obstacle-only text to the operational-alert panel.
+- Retains category filters and recursive OFP NOTAM extraction.
 
-- Retained the complete AeroSlate 0.4.0 responsive UI, SimBrief, Navigraph workspace, FR24 parser, simulator bridge, OOOI, navlog, weather/NOTAM, fuel, runway-analysis, and native shell functionality.
-- TypeScript validation passes.
-- Parser regression continues to pass all four supplied FR24 layouts.
-- Node/Electron syntax and Python bridge compilation pass.
-- `render.yaml` validates as a free service with no disk or `DATA_DIR`.
+## Fuel
 
-## 0.4.0 — 2026-08-02
+- Rebuilt the checkpoint layout to prevent clipping on landscape phones and tablets.
+- Split elapsed airborne time into separate HH and MM fields.
+- Preserved automatic elapsed time from OFF while allowing manual HH:MM entry.
+- Clarified plan, checkpoint, trend, projection, and reserve sections.
 
-See the previous release for the AeroSlate rebrand, responsive phone/tablet redesign, provider workspaces, active navlog, recursive NOTAM parsing, fuel workflow cleanup, and records/OOOI redesign.
+## Records
+
+- Added separate primary navigation destinations for Flight Logs and Duty Logs.
+- Added a saved-flight dropdown to the duty editor.
+- Saving a flight attaches the active duty draft to the new flight record.
+- Saving an unattached duty attempts an exact date/route match before leaving it unattached.
+- Preserved local-first encrypted Gist synchronization, audit hashes, exports, and attestations.
+
+## Server and deployment
+
+- Server runtime now reports official-provider-session mode only.
+- Removed direct Navigraph credentials, sessions, chart endpoints, and Render environment variables.
+- Kept the Render Blueprint on the free plan with no disk or database.
+- Removed visible TCalc debugging fields from the telemetry allowlist while retaining operational live data.
+
+## Validation
+
+- Added workflow regression tests for the bundled airport catalog, one-button parser UI, responsive flight columns, persistent provider pages, separate record modules, and NOTAM priority logic.
+- Retained exact parser regression coverage for all four supplied FR24 formats.
