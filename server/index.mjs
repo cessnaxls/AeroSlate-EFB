@@ -22,7 +22,7 @@ function secureEqual(supplied, expected) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'aeroslate-efb', version: '0.10.1', time: new Date().toISOString() }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'aeroslate-efb', version: '0.12.0', time: new Date().toISOString() }));
 app.get('/api/runtime', (_req, res) => res.json({
   simLinked: simLinked(),
   mode: simLinked() ? 'sim-linked' : 'standalone',
@@ -70,6 +70,82 @@ app.get('/api/simbrief', async (req, res) => {
     res.set('cache-control', 'no-store').json(JSON.parse(text));
   } catch (error) { res.status(502).json({ error: error?.name === 'AbortError' ? 'SimBrief request timed out.' : 'Unable to retrieve SimBrief OFP.' }); }
   finally { clearTimeout(timer); }
+});
+
+
+
+let vatsimCache = { time: 0, data: null };
+async function getVatsimData() {
+  if (vatsimCache.data && Date.now() - vatsimCache.time < 12000) return vatsimCache.data;
+  const response = await fetch('https://data.vatsim.net/v3/vatsim-data.json', { headers: { 'user-agent': 'AeroSlate-EFB/0.12.0' } });
+  if (!response.ok) throw new Error(`VATSIM data returned ${response.status}`);
+  const data = await response.json();
+  vatsimCache = { time: Date.now(), data };
+  return data;
+}
+
+function normalizeAtisPayload(payload, airport) {
+  const records = Array.isArray(payload) ? payload : (payload?.data || payload?.atis || payload?.messages || payload?.results || [payload]);
+  const list = Array.isArray(records) ? records : [records];
+  return list.filter(Boolean).map((item, index) => {
+    if (typeof item === 'string') return { id: `${airport}-${index}`, type: '', text: item, timestamp: '', source: 'Real-world D-ATIS' };
+    const text = item.text || item.datis || item.atis || item.message || item.contents || item.raw || item.body || '';
+    return {
+      id: String(item.id || item.uuid || `${airport}-${index}`),
+      type: String(item.type || item.kind || item.atis_type || item.category || ''),
+      text: Array.isArray(text) ? text.join(' ') : String(text || ''),
+      timestamp: String(item.timestamp || item.time || item.created_at || item.updated_at || item.received || ''),
+      source: String(item.source || 'Real-world D-ATIS')
+    };
+  }).filter(item => item.text);
+}
+
+app.get('/api/atis', async (req, res) => {
+  const airport = String(req.query.airport || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{4}$/.test(airport)) return res.status(400).json({ error: 'A four-letter ICAO airport code is required.' });
+  const result = { airport, realWorld: [], vatsim: [], warnings: [] };
+  try {
+    const data = await getVatsimData();
+    result.vatsim = (data.atis || []).filter(item => String(item.callsign || '').toUpperCase().startsWith(airport)).map(item => ({
+      callsign: item.callsign,
+      frequency: item.frequency,
+      code: item.atis_code || '',
+      text: Array.isArray(item.text_atis) ? item.text_atis.join(' ') : String(item.text_atis || ''),
+      updatedAt: item.last_updated || ''
+    }));
+  } catch (error) { result.warnings.push(`VATSIM ATIS unavailable: ${error.message}`); }
+  const providers = [
+    `https://atis.info/api/${airport}`,
+    `https://datis.clowd.io/api/${airport.toLowerCase()}`
+  ];
+  for (const url of providers) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(9000), headers: { accept: 'application/json', 'user-agent': 'AeroSlate-EFB/0.12.0' } });
+      if (!response.ok) continue;
+      const payload = await response.json();
+      result.realWorld = normalizeAtisPayload(payload, airport);
+      if (result.realWorld.length) break;
+    } catch { /* try next public provider */ }
+  }
+  if (!result.realWorld.length) result.warnings.push('No current public real-world D-ATIS message was returned. Public ACARS-derived coverage can be delayed or unavailable.');
+  res.set('cache-control', 'no-store');
+  res.json(result);
+});
+
+app.get('/api/vatsim/flightplan', async (req, res) => {
+  const callsign = String(req.query.callsign || '').trim().toUpperCase();
+  const origin = String(req.query.origin || '').trim().toUpperCase();
+  const destination = String(req.query.destination || '').trim().toUpperCase();
+  if (!callsign) return res.status(400).json({ error: 'A callsign is required.' });
+  try {
+    const data = await getVatsimData();
+    const candidates = [...(data.pilots || []).map(item => ({ ...item, source: 'online' })), ...(data.prefiles || []).map(item => ({ ...item, source: 'prefile' }))];
+    const exact = candidates.find(item => String(item.callsign || '').toUpperCase() === callsign);
+    const plan = exact?.flight_plan || null;
+    const routeMatch = Boolean(plan && (!origin || String(plan.departure || '').toUpperCase() === origin) && (!destination || String(plan.arrival || '').toUpperCase() === destination));
+    res.set('cache-control', 'no-store');
+    res.json({ filed: Boolean(plan), routeMatch, source: exact?.source || null, callsign, flightPlan: plan, checkedAt: new Date().toISOString(), prefileUrl: 'https://my.vatsim.net/pilots/flightplan' });
+  } catch (error) { res.status(502).json({ error: `Unable to verify the VATSIM flight plan: ${error.message}` }); }
 });
 
 app.get('/api/gates', async (req, res) => {

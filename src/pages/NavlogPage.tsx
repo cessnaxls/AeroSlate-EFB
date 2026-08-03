@@ -23,6 +23,26 @@ function course(fix: AnyRecord) {
   const value = Number(field(fix, 'course', 'track_mag', 'mag_course', 'heading'));
   return Number.isFinite(value) ? `${String(Math.round(value)).padStart(3, '0')}°` : '—';
 }
+function isaTemperature(altitudeFeet: number): number {
+  if (!Number.isFinite(altitudeFeet)) return NaN;
+  return altitudeFeet <= 36089 ? 15 - (1.98 * altitudeFeet / 1000) : -56.5;
+}
+function NavWeather({ fix }: { fix: AnyRecord }) {
+  const direction = Number(field(fix, 'wind_dir', 'wind_direction'));
+  const speed = Number(field(fix, 'wind_spd', 'wind_speed'));
+  const oat = Number(field(fix, 'oat', 'temperature'));
+  const providedIsa = Number(field(fix, 'isa_dev', 'isa_deviation', 'isa'));
+  const altitude = Number(field(fix, 'altitude_feet', 'altitude', 'alt'));
+  const calculatedIsa = Number.isFinite(oat) && Number.isFinite(altitude) ? oat - isaTemperature(altitude) : NaN;
+  const isa = Number.isFinite(providedIsa) ? providedIsa : calculatedIsa;
+  const fmt = (value: number) => Number.isFinite(value) ? `${value > 0 ? '+' : ''}${Math.round(value)}°C` : '—';
+  return <div className="navlog-weather-stack">
+    <strong>{Number.isFinite(direction) ? String(Math.round(direction)).padStart(3, '0') : '—'}/{Number.isFinite(speed) ? String(Math.round(speed)).padStart(2, '0') : '—'}</strong>
+    <span>OAT {fmt(oat)}</span>
+    <span className="isa-dev">ISA {fmt(isa)}</span>
+  </div>;
+}
+
 function SpeedStack({ fix }: { fix: AnyRecord }) {
   const tas = field(fix, 'tas', 'true_airspeed');
   const gs = field(fix, 'groundspeed', 'ground_speed');
@@ -111,7 +131,7 @@ export function NavlogPage({ ofp, flight }: { ofp: AnyRecord | null; flight: Fli
             <td>{fix.via_airway || fix.via || 'DCT'}</td><td>{course(fix)}</td>
             <td>{numberText(legDistance, ' NM', 1)}<small>{remainingDistance !== undefined ? `${numberText(remainingDistance, ' NM', 1)} remain` : ''}</small></td>
             <td>{numberText(field(fix, 'altitude_feet', 'altitude'), ' ft')}</td><td><SpeedStack fix={fix} /></td>
-            <td><div className="navlog-weather-stack"><strong>{fix.wind_dir ? `${String(fix.wind_dir).padStart(3, '0')}/${String(fix.wind_spd || 0).padStart(2, '0')}` : '—/—'}</strong><span>OAT {field(fix, 'oat') !== undefined ? `${Number(field(fix, 'oat')) > 0 ? '+' : ''}${field(fix, 'oat')}°C` : '—'}</span><span className="isa-dev">ISA {field(fix, 'isa_dev', 'isa_deviation', 'isa') !== undefined ? `${Number(field(fix, 'isa_dev', 'isa_deviation', 'isa')) > 0 ? '+' : ''}${field(fix, 'isa_dev', 'isa_deviation', 'isa')}°C` : '—'}</span></div></td>
+            <td><NavWeather fix={fix} /></td>
             <td>{duration(field(fix, 'time_leg'))}<small>ETA {plannedEta}</small>{active && <small className="active-eta">ATA {displayAta(plannedElapsedMinutes, actual.crossed)}</small>}</td>
             <td className="fuel-plan-cell"><strong>{numberText(legFuel, '', 0)}</strong><small>{plannedRemaining > 0 ? `${Math.round(plannedRemaining).toLocaleString()} remain` : '— remain'}</small></td>
             {active && <td><div className="active-checkpoint-line"><input className="ata-input" value={actual.crossed} placeholder={displayAta(plannedElapsedMinutes, '') === '—' ? 'ATA' : displayAta(plannedElapsedMinutes, '')} onChange={event => update(id, { crossed: event.target.value })} /><button className="now-mini" title="Use current UTC" onClick={() => update(id, { crossed: nowZulu() })}>NOW</button><input className="alt-input" inputMode="numeric" value={actual.altitude} placeholder="ALT" onChange={event => update(id, { altitude: event.target.value })} /><input className="fuel-input" inputMode="decimal" value={actual.fuel} placeholder="FUEL" aria-label="Actual fuel" onChange={event => update(id, { fuel: event.target.value })} /><input className="remark-input" value={actual.remarks} placeholder="Remarks" onChange={event => update(id, { remarks: event.target.value })} /><button className={`complete-button ${actual.complete ? 'done' : ''}`} title="Mark complete" onClick={() => update(id, { complete: !actual.complete })}><Check size={15} /></button>{variance !== null && <small className={variance < 0 ? 'fuel-variance negative' : 'fuel-variance positive'}>{signed(variance, flight.units)}</small>}</div></td>}

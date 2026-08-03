@@ -127,6 +127,59 @@ export function asArray<T = any>(value: any): T[] {
   return Array.isArray(value) ? value : [value];
 }
 
+
+export function leafText(value: unknown, fallback = ''): string {
+  const seen = new Set<unknown>();
+  const walk = (input: unknown): string => {
+    if (input === undefined || input === null || input === '') return '';
+    if (typeof input === 'string' || typeof input === 'number' || typeof input === 'boolean') return String(input).trim();
+    if (seen.has(input)) return '';
+    if (Array.isArray(input)) return input.map(walk).filter(Boolean).join(', ');
+    if (typeof input === 'object') {
+      seen.add(input);
+      const object = input as Record<string, unknown>;
+      for (const key of ['#text','_text','text','value','code','name','ident','id','selcal','fin']) {
+        const result = walk(object[key]);
+        if (result) return result;
+      }
+      const values = Object.values(object).map(walk).filter(Boolean);
+      return values.length === 1 ? values[0] : '';
+    }
+    return '';
+  };
+  return walk(value) || fallback;
+}
+
+function routeProcedureCandidate(route: string, side: 'sid' | 'star'): string {
+  const tokens = String(route || '').trim().split(/\s+/).filter(Boolean);
+  const procedurePattern = /^[A-Z][A-Z0-9]{2,7}\d[A-Z]?$/;
+  const candidates = tokens.filter(token => procedurePattern.test(token) && !/^(?:DCT|NAT|PACOT)$/i.test(token));
+  return side === 'sid' ? (candidates[0] || '') : (candidates[candidates.length - 1] || '');
+}
+
+export function getProcedures(ofp: AnyRecord | null): { sid: string; star: string } {
+  if (!ofp) return { sid: '—', star: '—' };
+  const scalar = (value: unknown) => leafText(value, '').toUpperCase();
+  const rejectRunway = (value: string) => value && !/^RWY?\s*\d{1,2}[LRC]?$/i.test(value) && !/^\d{1,2}[LRC]?$/i.test(value) ? value : '';
+  const sidDirect = rejectRunway(scalar(dig(ofp, 'origin.sid', 'origin.sid_name', 'origin.plan_sid', 'general.sid', 'params.sid')));
+  const starDirect = rejectRunway(scalar(dig(ofp, 'destination.star', 'destination.star_name', 'destination.plan_star', 'general.star', 'params.star')));
+  const route = String(dig(ofp, 'general.route', 'atc.route', 'params.route') || '');
+  const fixes = getNavlog(ofp);
+  const via = fixes.map(fix => scalar(dig(fix, 'via_airway', 'via', 'airway'))).filter(Boolean);
+  const sidFromNavlog = via.find(value => rejectRunway(value) && /\d[A-Z]?$/.test(value) && !/^[JQTVUN]\d+$/i.test(value)) || '';
+  const starFromNavlog = [...via].reverse().find(value => rejectRunway(value) && /\d[A-Z]?$/.test(value) && !/^[JQTVUN]\d+$/i.test(value)) || '';
+  return {
+    sid: sidDirect || sidFromNavlog || routeProcedureCandidate(route, 'sid') || '—',
+    star: starDirect || starFromNavlog || routeProcedureCandidate(route, 'star') || '—'
+  };
+}
+
+export function getSelcal(ofp: AnyRecord | null): string {
+  const raw = leafText(dig(ofp, 'aircraft.selcal', 'aircraft.selcal_code', 'general.selcal', 'params.selcal'), '');
+  const compact = raw.toUpperCase().replace(/[^A-Z]/g, '');
+  if (compact.length === 4) return `${compact.slice(0,2)}-${compact.slice(2)}`;
+  return raw || '—';
+}
 export function normalizeZulu(value: unknown): string {
   const raw = String(value || '').trim().replace(/z/gi, '').replace(/\s+/g, '');
   const match = raw.match(/^(\d{1,2}):?(\d{2})$/);

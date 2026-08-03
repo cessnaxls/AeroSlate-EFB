@@ -29,7 +29,7 @@ assert.match(app, /dutylogs/);
 const chartsPage = fs.readFileSync(path.join(root, 'src/pages/ChartsPage.tsx'), 'utf8');
 assert.match(chartsPage, /charts\.navigraph\.com\/flights\/current/);
 assert.match(chartsPage, /persist:aeroslate-providers/);
-assert.match(chartsPage, /aeroslate\.navigraph\.notes/);
+assert.doesNotMatch(chartsPage, /aeroslate\.navigraph\.notes/);
 assert.doesNotMatch(chartsPage, /api\/charts\/faa/);
 assert.doesNotMatch(chartsPage, /pdfjs-dist/);
 const runwayPage = fs.readFileSync(path.join(root, 'src/pages/RunwayAnalysisPage.tsx'), 'utf8');
@@ -67,6 +67,10 @@ try {
     ] },
     destination: { icao_code: 'KORD' }, alternate: { icao_code: 'KMDW' }
   };
+  const procedures = ofp.getProcedures({ general: { route: 'DCT ELOCO6 LLA DCT LEV Y290 DOWRY TEEKY4' }, navlog: { fix: [{ via_airway: 'ELOCO6' }, { via_airway: 'Y290' }, { via_airway: 'TEEKY4' }] } });
+  assert.equal(procedures.sid, 'ELOCO6');
+  assert.equal(procedures.star, 'TEEKY4');
+  assert.equal(ofp.getSelcal({ aircraft: { selcal: { value: 'ABCD' } } }), 'AB-CD');
   const notams = ofp.getAllNotams(sample);
   assert.equal(notams.length, 3, 'complete NOTAM set should be retained');
   assert.equal(notams.find(item => /RWY 05R CLSD/.test(item.text))?.priority, 'critical');
@@ -92,7 +96,7 @@ try {
 } finally {
   fs.rmSync(buildDir, { recursive: true, force: true });
 }
-console.log(`Workflow regression passed: airports=${airports.length}, countries=${new Set(airports.map(item => item.country)).size}, Navigraph workspace, persistent chart notes, clipboard parser, NOTAM priorities, structured TLR`);
+console.log(`Workflow regression passed: airports=${airports.length}, countries=${new Set(airports.map(item => item.country)).size}, Navigraph workspace, VATSIM/ATIS briefing, clipboard parser, NOTAM priorities, structured TLR`);
 
 // v0.11.2 source regressions
 {
