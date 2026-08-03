@@ -149,8 +149,33 @@ export default function App() {
   }, [flight.callsign, flight.airline, flight.flightNumber, flight.origin, flight.destination]);
   useEffect(() => { void verifyVatsimTopbar(); const timer = window.setInterval(() => void verifyVatsimTopbar(), 30000); return () => clearInterval(timer); }, [verifyVatsimTopbar]);
   const openVatsimPrefile = () => {
+    const digits4 = (value: unknown, fallback = '0000') => {
+      const raw = String(value || '').replace(/[^0-9]/g, '');
+      if (raw.length >= 4) return raw.slice(0, 4);
+      if (raw.length === 3) return `0${raw}`;
+      return fallback;
+    };
     const route = String(flight.route || '');
-    const params = new URLSearchParams({ callsign: flight.callsign || `${flight.airline}${flight.flightNumber}`, departure: flight.origin, arrival: flight.destination, alternate: flight.alternate || '', aircraft: flight.aircraft || '', altitude: String(flight.cruiseAltitude || '').replace(/[^0-9]/g,''), route, remarks: String(dig(ofp,'general.remarks') || dig(ofp,'atc.remarks') || ''), deptime: String(flight.schedOut || '').replace(/[^0-9]/g,'').slice(0,4), enroute: String(flight.ete || '').replace(/[^0-9]/g,'').slice(0,4) });
+    const tas = Math.max(1, Number(dig(ofp, 'general.cruise_tas') || dig(ofp, 'general.avg_tas') || 450));
+    const rampFuel = Number(dig(ofp, 'fuel.plan_ramp') || 0);
+    const avgFlow = Number(dig(ofp, 'fuel.avg_fuel_flow') || 0);
+    const enduranceMinutes = avgFlow > 0 ? Math.max(1, Math.round((rampFuel / avgFlow) * 60)) : 240;
+    const fuelTime = `${String(Math.floor(enduranceMinutes / 60)).padStart(2, '0')}${String(enduranceMinutes % 60).padStart(2, '0')}`;
+    const equipment = String(dig(ofp, 'aircraft.equip') || dig(ofp, 'aircraft.equipment') || dig(ofp, 'atc.equipment') || dig(ofp, 'aircraft.icao_equipment') || 'SDE3FGHIRWXY').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    const transponder = String(dig(ofp, 'aircraft.transponder') || dig(ofp, 'atc.transponder') || 'L').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    const type = String(flight.aircraft || '').toUpperCase();
+    const wake = type === 'A388' ? 'J' : /^(B74[48]|B77[7-9]|A35K|A34[056])$/.test(type) ? 'H' : /^(C172|C152|PA28|DA40|SR2[02])$/.test(type) ? 'L' : 'M';
+    const params = new URLSearchParams({
+      callsign: flight.callsign || `${flight.airline}${flight.flightNumber}`,
+      rules: 'IFR', departure: flight.origin, arrival: flight.destination,
+      alternate: flight.alternate || '', aircraft: flight.aircraft || '', wake,
+      equipment, transponder, altitude: String(flight.cruiseAltitude || '').replace(/[^0-9]/g,''),
+      speed: String(Math.round(tas)), route,
+      remarks: String(dig(ofp,'general.remarks') || dig(ofp,'atc.remarks') || ''),
+      deptime: digits4(flight.schedOut), enroute: digits4(flight.ete, '0100'), fuel: fuelTime,
+      reg: flight.registration || '', sel: String(dig(ofp, 'aircraft.selcal') || dig(ofp, 'general.selcal') || '').replace(/[^A-Z]/gi, '').toUpperCase(),
+      dof: String(flight.flightDate || '')
+    });
     window.open(`https://my.vatsim.net/pilots/flightplan?${params.toString()}`, 'aeroslate-vatsim-prefile');
   };
 
@@ -212,16 +237,15 @@ function Dashboard({ ofp, flight, setPage }: { ofp: AnyRecord | null; flight: Re
 
 function SettingsPage({ simbriefKey, setSimbriefKey, mode, setMode, loading, importOFP, loadDemo, runtime, refreshRuntime, notify, theme, setTheme }: { simbriefKey: string; setSimbriefKey: (value: string) => void; mode: 'username' | 'userid'; setMode: (value: 'username' | 'userid') => void; loading: boolean; importOFP: () => Promise<void>; loadDemo: () => void; runtime: RuntimeStatus; refreshRuntime: () => Promise<void>; notify: (message: string) => void; theme: string; setTheme: (value:string)=>void; }) {
   const native = isNativeApp(); const api = (window as any).aeroslateNative || (window as any).dispatchlinkNative;
-  const [vatsimCid,setVatsimCid]=useState(()=>loadLocal('aeroslate.vatsim.cid',''));
   const [gistId,setGistId]=useState(()=>loadLocal('aeroslate.records.gistId',''));
   const [gistToken,setGistToken]=useState(()=>loadLocal('aeroslate.records.gistToken',''));
   const [atisApi,setAtisApi]=useState(()=>loadLocal('aeroslate.atis.api',''));
   const themes=[['ocean','Ocean'],['midnight','Midnight'],['slate','Slate'],['emerald','Emerald'],['amber','Amber'],['violet','Violet'],['crimson','Crimson'],['arctic','Arctic'],['cobalt','Cobalt'],['graphite','Graphite']];
   const install = async () => { const prompt = (window as any).deferredPrompt; if (prompt) await prompt.prompt(); else notify('Use the browser menu and choose Add to Home Screen.'); };
   const changeBackend = async () => { if (!api?.setAppUrl) return; const current = await api.getAppUrl?.(); const next = window.prompt('Render service URL', current || 'https://your-aeroslate.onrender.com'); if (next) await api.setAppUrl(next); };
-  const saveConnections=()=>{ saveLocal('aeroslate.vatsim.cid',vatsimCid.trim()); saveLocal('aeroslate.records.gistId',gistId.trim()); saveLocal('aeroslate.records.gistToken',gistToken.trim()); saveLocal('aeroslate.atis.api',atisApi.trim()); notify('Connection and API settings saved on this device.'); };
+  const saveConnections=()=>{ saveLocal('aeroslate.records.gistId',gistId.trim()); saveLocal('aeroslate.records.gistToken',gistToken.trim()); saveLocal('aeroslate.atis.api',atisApi.trim()); notify('Connection and API settings saved on this device.'); };
   return <div className="content-grid two settings-grid">
-    <Card title="Accounts & data sources" icon={Link2}><div className="settings-fields"><label><span>VATSIM CID</span><input value={vatsimCid} onChange={e=>setVatsimCid(e.target.value)} placeholder="Optional"/></label><label><span>GitHub Gist ID</span><input value={gistId} onChange={e=>setGistId(e.target.value)} placeholder="Private sync vault"/></label><label><span>GitHub token</span><input type="password" value={gistToken} onChange={e=>setGistToken(e.target.value)} placeholder="Gist permission only"/></label><label><span>D-ATIS API base URL</span><input value={atisApi} onChange={e=>setAtisApi(e.target.value)} placeholder="Optional custom provider"/></label></div><button className="primary" onClick={saveConnections}>Save connections</button></Card>
+    <Card title="Accounts & data sources" icon={Link2}><div className="settings-fields"><label><span>GitHub Gist ID</span><input value={gistId} onChange={e=>setGistId(e.target.value)} placeholder="Private sync vault"/></label><label><span>GitHub token</span><input type="password" value={gistToken} onChange={e=>setGistToken(e.target.value)} placeholder="Gist permission only"/></label><label><span>D-ATIS API base URL</span><input value={atisApi} onChange={e=>setAtisApi(e.target.value)} placeholder="Optional custom provider"/></label></div><button className="primary" onClick={saveConnections}>Save connections</button></Card>
     <Card title="Appearance" icon={Settings}><p className="muted">Choose one of ten device-local AeroSlate themes.</p><div className="theme-grid">{themes.map(([id,label])=><button key={id} className={theme===id?'active':''} onClick={()=>setTheme(id)}><i className={`theme-swatch ${id}`}/><span>{label}</span></button>)}</div></Card>
     <Card title="SimBrief synchronization" icon={Plane}><p>The account identifier imports the latest generated OFP and makes it the source for route, fuel, weather and NOTAMs.</p><div className="segmented"><button className={mode === 'username' ? 'active' : ''} onClick={() => setMode('username')}>Username</button><button className={mode === 'userid' ? 'active' : ''} onClick={() => setMode('userid')}>Pilot ID</button></div><label className="stacked-input"><span>{mode === 'username' ? 'SimBrief username' : 'Numeric Pilot ID'}</span><input value={simbriefKey} onChange={event => setSimbriefKey(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void importOFP(); }} /></label><div className="button-row"><button className="primary" onClick={() => void importOFP()} disabled={loading}>{loading ? <RefreshCw className="spin" /> : <Import />} {loading ? 'Synchronizing…' : 'Import latest OFP'}</button><button onClick={loadDemo}>Load demo</button></div></Card>
     <Card title="Provider workspaces" icon={Map}><div className="connection-cards"><div className="ok"><Check /><span><strong>SimBrief</strong><small>In-app dispatch and tools</small></span></div><div className="ok"><Check /><span><strong>Navigraph Charts</strong><small>Persistent authenticated workspace</small></span></div><div className={runtime.simLinked ? 'ok' : 'blocked'}>{runtime.simLinked ? <Check /> : <X />}<span><strong>Simulator bridge</strong><small>{runtime.simLinked ? 'Connected' : 'Optional for flight data'}</small></span></div></div><button onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh status</button></Card>

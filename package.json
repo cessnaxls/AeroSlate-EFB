@@ -2,7 +2,7 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "AeroSlate EFB with concise OFP release, calculated ISA deviation, VATSIM filing verification, and real-world/VATSIM D-ATIS briefing.",
   "main": "electron/main.cjs",
   "type": "module",
