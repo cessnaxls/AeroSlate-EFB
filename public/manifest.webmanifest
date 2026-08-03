@@ -1,7 +1,7 @@
 {
   "name": "AeroSlate EFB",
   "short_name": "AeroSlate",
-  "description": "AeroSlate EFB: SimBrief dispatch, persistent Navigraph workspace, live simulator data, flight briefing, and records.",
+  "description": "AeroSlate EFB free edition with compact responsive navigation, global airline-code parsing, chronological FR24 flights, cloud-synced trip calendar and payload generation, pilot-friendly NOTAM triage, parsed SimBrief runway analysis, and persistent provider workspaces.",
   "start_url": "/",
   "scope": "/",
   "id": "/",

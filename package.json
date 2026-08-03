@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.5.0",
-  "description": "A free-tier, responsive all-in-one flight-simulation EFB with persistent embedded SimBrief and Navigraph provider workspaces.",
+  "version": "0.7.0",
+  "description": "AeroSlate EFB free edition with a breathable flight finder, realistic automatic dispatch payloads, Gist-synced trips and records, axis-locked active navlog, collapsible pilot-focused NOTAM briefing, redesigned scratchboard, FRAT/preflight/postflight workflows, structured SimBrief TLR, and persistent provider workspaces.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {

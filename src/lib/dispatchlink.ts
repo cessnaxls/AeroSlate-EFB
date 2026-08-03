@@ -1,3 +1,4 @@
+import airlineCodes from '../data/airlineCodes';
 export interface Airport {
   id: number;
   name: string;
@@ -302,12 +303,20 @@ function scheduleTimes(
   };
 }
 
+interface AirlineCodeRecord { iata: string; icao: string; name: string; country: string; active: boolean; }
+const GLOBAL_IATA_TO_ICAO: Record<string, string> = Object.fromEntries(
+  (airlineCodes as readonly AirlineCodeRecord[])
+    .filter(row => /^[A-Z0-9]{2}$/.test(row.iata) && /^[A-Z0-9]{3}$/.test(row.icao))
+    .map(row => [row.iata, row.icao])
+);
 const COMMON_IATA_TO_ICAO: Record<string, string> = {
+  ...GLOBAL_IATA_TO_ICAO,
   AA: 'AAL', UA: 'UAL', DL: 'DAL', WN: 'SWA', AS: 'ASA', B6: 'JBU', NK: 'NKS', F9: 'FFT',
   MQ: 'ENY', OH: 'JIA', PT: 'PDT', YX: 'RPA', OO: 'SKW', YV: 'ASH', G7: 'GJS', C5: 'UCA',
   ZW: 'AWI', CP: 'CPZ', AX: 'LOF', '9E': 'EDV', MX: 'MXY', G4: 'AAY', '5X': 'UPS',
-  AC: 'ACA', XP: 'VXP', '2I': 'SRU'
+  AC: 'ACA', XP: 'VXP', '2I': 'SRU', V0: 'VCV', QL: 'LER', '9V': 'ROI', R7: 'OCA'
 };
+export const AIRLINE_CODE_COUNT = (airlineCodes as readonly AirlineCodeRecord[]).length;
 
 function airlineMap(text: string) {
   const result = { ...COMMON_IATA_TO_ICAO };
@@ -339,14 +348,32 @@ function parseAircraft(raw: string): [string, string] {
   return match ? [match[1].toUpperCase(), (match[2] || '—').toUpperCase()] : [cleanLine(raw || '—').toUpperCase(), '—'];
 }
 
+const REGISTRATION_PATTERNS = [
+  /^N(?:[1-9]\d{0,2}[A-Z]{2}|[1-9]\d{0,3}[A-Z]|[1-9]\d{0,4})/i,
+  // Broad ICAO registration form used by VQ-/VP-/RA-/UR-/YV-/9H-/etc.
+  // This is evaluated only at the beginning of the aircraft-detail remainder.
+  /^(?:[A-Z0-9]{1,3})-[A-Z0-9]{3,7}/i,
+  /^(?:C|G|D|F|EC|EI|PH|VH|ZS|TC|A6|A7|9V|VT|PK|HS|RP-C|XA|XB|XC|PR|PP|PT|PU|LV|CX|CC|CP|HC|TG|TI|HP|HK|OB|YV)-?[A-Z0-9]{3,5}/i,
+  /^JA\d{3,4}[A-Z]?/i,
+  /^HL\d{4}/i,
+  /^B-[A-Z0-9]{4,5}/i,
+  /^YV\d{3,5}/i,
+  /^HK-?\d{3,5}[A-Z]?/i
+];
+function extractRegistration(value: string): string {
+  const text = cleanLine(value).replace(/^[^A-Z0-9]+/i, '');
+  for (const pattern of REGISTRATION_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) return match[0].toUpperCase();
+  }
+  return '—';
+}
 function parseCompactAircraft(raw: string): [string, string] {
   const compact = cleanLine(raw).replace(/^\s+/, '');
   const typeMatch = compact.match(/^([A-Z0-9]{3,4}|-)\s*(.*)$/i);
   if (!typeMatch) return ['—', '—'];
   const aircraft = typeMatch[1] === '-' ? '—' : typeMatch[1].toUpperCase();
-  const rest = typeMatch[2] || '';
-  const registration = rest.match(/^(N(?:[1-9]\d{0,2}[A-Z]{2}|[1-9]\d{0,3}[A-Z]|[1-9]\d{0,4})|[A-Z]{1,2}-[A-Z0-9]{3,5})/i)?.[1]?.toUpperCase() || '—';
-  return [aircraft, registration];
+  return [aircraft, extractRegistration(typeMatch[2] || '')];
 }
 
 function rowId(row: Omit<FlightCandidate, 'id'>) {
@@ -578,7 +605,13 @@ function mergeFlights(rows: FlightCandidate[]): FlightCandidate[] {
     };
     merged.set(key, { ...combined, id: rowId(combined) });
   }
-  return [...merged.values()];
+  return [...merged.values()].sort((a, b) => {
+    const aDate = dateParts(a.date); const bDate = dateParts(b.date);
+    const aClock = parseClock(a.rawStd || a.std); const bClock = parseClock(b.rawStd || b.std);
+    const aStamp = aDate ? Date.UTC(aDate.year, aDate.month, aDate.day, 0, aClock?.minutes || 0) : 0;
+    const bStamp = bDate ? Date.UTC(bDate.year, bDate.month, bDate.day, 0, bClock?.minutes || 0) : 0;
+    return aStamp - bStamp || a.flightNumber.localeCompare(b.flightNumber);
+  });
 }
 
 export function parseFr24PasteDetailed(clip: string, airports: Map<string, Airport>): Fr24ParseResult {
@@ -635,6 +668,35 @@ const FALLBACK_LAYOUTS = [...KNOWN_LAYOUTS, 'UAL'];
 function randomItem<T>(items: T[]): T { return items[Math.floor(Math.random() * items.length)]; }
 
 export function normalizeSimbriefType(type: string): string { return TYPE_MAP[type.toUpperCase()] || type.toUpperCase(); }
+
+const AIRCRAFT_CAPACITY: Record<string, number> = {
+  A319: 150, A320: 180, A20N: 186, A321: 220, A21N: 235, A220: 135, A223: 145, BCS1: 125, BCS3: 145,
+  B737: 143, B738: 175, B38M: 178, B739: 179, B39M: 179, B752: 199, B753: 234, B763: 218, B764: 238,
+  B772: 300, B77W: 350, B788: 242, B789: 290, B78X: 330, A332: 260, A333: 290, A339: 300, A359: 315,
+  CRJ2: 50, CRJ7: 70, CRJ9: 76, E170: 70, E175: 76, E75L: 76, E75S: 76, E190: 100, E195: 118, AT72: 70
+};
+function randomInteger(min: number, max: number): number { return Math.floor(min + Math.random() * (max - min + 1)); }
+function departureHour(flight: FlightCandidate): number {
+  const source = flight.timeMode === 'local-converted' && flight.rawStd ? flight.rawStd : flight.std;
+  const match = String(source || '').match(/(\d{1,2}):?(\d{2})/);
+  return match ? Number(match[1]) % 24 : 12;
+}
+export interface DispatchPayload {
+  seats: number; pax: number; bags: number; paxWeight: number; bagWeight: number; freight: number; payloadWeight: number;
+}
+export function generateDispatchPayload(flight: FlightCandidate): DispatchPayload {
+  const normalized = normalizeSimbriefType(flight.aircraft || 'A320');
+  const seats = AIRCRAFT_CAPACITY[normalized] || AIRCRAFT_CAPACITY[String(flight.aircraft || '').toUpperCase()] || 180;
+  const hour = departureHour(flight);
+  const range: [number, number] = hour < 5 ? [42, 70] : hour < 9 ? [68, 95] : hour < 16 ? [72, 98] : hour < 22 ? [78, 100] : [50, 78];
+  const pax = Math.max(1, Math.round(seats * randomInteger(range[0], range[1]) / 100));
+  const bags = randomInteger(Math.ceil(pax * 0.8), pax);
+  const paxWeight = pax * 190;
+  const bagWeight = bags * 40;
+  const maximumFreight = Math.floor(((paxWeight + bagWeight) * 0.25) / 10) * 10;
+  const freight = Math.random() < 0.175 && maximumFreight >= 10 ? randomInteger(1, Math.max(1, Math.floor(maximumFreight / 10))) * 10 : 0;
+  return { seats, pax, bags, paxWeight, bagWeight, freight, payloadWeight: paxWeight + bagWeight + freight };
+}
 export function pickOFPLayout(flightNumber: string): string {
   const airline = flightNumber.match(/^([A-Z]{3})/)?.[1] || '';
   if (airline === 'UAL') return randomItem(['UAL 2012', 'UAL 2018']);

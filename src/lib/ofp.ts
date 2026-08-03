@@ -36,13 +36,79 @@ export interface RunwayAnalysisData {
   documents: { title: string; url: string }[];
 }
 
+export interface TlrConditions {
+  airportIcao: string;
+  plannedRunway: string;
+  plannedWeight: number;
+  windDirection: number | null;
+  windSpeed: number | null;
+  temperature: number | null;
+  altimeter: string;
+  surfaceCondition: string;
+  flapSetting?: string;
+}
+
+export interface TlrRunway {
+  identifier: string;
+  length: number | null;
+  tora: number | null;
+  toda: number | null;
+  asda: number | null;
+  lda: number | null;
+  elevation: number | null;
+  gradient: number | null;
+  trueCourse: number | null;
+  magneticCourse: number | null;
+  headwindComponent: number | null;
+  crosswindComponent: number | null;
+  ilsFrequency: string;
+  flapSetting: string;
+  thrustSetting: string;
+  bleedSetting: string;
+  antiIceSetting: string;
+  flexTemperature: number | null;
+  maxTemperature: number | null;
+  maxWeight: number | null;
+  maxWeightDry: number | null;
+  maxWeightWet: number | null;
+  limitCode: string;
+  limitObstacle: string;
+  v1: number | null;
+  vr: number | null;
+  v2: number | null;
+  otherSpeed: number | null;
+  otherSpeedId: string;
+  thrustValue: string;
+  thrustValueId: string;
+  distanceDecide: number | null;
+  distanceReject: number | null;
+  distanceMargin: number | null;
+  distanceContinue: number | null;
+}
+
+export interface TlrLandingDistance {
+  weight: number | null;
+  flapSetting: string;
+  brakeSetting: string;
+  reverserCredit: string;
+  vref: number | null;
+  actualDistance: number | null;
+  factoredDistance: number | null;
+}
+
+export interface StructuredTlr {
+  available: boolean;
+  takeoff: { conditions: TlrConditions; runways: TlrRunway[] } | null;
+  landing: { conditions: TlrConditions; dry: TlrLandingDistance | null; wet: TlrLandingDistance | null; runways: TlrRunway[] } | null;
+}
+
 export interface ParsedNotam {
   id: string;
   station: string;
   text: string;
   important: boolean;
   priority: 'critical' | 'amendment' | 'advisory';
-  category: 'runway' | 'procedure' | 'airport' | 'airspace' | 'navaid' | 'other';
+  category: 'airport' | 'runway' | 'taxiway' | 'lighting' | 'procedure' | 'navaid' | 'communication' | 'service' | 'airspace' | 'obstacle' | 'other';
 }
 
 export function dig<T = any>(obj: any, ...paths: string[]): T | undefined {
@@ -227,28 +293,64 @@ function notamText(value: unknown): string {
   if (typeof value === 'string' || typeof value === 'number') return cleanText(String(value));
   if (!value || typeof value !== 'object') return '';
   const object = value as Record<string, unknown>;
-  for (const key of ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text']) {
-    if (object[key]) {
+  for (const key of ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text', 'full_text', 'body']) {
+    if (object[key] !== undefined && object[key] !== null && object[key] !== '') {
       const candidate = stringLeaves(object[key]).join(' ');
       if (candidate) return cleanText(candidate);
     }
   }
-  const joined = stringLeaves(value).join(' ');
-  return /\b(?:RWY|TWY|NOTAM|SID|STAR|ILS|VOR|DME|AIRSPACE|APCH|TOWER|OBST)\b/i.test(joined) ? cleanText(joined) : '';
+  return cleanText(stringLeaves(value).join(' '));
+}
+
+function looksLikeCompleteNotam(text: string): boolean {
+  const value = text.trim();
+  if (value.length < 8) return false;
+  if (/^(?:true|false|null|undefined|general|origin|destination|alternate)$/i.test(value)) return false;
+  return /\b(?:NOTAM|RWY|TWY|AD |AERODROME|AIRPORT|APCH|APPROACH|SID|STAR|ILS|LOC|RNAV|RNP|VOR|DME|NDB|NAVAID|AIRSPACE|TFR|TOWER|OBST|CRANE|CLSD|CLOSED|OOS|INOP|UNSERVICEABLE|Q\)|A\)|B\)|C\)|E\))\b/i.test(value)
+    || /\b[A-Z]\d{4}\/\d{2}\b/.test(value)
+    || /\b(?:FROM|TO|VALID|EFFECTIVE)\b.*\b(?:UTC|Z)\b/i.test(value);
+}
+
+function normalizeNotamStation(text: string, fallback: string): string {
+  const candidates = [
+    text.match(/(?:^|\s)A\)\s*([A-Z]{4})(?:\s|$)/i)?.[1],
+    text.match(/\b([A-Z]{4})\s+(?:AD|AERODROME|AIRPORT|RWY|TWY)\b/i)?.[1],
+    text.match(/^([A-Z]{4})\b/)?.[1]
+  ].filter(Boolean) as string[];
+  return (candidates[0] || fallback || 'GENERAL').toUpperCase();
 }
 
 function classifyNotam(text: string): Pick<ParsedNotam, 'important' | 'priority' | 'category'> {
-  const runway = /\bRWY\b|RUNWAY|DECLARED DISTANCE|TORA|TODA|ASDA|LDA|PAPI|VASI|REIL|RVR/i.test(text);
-  const closure = /\bCLSD\b|CLOSED|UNSERVICEABLE|U\/S|OUT OF SERVICE|OTS|NOT AVBL|NOT AVAILABLE|SUSPENDED|INOPERATIVE|INOP/i.test(text);
-  const procedure = /\bAPCH\b|APPROACH|\bSID\b|\bSTAR\b|IAP|ILS|LOC|RNAV|RNP|MINIMA|MISSED APPROACH|PROCEDURE/i.test(text);
-  const amendment = procedure && /AMDT|AMEND|AMENDED|REV(?:ISED)?|CHANGE|CHANGED|CORRECT|MINIMA|NOTE|PROC(?:EDURE)? NA|NOT AUTHORIZED/i.test(text);
-  const navaid = /\bVOR\b|\bDME\b|\bNDB\b|GLIDESLOPE|GLIDE SLOPE|LOCALIZER|NAVAID|MARKER BEACON/i.test(text);
-  const airport = /AD CLSD|AERODROME|AIRPORT|APRON|\bTWY\b|TAXIWAY|LIGHTING|MALSR|ALSF|HIRL|MIRL/i.test(text);
-  const airspace = /AIRSPACE|TFR|RESTRICTED|PROHIBITED|DANGER AREA/i.test(text);
-  const obstacleOnly = /\b(?:TOWER|CRANE|OBST(?:ACLE)?)\b/i.test(text) && !runway && !procedure && !navaid && !airport;
-  const category: ParsedNotam['category'] = procedure ? 'procedure' : runway ? 'runway' : navaid ? 'navaid' : airport ? 'airport' : airspace ? 'airspace' : 'other';
-  const operationalEquipment = runway || procedure || navaid || airport;
-  const critical = operationalEquipment && closure;
+  const runway = /\bRWY\b|RUNWAY|DECLARED DISTANCE|TORA|TODA|ASDA|LDA|RVR/i.test(text);
+  const taxiway = /\bTWY\b|TAXIWAY|APRON/i.test(text);
+  const lighting = /PAPI|VASI|REIL|MALSR|ALSF|HIRL|MIRL|LIGHT(?:ING)?|BEACON/i.test(text);
+  const procedure = /\bAPCH\b|APPROACH|\bSID\b|\bSTAR\b|IAP|ILS|LOC|RNAV|RNP|MINIMA|MISSED APPROACH|PROCEDURE|FDC/i.test(text);
+  const navaid = /\bVOR\b|\bDME\b|\bNDB\b|GLIDESLOPE|GLIDE SLOPE|LOCALIZER|\bILS\b|NAVAID|MARKER BEACON/i.test(text);
+  const communication = /\bTWR\b|TOWER|ATIS|AWOS|ASOS|FREQ|FREQUENCY|RCO|COMM/i.test(text);
+  const service = /FUEL|ARFF|CUSTOMS|SERVICE|HOURS OF OPERATION|SNOW REMOVAL/i.test(text);
+  const airport = /AERODROME|AIRPORT|\bAD\b|HELIPORT/i.test(text);
+  const airspace = /AIRSPACE|TFR|RESTRICTED|PROHIBITED|DANGER AREA|MOA/i.test(text);
+  const obstacle = /\bTOWER\b|CRANE|OBST(?:ACLE)?|UNLIGHTED|LGTD/i.test(text) && !communication;
+  const closed = /\bCLSD\b|\bCLOSED\b/i.test(text);
+  const unserviceable = /UNSERVICEABLE|\bU\/S\b/i.test(text);
+  const outOfService = /OUT OF SERVICE|\bOOS\b|\bOTS\b|INOPERATIVE|\bINOP\b/i.test(text);
+  const notAvailable = /NOT AVBL|NOT AVAILABLE|SUSPENDED/i.test(text);
+  const notApplicable = /(?:PROC(?:EDURE)?|APCH|APPROACH|SID|STAR|ILS|LOC|RNAV|RNP)[^.;]{0,120}\bNA\b|NOT AUTHORIZED|NOT APPLICABLE/i.test(text);
+  const operationalChange = procedure && /AMDT|AMEND|AMENDED|REV(?:ISED)?|CHANGE|CHANGED|CORRECT|MINIMA|NOTE|INCREASE|RAISE|VISIBILITY|CEILING|DA\b|MDA\b|RVR\b/i.test(text);
+
+  const airportClosed = /(?:AD|AERODROME|AIRPORT)[^.;]{0,90}(?:CLSD|CLOSED)/i.test(text);
+  const runwayClosed = /(?:RWY|RUNWAY)[^.;]{0,110}(?:CLSD|CLOSED)/i.test(text);
+  const taxiwayClosed = /(?:TWY|TAXIWAY)[^.;]{0,110}(?:CLSD|CLOSED)/i.test(text);
+  const operationalEquipment = runway || lighting || navaid;
+  const equipmentUnavailable = operationalEquipment && (unserviceable || outOfService || notAvailable);
+  const explicitProcedureUnavailable = /(?:APCH|APPROACH|SID|STAR|IAP|ILS|LOC|RNAV|RNP|PROCEDURE)[^.;\n]{0,140}(?:UNSERVICEABLE|U\/S|OUT OF SERVICE|OOS|INOP|NOT AVBL|NOT AVAILABLE|SUSPENDED)|(?:UNSERVICEABLE|U\/S|OUT OF SERVICE|OOS|INOP|NOT AVBL|NOT AVAILABLE|SUSPENDED)[^.;\n]{0,140}(?:APCH|APPROACH|SID|STAR|IAP|ILS|LOC|RNAV|RNP|PROCEDURE)/i.test(text);
+  const procedureUnavailable = procedure && !operationalChange && explicitProcedureUnavailable;
+
+  const category: ParsedNotam['category'] = procedure ? 'procedure' : lighting ? 'lighting' : runway ? 'runway' : taxiway ? 'taxiway' : navaid ? 'navaid' : obstacle ? 'obstacle' : communication ? 'communication' : service ? 'service' : airport ? 'airport' : airspace ? 'airspace' : 'other';
+  const critical = airportClosed || runwayClosed || taxiwayClosed || equipmentUnavailable || procedureUnavailable;
+  // Procedure NA, raised minima, and procedural changes are restrictions—not outages.
+  const amendment = procedure && (notApplicable || operationalChange) && !procedureUnavailable;
+  const obstacleOnly = category === 'obstacle';
   const priority: ParsedNotam['priority'] = critical ? 'critical' : amendment ? 'amendment' : 'advisory';
   return { category, priority, important: !obstacleOnly && (critical || amendment) };
 }
@@ -263,43 +365,48 @@ export function getAllNotams(ofp: AnyRecord | null): ParsedNotam[] {
   };
   const results: ParsedNotam[] = [];
   const seen = new Set<string>();
+
+  const add = (raw: unknown, fallbackStation: string, path: string) => {
+    const text = notamText(raw);
+    if (!looksLikeCompleteNotam(text)) return false;
+    const normalized = text.replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').trim();
+    const dedupeKey = normalized.toUpperCase().replace(/\s+/g, ' ');
+    if (seen.has(dedupeKey)) return true;
+    seen.add(dedupeKey);
+    const station = normalizeNotamStation(normalized, fallbackStation);
+    const classification = classifyNotam(normalized);
+    results.push({ id: `${station}-${results.length}-${path}`, station, text: normalized, ...classification });
+    return true;
+  };
+
   const visit = (value: unknown, station: string, path: string, depth = 0) => {
-    if (depth > 9 || value === null || value === undefined) return;
+    if (depth > 10 || value === null || value === undefined) return;
     if (Array.isArray(value)) { value.forEach((item, index) => visit(item, station, `${path}.${index}`, depth + 1)); return; }
     if (typeof value === 'object') {
       const object = value as Record<string, unknown>;
-      const directKeys = ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text'];
-      const hasDirectText = directKeys.some(key => object[key] !== undefined && object[key] !== null && object[key] !== '');
-      const text = hasDirectText ? notamText(object) : '';
-      if (text && text.length > 7 && /\b(?:RWY|TWY|NOTAM|CLSD|APCH|SID|STAR|ILS|VOR|DME|AIRSPACE|AD |AERODROME|TFR|TOWER|OBST|CRANE|NAV)\b/i.test(text)) {
-        const normalized = text.replace(/\s+/g, ' ').trim();
-        if (!seen.has(normalized)) {
-          seen.add(normalized);
-          const classification = classifyNotam(normalized);
-          results.push({ id: `${station}-${results.length}-${path}`, station, text: normalized, ...classification });
-        }
-        return;
-      }
+      const directKeys = ['notam', 'text', 'raw', 'message', 'content', 'description', 'notam_text', 'full_text', 'body'];
+      const direct = directKeys.find(key => object[key] !== undefined && object[key] !== null && object[key] !== '');
+      if (direct && add(object[direct], station, path)) return;
       Object.entries(object).forEach(([key, child]) => {
-        const nextStation = stationHints[key.toLowerCase()] || (/^[A-Z]{4}$/.test(key) ? key : station);
+        const lower = key.toLowerCase();
+        const nextStation = stationHints[lower] || (/^[A-Z]{4}$/.test(key) ? key : station);
         visit(child, nextStation, `${path}.${key}`, depth + 1);
       });
       return;
     }
-    const text = notamText(value);
-    if (text && text.length > 7 && /\b(?:RWY|TWY|NOTAM|CLSD|APCH|SID|STAR|ILS|VOR|DME|AIRSPACE|AD |AERODROME|TFR|TOWER|OBST|CRANE|NAV)\b/i.test(text)) {
-      const normalized = text.replace(/\s+/g, ' ').trim();
-      if (!seen.has(normalized)) {
-        seen.add(normalized);
-        const classification = classifyNotam(normalized);
-        results.push({ id: `${station}-${results.length}-${path}`, station, text: normalized, ...classification });
-      }
-    }
+    add(value, station, path);
   };
 
-  visit(dig(ofp, 'notams'), 'GENERAL', 'notams');
+  // SimBrief has used several NOTAM branches over time. Scan each known branch,
+  // while deduplicating identical notices, so the complete imported briefing is retained.
+  for (const [path, station] of [
+    ['notams', 'GENERAL'], ['notam', 'GENERAL'], ['briefing.notams', 'GENERAL'], ['weather.notams', 'GENERAL'],
+    ['fir_notams', 'FIR'], ['enroute_notams', 'ENROUTE'], ['navlog.notams', 'ENROUTE']
+  ] as const) visit(dig(ofp, path), station, path);
   for (const key of ['origin', 'destination', 'alternate'] as const) {
-    visit(dig(ofp, `${key}.notams`, `${key}.notam`), stationHints[key], key);
+    for (const suffix of ['notams', 'notam', 'notam_text', 'notam_list']) {
+      visit(dig(ofp, `${key}.${suffix}`), stationHints[key], `${key}.${suffix}`);
+    }
   }
   return results;
 }
@@ -395,6 +502,135 @@ export function getRunwayAnalysis(ofp: AnyRecord | null): RunwayAnalysisData {
     return { available: true, text: excerpt, source: 'OFP text section', documents };
   }
   return { available: documents.length > 0, text: '', source: documents.length ? 'SimBrief document' : '', documents };
+}
+
+
+function scalar(value: unknown): unknown {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    for (const key of ['#text', '_text', 'value']) if (record[key] !== undefined) return record[key];
+  }
+  return value;
+}
+
+function textValue(value: unknown): string {
+  const raw = scalar(value);
+  return raw === undefined || raw === null ? '' : String(raw).trim();
+}
+
+function numberValue(value: unknown): number | null {
+  const raw = textValue(value);
+  if (!raw) return null;
+  const parsed = Number(raw.replace(/,/g, ''));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function child(record: any, ...keys: string[]): any {
+  if (!record || typeof record !== 'object') return undefined;
+  for (const key of keys) {
+    if (record[key] !== undefined && record[key] !== null) return record[key];
+    const found = Object.keys(record).find(existing => existing.toLowerCase() === key.toLowerCase());
+    if (found) return record[found];
+  }
+  return undefined;
+}
+
+function parseTlrConditions(raw: any): TlrConditions {
+  return {
+    airportIcao: textValue(child(raw, 'airport_icao')),
+    plannedRunway: textValue(child(raw, 'planned_runway')).toUpperCase(),
+    plannedWeight: numberValue(child(raw, 'planned_weight')) || 0,
+    windDirection: numberValue(child(raw, 'wind_direction')),
+    windSpeed: numberValue(child(raw, 'wind_speed')),
+    temperature: numberValue(child(raw, 'temperature')),
+    altimeter: textValue(child(raw, 'altimeter')),
+    surfaceCondition: textValue(child(raw, 'surface_condition')),
+    flapSetting: textValue(child(raw, 'flap_setting')) || undefined
+  };
+}
+
+function parseTlrRunway(raw: any): TlrRunway {
+  return {
+    identifier: textValue(child(raw, 'identifier')).toUpperCase(),
+    length: numberValue(child(raw, 'length')),
+    tora: numberValue(child(raw, 'length_tora', 'tora')),
+    toda: numberValue(child(raw, 'length_toda', 'toda')),
+    asda: numberValue(child(raw, 'length_asda', 'asda')),
+    lda: numberValue(child(raw, 'length_lda', 'lda')),
+    elevation: numberValue(child(raw, 'elevation')),
+    gradient: numberValue(child(raw, 'gradient')),
+    trueCourse: numberValue(child(raw, 'true_course')),
+    magneticCourse: numberValue(child(raw, 'magnetic_course')),
+    headwindComponent: numberValue(child(raw, 'headwind_component')),
+    crosswindComponent: numberValue(child(raw, 'crosswind_component')),
+    ilsFrequency: textValue(child(raw, 'ils_frequency')),
+    flapSetting: textValue(child(raw, 'flap_setting')),
+    thrustSetting: textValue(child(raw, 'thrust_setting')),
+    bleedSetting: textValue(child(raw, 'bleed_setting')),
+    antiIceSetting: textValue(child(raw, 'anti_ice_setting')),
+    flexTemperature: numberValue(child(raw, 'flex_temperature')),
+    maxTemperature: numberValue(child(raw, 'max_temperature')),
+    maxWeight: numberValue(child(raw, 'max_weight')),
+    maxWeightDry: numberValue(child(raw, 'max_weight_dry')),
+    maxWeightWet: numberValue(child(raw, 'max_weight_wet')),
+    limitCode: textValue(child(raw, 'limit_code')),
+    limitObstacle: textValue(child(raw, 'limit_obstacle')),
+    v1: numberValue(child(raw, 'speeds_v1')),
+    vr: numberValue(child(raw, 'speeds_vr')),
+    v2: numberValue(child(raw, 'speeds_v2')),
+    otherSpeed: numberValue(child(raw, 'speeds_other')),
+    otherSpeedId: textValue(child(raw, 'speeds_other_id')),
+    thrustValue: textValue(child(raw, 'thrust_value')),
+    thrustValueId: textValue(child(raw, 'thrust_value_id')),
+    distanceDecide: numberValue(child(raw, 'distance_decide')),
+    distanceReject: numberValue(child(raw, 'distance_reject')),
+    distanceMargin: numberValue(child(raw, 'distance_margin')),
+    distanceContinue: numberValue(child(raw, 'distance_continue'))
+  };
+}
+
+function parseLandingDistance(raw: any): TlrLandingDistance | null {
+  if (!raw || typeof raw !== 'object') return null;
+  return {
+    weight: numberValue(child(raw, 'weight')),
+    flapSetting: textValue(child(raw, 'flap_setting')),
+    brakeSetting: textValue(child(raw, 'brake_setting')),
+    reverserCredit: textValue(child(raw, 'reverser_credit')),
+    vref: numberValue(child(raw, 'speeds_vref', 'vref')),
+    actualDistance: numberValue(child(raw, 'actual_distance')),
+    factoredDistance: numberValue(child(raw, 'factored_distance'))
+  };
+}
+
+function findTlrNode(value: unknown, depth = 0): any {
+  if (!value || depth > 7 || typeof value !== 'object') return null;
+  const record = value as Record<string, unknown>;
+  for (const [key, candidate] of Object.entries(record)) {
+    if (key.toLowerCase() === 'tlr' && candidate && typeof candidate === 'object') return candidate;
+  }
+  for (const candidate of Object.values(record)) {
+    const found = findTlrNode(candidate, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+export function getStructuredTlr(ofp: AnyRecord | null): StructuredTlr {
+  if (!ofp) return { available: false, takeoff: null, landing: null };
+  const root = findTlrNode(ofp);
+  if (!root) return { available: false, takeoff: null, landing: null };
+  const takeoffRaw = child(root, 'takeoff');
+  const landingRaw = child(root, 'landing');
+  const takeoffRunways = asArray(child(takeoffRaw, 'runway')).map(parseTlrRunway).filter(runway => runway.identifier);
+  const landingRunways = asArray(child(landingRaw, 'runway')).map(parseTlrRunway).filter(runway => runway.identifier);
+  const takeoff = takeoffRaw ? { conditions: parseTlrConditions(child(takeoffRaw, 'conditions')), runways: takeoffRunways } : null;
+  const landing = landingRaw ? {
+    conditions: parseTlrConditions(child(landingRaw, 'conditions')),
+    dry: parseLandingDistance(child(landingRaw, 'distance_dry')),
+    wet: parseLandingDistance(child(landingRaw, 'distance_wet')),
+    runways: landingRunways
+  } : null;
+  return { available: Boolean(takeoffRunways.length || landingRunways.length), takeoff, landing };
 }
 
 export function weight(ofp: AnyRecord | null, ...paths: string[]): number {

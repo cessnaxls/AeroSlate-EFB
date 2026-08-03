@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Clipboard, ExternalLink, MapPinned, Plane, RefreshCw, Search, Shuffle } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarPlus, Clipboard, ExternalLink, MapPinned, Plane, RefreshCw, Search, Shuffle } from 'lucide-react';
 import airportCatalog from '../data/airports.catalog.json';
-import { airportMap, buildSimbriefDispatch, parseFr24PasteDetailed, type Airport, type FlightCandidate, type Fr24ParseResult, type Fr24PasteFormat } from '../lib/dispatchlink';
+import { airportMap, buildSimbriefDispatch, generateDispatchPayload, parseFr24PasteDetailed, type Airport, type FlightCandidate, type Fr24ParseResult, type Fr24PasteFormat } from '../lib/dispatchlink';
 import { loadLocal, saveLocal } from '../lib/storage';
 
 interface Props {
   onDispatch: (url: string, flight: FlightCandidate, staticId: string) => void;
+  onSelect?: (flight: FlightCandidate | null) => void;
+  onSchedule?: (flight: FlightCandidate) => void;
   notify: (message: string) => void;
 }
 
@@ -29,7 +31,12 @@ function timeModeLabel(mode?: FlightCandidate['timeMode']) {
 
 const AIRPORTS = airportCatalog as Airport[];
 
-export function FlightFinderPage({ onDispatch, notify }: Props) {
+function fr24TailUrl(registration?: string) {
+  const reg = String(registration || '').trim().replace(/^REG\s*/i, '').toLowerCase();
+  return reg ? `https://www.flightradar24.com/data/aircraft/${encodeURIComponent(reg)}` : '';
+}
+
+export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: Props) {
   const airports = AIRPORTS;
   const [country, setCountry] = useState(() => loadLocal('aeroslate.finder.country', 'United States'));
   const [size, setSize] = useState<'large' | 'medium' | 'small'>(() => loadLocal('aeroslate.finder.size', 'large'));
@@ -39,11 +46,12 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
   const [selectedFlight, setSelectedFlight] = useState<FlightCandidate | null>(() => loadLocal<FlightCandidate | null>('aeroslate.finder.flight', null));
   const [parseInfo, setParseInfo] = useState<Fr24ParseResult | null>(null);
   const [readingClipboard, setReadingClipboard] = useState(false);
+  const flightTableRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => { saveLocal('aeroslate.finder.country', country); saveLocal('aeroslate.finder.size', size); }, [country, size]);
   useEffect(() => saveLocal('aeroslate.finder.airport', selectedAirport), [selectedAirport]);
   useEffect(() => saveLocal('aeroslate.finder.flights', flights), [flights]);
-  useEffect(() => saveLocal('aeroslate.finder.flight', selectedFlight), [selectedFlight]);
+  useEffect(() => { saveLocal('aeroslate.finder.flight', selectedFlight); onSelect?.(selectedFlight); }, [selectedFlight, onSelect]);
 
   const countries = useMemo(() => [...new Set(airports.map(airport => airport.country).filter(Boolean))].sort(), [airports]);
   useEffect(() => {
@@ -69,6 +77,15 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
     notify(`Selected ${airport.icao} · ${airport.name}.`);
   };
 
+  const openRandomTail = () => {
+    const withTail = flights.filter(row => fr24TailUrl(row.registration));
+    if (!withTail.length) { notify('No registrations are available in the parsed flight list.'); return; }
+    const row = withTail[Math.floor(Math.random() * withTail.length)];
+    setSelectedFlight(row);
+    window.open(fr24TailUrl(row.registration), 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900');
+    notify(`Opened ${row.registration} aircraft history on FR24.`);
+  };
+
   const parseText = (text: string) => {
     const result = parseFr24PasteDetailed(text, airportMap(airports));
     setParseInfo(result); setFlights(result.flights); setSelectedFlight(result.flights[0] || null);
@@ -90,15 +107,31 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
     } finally { setReadingClipboard(false); }
   };
 
-  const dispatch = (flight: FlightCandidate) => { const plan = buildSimbriefDispatch(flight); onDispatch(plan.url, flight, plan.staticId); };
+  const focusFlight = (flight: FlightCandidate) => {
+    setSelectedFlight(flight);
+    requestAnimationFrame(() => {
+      const row = flightTableRef.current?.querySelector<HTMLElement>(`[data-flight-id="${CSS.escape(flight.id)}"]`);
+      row?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+  const dispatch = (flight: FlightCandidate) => {
+    const load = generateDispatchPayload(flight);
+    const plan = buildSimbriefDispatch(flight, {
+      pax: load.pax,
+      cargo: load.freight,
+      remarks: `AeroSlate load: ${load.pax} pax, ${load.bags} bags (${load.bagWeight.toLocaleString()} lb)${load.freight ? `, ${load.freight.toLocaleString()} lb freight` : ''}.`
+    });
+    notify(`Dispatch load · ${load.pax} pax · ${load.bags} bags${load.freight ? ` · ${load.freight.toLocaleString()} lb freight` : ''}.`);
+    onDispatch(plan.url, flight, plan.staticId);
+  };
 
-  return <div className="finder-layout finder-streamlined">
+  return <div className="finder-layout finder-streamlined finder-airport-first">
     <section className="card airport-picker-card">
-      <header><div><MapPinned size={18} /><h3>Choose an airport</h3></div><span className="pill good">{airports.length.toLocaleString()} AIRPORTS</span></header>
-      <div className="card-body">
+      <header><div><MapPinned size={18} /><h3>Choose airport</h3></div><span className="pill good">{airports.length.toLocaleString()} AIRPORTS</span></header>
+      <div className="card-body finder-compact-body">
         <div className="form-grid three airport-filter-grid">
           <label><span>Country</span><select value={country} onChange={event => setCountry(event.target.value)}>{countries.map(item => <option key={item}>{item}</option>)}</select></label>
-          <label><span>Airport size</span><select value={size} onChange={event => setSize(event.target.value as typeof size)}><option value="large">Large</option><option value="medium">Medium</option><option value="small">Small</option></select></label>
+          <label><span>Size</span><select value={size} onChange={event => setSize(event.target.value as typeof size)}><option value="large">Large</option><option value="medium">Medium</option><option value="small">Small</option></select></label>
           <button className="primary align-end" onClick={randomAirport}><Shuffle size={17} /> Random airport</button>
         </div>
         <label className="stacked-input"><span>Find airport</span><div className="input-with-icon"><Search size={16} /><input value={airportQuery} onChange={event => setAirportQuery(event.target.value)} placeholder="ICAO, IATA, city, airport, or country" /></div></label>
@@ -107,31 +140,29 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
       </div>
     </section>
 
-    <section className="card paste-action-card">
-      <header><div><Clipboard size={18} /><h3>Paste and parse flights</h3></div>{parseInfo && <span className="pill blue">{flights.length} FOUND</span>}</header>
-      <div className="card-body paste-action-body">
-        <div className="paste-action-copy"><strong>One-button import</strong><p>Copy a complete FR24 airport departures/arrivals page or aircraft-history page. AeroSlate reads the clipboard, detects the layout, converts times, and builds the flight list automatically.</p></div>
-        <button className="primary paste-parse-button" onClick={() => void pasteAndParse()} disabled={readingClipboard}><Clipboard size={20} /> {readingClipboard ? 'Reading clipboard…' : 'Paste & Parse'}</button>
-        <div className="button-row compact-actions"><button onClick={() => { if (!flights.length) return notify('Paste and parse flights first.'); const row = flights[Math.floor(Math.random() * flights.length)]; setSelectedFlight(row); notify(`Selected ${row.flightNumber}.`); }}><Shuffle size={17} /> Random flight</button><button className="text-button" onClick={() => { setFlights([]); setSelectedFlight(null); setParseInfo(null); }}><RefreshCw size={15} /> Clear flights</button></div>
-        {parseInfo && <div className="parser-result">
-          <div className="parser-format-row"><strong>Detected</strong>{parseInfo.formats.map(format => <span className="pill blue" key={format}>{FORMAT_LABELS[format]}</span>)}{parseInfo.timeModes.map(mode => <span className={mode === 'local-unresolved' || mode === 'unknown' ? 'pill warn' : 'pill good'} key={mode}>{timeModeLabel(mode)}</span>)}</div>
-          {parseInfo.warnings.map(warning => <div className="notice warn parser-warning" key={warning}><p>{warning}</p></div>)}
-        </div>}
+    <section className="card paste-action-card compact-import-card">
+      <header><div><Clipboard size={18} /><h3>Import</h3></div>{parseInfo && <span className="pill blue">{flights.length}</span>}</header>
+      <div className="card-body import-button-stack">
+        <button className="primary" onClick={() => void pasteAndParse()} disabled={readingClipboard}><Clipboard size={18} /> {readingClipboard ? 'Reading…' : 'Paste & Parse'}</button>
+        <button onClick={() => { if (!flights.length) return notify('Paste and parse flights first.'); const row = flights[Math.floor(Math.random() * flights.length)]; focusFlight(row); notify(`Selected ${row.flightNumber} and brought it into view.`); }}><Shuffle size={17} /> Random flight</button>
+        <button onClick={openRandomTail} disabled={!flights.some(row => Boolean(fr24TailUrl(row.registration)))}><Plane size={17} /> Random tail on FR24</button>
+        <button className="text-button" onClick={() => { setFlights([]); setSelectedFlight(null); setParseInfo(null); }}><RefreshCw size={15} /> Clear flights</button>
+        {parseInfo && <div className="parser-result compact-parser-result"><div className="parser-format-row">{parseInfo.formats.map(format => <span className="pill blue" key={format}>{FORMAT_LABELS[format]}</span>)}{parseInfo.timeModes.map(mode => <span className={mode === 'local-unresolved' || mode === 'unknown' ? 'pill warn' : 'pill good'} key={mode}>{timeModeLabel(mode)}</span>)}</div>{parseInfo.warnings.slice(0, 2).map(warning => <small key={warning}>{warning}</small>)}</div>}
       </div>
     </section>
 
     <section className="card span-full flights-card">
       <header><div><Plane size={18} /><h3>Available flights</h3></div><span className="pill neutral">{flights.length} rows</span></header>
-      <div className="card-body table-wrap flight-table-wrap">
+      <div className="card-body table-wrap flight-table-wrap" ref={flightTableRef}>
         <table className="data-table flight-table responsive-flight-table"><thead><tr><th>Flight</th><th>Route</th><th>EQUIP</th><th>REG</th><th>Schedule</th><th>ETE</th><th></th></tr></thead><tbody>
-          {flights.map(row => <tr key={row.id} className={selectedFlight?.id === row.id ? 'selected' : ''} onClick={() => setSelectedFlight(row)}>
+          {flights.map(row => <tr key={row.id} data-flight-id={row.id} className={selectedFlight?.id === row.id ? 'selected' : ''} onClick={() => setSelectedFlight(row)}>
             <td className="flight-cell"><strong>{row.flightNumber}</strong><small>{row.date}</small></td>
             <td className="route-cell"><strong>{row.departure}</strong><span>→</span><strong>{row.arrival}</strong></td>
             <td className="equip-cell">{row.aircraft || '—'}</td>
             <td className="reg-cell">{row.registration || '—'}</td>
             <td className="schedule-cell"><span title={row.rawStd ? `Pasted: ${row.rawStd}` : undefined}><small>STD</small>{row.std}</span><span title={row.rawSta ? `Pasted: ${row.rawSta}` : undefined}><small>STA</small>{row.sta}</span></td>
             <td className="ete-cell">{row.ete}</td>
-            <td className="dispatch-cell"><button className="primary compact" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button></td>
+            <td className="dispatch-cell"><div className="flight-row-actions"><button className="primary compact" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button>{onSchedule && <button className="compact schedule-button" title="Add to trip calendar" onClick={event => { event.stopPropagation(); onSchedule(row); }}><CalendarPlus size={14} /> Trip</button>}<button className="compact tail-button" disabled={!fr24TailUrl(row.registration)} title={row.registration ? `Open ${row.registration} on Flightradar24` : 'No registration available'} onClick={event => { event.stopPropagation(); const url = fr24TailUrl(row.registration); if (url) window.open(url, 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900'); }}><ExternalLink size={14} /> Tail</button></div></td>
           </tr>)}
           {!flights.length && <tr><td colSpan={7} className="empty-cell">Copy a supported FR24 page, then press <strong>Paste & Parse</strong>.</td></tr>}
         </tbody></table>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Clipboard, FileText, Gauge, Plane, Route } from 'lucide-react';
+import { Clipboard, ExternalLink, FileText, Gauge, Plane, Route } from 'lucide-react';
 import { ChartWorkspace, type ChartSource } from '../components/ChartWorkspace';
 import { dig, getICAOFlightPlan, getOFPDocument, type AnyRecord, type FlightSummary } from '../lib/ofp';
 
@@ -36,7 +36,7 @@ export function OFPPage({ ofp, flight, notify }: Props) {
       <ChartWorkspace source={source} />
     </div></div>
     <div className={`workspace-pane ${view === 'summary' ? 'active' : ''}`}><div className="content-grid two">
-      <section className="card span-2"><header><div><FileText size={18} /><h3>Operational flight plan</h3></div></header><div className="card-body"><div className="ofp-header"><div><span>{flight.airline}{flight.flightNumber}</span><strong>{flight.origin} → {flight.destination}</strong><small>{flight.aircraft} / {flight.registration}</small></div><div className="button-row"><button className="primary" onClick={() => setView('document')}><FileText size={17} /> View full OFP</button><button onClick={copyFpl}><Clipboard size={16} /> Copy ICAO FPL</button></div></div></div></section>
+      <section className="card span-2"><header><div><FileText size={18} /><h3>Operational flight plan</h3></div></header><div className="card-body"><div className="ofp-header"><div><span>{flight.airline}{flight.flightNumber}</span><strong>{flight.origin} → {flight.destination}</strong><small>{flight.aircraft} / {flight.registration}</small></div><div className="button-row"><button className="primary" disabled={!pdf} onClick={() => pdf && window.open(pdf, 'aeroslate-ofp')}><ExternalLink size={17} /> Open OFP</button><button onClick={copyFpl}><Clipboard size={16} /> Copy ICAO FPL</button></div></div></div></section>
       <section className="card"><header><div><Gauge size={18} /><h3>Dispatch parameters</h3></div></header><div className="card-body status-list">
         <div><span>Release</span><strong>{flight.release}</strong></div><div><span>Callsign</span><strong>{flight.callsign || '—'}</strong></div>
         <div><span>STD / STA</span><strong>{flight.schedOut} / {flight.schedIn}</strong></div><div><span>Block</span><strong>{flight.blockTime}</strong></div>

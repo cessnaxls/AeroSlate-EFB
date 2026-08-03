@@ -1,65 +1,26 @@
-# AeroSlate EFB 0.5.0
+# AeroSlate EFB 0.7.0
 
 ## Flight Finder
+- Expanded the airport browser and reduced the import panel to four compact stacked actions.
+- Random Flight now selects the row and scrolls it into view.
+- Build now generates the requested realistic time-of-day passenger, baggage, and occasional freight load before opening SimBrief.
+- Preserved trip scheduling and encrypted GitHub Gist synchronization.
 
-- Compiled the complete `airports.dat` catalog into the application bundle: 7,692 airports in 237 countries.
-- Removed the runtime dependency that left country and airport lists blank after deployment.
-- Added reliable country, airport-size, search, and random-airport workflows.
-- Removed the persistent paste textarea.
-- Added one-button **Paste & Parse** clipboard import for all four supported FR24 layouts.
-- Removed the Source column from Available Flights.
-- Renamed Aircraft and Registration columns to **EQUIP** and **REG**.
-- Reworked narrow-screen rows into compact cards so the table does not require horizontal scrolling.
+## Navigation and workflow
+- Fixed landscape tablet sidebar collapse so the EFB can expand into the released space.
+- Added Help, FRAT, Preflight, and Postflight pages.
+- Help includes step-by-step private encrypted GitHub Gist setup for trips and records.
 
-## Persistent provider workspaces
-
-- Removed the direct Navigraph Charts API/OAuth implementation and related server routes/configuration.
-- Uses the official Navigraph Charts website as the chart provider session.
-- Keeps SimBrief Dispatch, Navigraph Charts, SimBrief Tools, and OFP workspaces mounted when changing AeroSlate tabs.
-- Keeps Navigraph loaded when switching between Navigraph and the AeroSlate binder.
-- Keeps the OFP PDF loaded when switching between document and summary views.
-- Retains a persistent Electron provider partition for authenticated SimBrief and Navigraph sessions.
-- Simplified web/PWA fallback messaging and retained a named provider session instead of replacing AeroSlate.
-
-## Navlog and fuel trend
-
-- Stacked TAS, GS, and Mach in a compact waypoint-speed cell.
-- Calculates planned remaining fuel sequentially by subtracting each leg burn from the prior total.
-- Displays remaining fuel in muted text below Fuel Leg.
-- Added actual-versus-planned fuel variance to Active Navlog.
-- Added current Active Navlog fuel-trend status.
+## Navlog
+- The navlog card is constrained to the available device viewport.
+- Added Rows and Columns modes so the navlog scrolls on only one axis at a time.
+- The rest of the page remains fixed while the navlog itself scrolls.
 
 ## Weather and NOTAMs
+- Operational airport groups are collapsible.
+- Procedure changes and increased minima take precedence over generic outage words when categorizing a notice.
+- Complete source NOTAM text remains grouped by station for the legal briefing.
 
-- Made weather, individual weather stations, operational NOTAMs, complete NOTAMs, and station groups collapsible.
-- Added red priority for relevant airport/runway/procedure/navaid closures and unserviceability.
-- Added yellow priority for instrument-procedure and minima amendments.
-- Retains tower, crane, obstacle, and other notices in the complete briefing without promoting obstacle-only text to the operational-alert panel.
-- Retains category filters and recursive OFP NOTAM extraction.
-
-## Fuel
-
-- Rebuilt the checkpoint layout to prevent clipping on landscape phones and tablets.
-- Split elapsed airborne time into separate HH and MM fields.
-- Preserved automatic elapsed time from OFF while allowing manual HH:MM entry.
-- Clarified plan, checkpoint, trend, projection, and reserve sections.
-
-## Records
-
-- Added separate primary navigation destinations for Flight Logs and Duty Logs.
-- Added a saved-flight dropdown to the duty editor.
-- Saving a flight attaches the active duty draft to the new flight record.
-- Saving an unattached duty attempts an exact date/route match before leaving it unattached.
-- Preserved local-first encrypted Gist synchronization, audit hashes, exports, and attestations.
-
-## Server and deployment
-
-- Server runtime now reports official-provider-session mode only.
-- Removed direct Navigraph credentials, sessions, chart endpoints, and Render environment variables.
-- Kept the Render Blueprint on the free plan with no disk or database.
-- Removed visible TCalc debugging fields from the telemetry allowlist while retaining operational live data.
-
-## Validation
-
-- Added workflow regression tests for the bundled airport catalog, one-button parser UI, responsive flight columns, persistent provider pages, separate record modules, and NOTAM priority logic.
-- Retained exact parser regression coverage for all four supplied FR24 formats.
+## Scratchboard
+- Rebuilt the scratchpad as four simultaneously available cockpit sheets: Clearance, ATIS, Taxi, and Flight Notes.
+- Each sheet autosaves, has its own quick inserts, and can be copied, reset, or cleared independently.

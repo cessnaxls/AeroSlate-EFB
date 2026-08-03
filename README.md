@@ -1,8 +1,40 @@
-# AeroSlate EFB 0.5.0 Free
+# AeroSlate EFB 0.6.1 — Free Render Edition
 
 AeroSlate is a responsive, local-first electronic flight bag for **Microsoft Flight Simulator 2020 and X-Plane 11/12**. The hosted service deploys on Render's free web-service plan. SimBrief supplies the dispatch/OFP data, the official Navigraph Charts website is presented as an authenticated provider workspace, and the local simulator bridge supplies live telemetry and simulator Zulu time.
 
 > **Flight-simulation and recordkeeping aid.** AeroSlate is not an approved source for real-world navigation, certified takeoff/landing performance, operational control, or operator flight-time-limit calculations.
+
+
+
+## Structured SimBrief TLR runway analysis
+
+AeroSlate reads the structured `tlr` section returned by SimBrief rather than relying on a plain-text performance report. It builds takeoff and landing runway selectors from the returned runway arrays and presents the values in operational groups.
+
+Takeoff includes runway dimensions, wind components, flap/thrust/bleed/anti-ice configuration, flex temperature, V-speeds, maximum weight, limiting code, decision distance, accelerate-stop distance, continue distance and available margin.
+
+Landing includes the selected runway's LDA, slope, wind, ILS and dry/wet maximum weights alongside SimBrief's returned dry and wet actual/factored landing-distance calculations. SimBrief supplies those dry/wet calculations once under the landing conditions in the documented structure, so AeroSlate does not falsely present them as separately recalculated for every runway.
+
+All performance values are read-only and remain attributed to the imported SimBrief OFP.
+
+## 0.6.0 workflow update
+
+- Compact sidebar labels with an optional landscape collapsed rail.
+- Flight Finder rows are chronologically sorted, aligned, and use roomier Build / Trip / Tail actions.
+- A bundled 983-airline IATA-to-ICAO dictionary improves worldwide parsing, including South America and the Caribbean.
+- Global registration parsing supports common non-N-number formats.
+- Trips can be saved to the local-first calendar, synchronized through the encrypted private GitHub Gist vault, and dispatched directly to SimBrief with realistic randomized passenger, baggage, and occasional freight loads.
+- The complete NOTAM briefing remains available, while pilot-priority cards use clearer FAA-style categories and distinguish **Unserviceable**, **Out of service**, **Not applicable**, and procedure-minima increases.
+- Navlog data is readable at normal size through deliberate horizontal scrolling.
+- SimBrief TLR output is presented as selectable takeoff/landing runway cards rather than a raw plaintext dump.
+- Scratchpads now include Clearance, ATIS, Taxi, and Notes templates.
+
+## 0.5.2 interface and briefing changes
+
+- The AeroSlate brand cap is fixed at the top-left safe area; only the menu list scrolls.
+- The sidebar keeps its existing width and brand footprint while using cleaner grouping, spacing, selection states, and an anchored status footer.
+- EQUIP and REG are always visible in the flight header in portrait and landscape layouts.
+- The NOTAM importer scans all known SimBrief NOTAM branches, retains each complete imported notice, deduplicates exact duplicates, and determines the station from the notice A) field when available.
+- The Weather & NOTAM page separates a quick operational scan from the complete imported briefing, grouped by station with search and category filters. No imported tower, obstacle, airspace, or advisory notice is removed from the complete set.
 
 ## What changed in 0.5.0
 
@@ -218,3 +250,51 @@ npm run native:dist
 ```
 
 The resulting installer/archive is placed in `release/`. GitHub Actions also includes the native build workflow.
+
+## 0.5.2 operational workflow additions
+
+Parsed airport flights now include **Build** and **Tail** actions. Tail opens the matching FR24 aircraft-history page, and **Random tail on FR24** selects a registration from the current list. Copy that aircraft page and use **Paste & Parse** again to switch from an airport schedule to a tail rotation.
+
+The provider destinations are fixed to the official current-flight pages:
+
+- Navigraph Charts: `https://charts.navigraph.com/flights/current`
+- SimBrief Tools: `https://dispatch.simbrief.com/tools`
+- OFP: the PDF URL supplied by SimBrief under `/ofp/flightplans/`
+
+The planned navlog calculates waypoint ETAs; Active Navlog carries downstream ATA estimates from the latest actual crossing. The pilot-critical NOTAM scan is grouped by airport and promotes only closures, runway/approach-equipment outages, unavailable procedures, and procedure amendments. The complete unmodified NOTAM set remains available below it.
+
+---
+
+## Version 0.6.0 additions
+
+### Global airline-code parser
+
+AeroSlate now bundles 983 IATA/ICAO airline mappings rather than relying on a small U.S.-centric dictionary. Airline codes found directly on a pasted FR24 aircraft page still override the bundled map. The parser also includes reviewed overrides for Conviasa, LASER Airlines, Avior Airlines, and Aserca.
+
+The base airline list is generated from the OpenFlights airline dataset and stored locally in `src/data/airlineCodes.ts`; AeroSlate does not query an airline-code service while parsing.
+
+### Trips and free cloud storage
+
+Select **Trip** beside a parsed flight, then open **Trips** in the Plan section. The scheduled trip is stored in the same encrypted ledger as the logbook and duty records. When GitHub Gist synchronization has been configured in Flight Logs, the trip calendar synchronizes to that same private encrypted vault.
+
+Generated dispatch loads use aircraft seating estimates and departure time:
+
+- passenger load varies by local departure period;
+- each passenger is calculated at 190 lb;
+- bags are 80–100% of passenger count at 40 lb each;
+- freight appears only on a minority of trips and cannot exceed 25% of passenger-plus-bag weight.
+
+### Runway-analysis presentation
+
+AeroSlate continues to use SimBrief as the performance source. It parses the returned TLR section into takeoff and landing runway sets and presents the selected runway’s values as labeled cards. The official SimBrief Tools page remains embedded for interactive recalculation.
+
+## Version 0.7.0 workflow updates
+
+- The Flight Finder gives the airport catalog most of the available width and keeps clipboard actions in a compact four-button stack.
+- **Random flight** selects the result and brings it into view.
+- Every **Build** action creates a realistic payload based on aircraft capacity and local departure time: 190 lb per passenger, 80–100% bag count at 40 lb per bag, and occasional freight capped at 25% of passenger-plus-bag weight.
+- The sidebar collapses to an icon rail in landscape tablet and desktop layouts.
+- The navlog offers mutually exclusive vertical-row or horizontal-column scrolling and is constrained to the device viewport.
+- Operational and complete NOTAM groups are collapsible by station; procedure/minima changes are kept distinct from outages.
+- The cockpit scratchpad is now a four-sheet scratchboard.
+- New **FRAT**, **Preflight**, **Postflight**, and **Help** pages retain device-local data. The Help page explains encrypted private GitHub Gist synchronization for trips and records.

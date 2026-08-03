@@ -18,17 +18,29 @@ assert.doesNotMatch(finder, /<textarea[^>]*fr24-paste/);
 assert.doesNotMatch(finder, /<th>Source<\/th>/);
 assert.match(finder, /<th>EQUIP<\/th>/);
 assert.match(finder, /<th>REG<\/th>/);
+assert.match(finder, /Random tail on FR24/);
+assert.match(finder, /flightradar24\.com\/data\/aircraft/);
+assert.match(finder, /> Tail<\/button>/);
 
 const app = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');
 assert.match(app, /page-panel/);
 assert.match(app, /flightlogs/);
 assert.match(app, /dutylogs/);
+const chartsPage = fs.readFileSync(path.join(root, 'src/pages/ChartsPage.tsx'), 'utf8');
+assert.match(chartsPage, /https:\/\/charts\.navigraph\.com\/flights\/current/);
+const runwayPage = fs.readFileSync(path.join(root, 'src/pages/RunwayAnalysisPage.tsx'), 'utf8');
+assert.match(runwayPage, /https:\/\/dispatch\.simbrief\.com\/tools/);
 
 const buildDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aeroslate-workflow-'));
 try {
   const compile = spawnSync('tsc', [path.join(root, 'src/lib/ofp.ts'), path.join(root, 'src/lib/dispatchlink.ts'), '--target', 'ES2022', '--module', 'ES2022', '--moduleResolution', 'Bundler', '--lib', 'ES2022,DOM,DOM.Iterable', '--skipLibCheck', '--outDir', buildDir], { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' });
   if (compile.status !== 0) throw new Error(`Workflow test compilation failed:\n${compile.stdout}\n${compile.stderr}`);
-  const ofp = await import(`${pathToFileURL(path.join(buildDir, 'ofp.js')).href}?test=${Date.now()}`);
+  const dispatchPath = path.join(buildDir, 'lib', 'dispatchlink.js');
+  if (fs.existsSync(dispatchPath)) {
+    const airlineData = fs.readFileSync(path.join(root, 'src/data/airline-codes.json'), 'utf8');
+    fs.writeFileSync(dispatchPath, fs.readFileSync(dispatchPath, 'utf8').replace(/import airlineCodes from ['"]\.\.\/data\/airlineCodes['"];?/, `const airlineCodes = ${airlineData};`));
+  }
+  const ofp = await import(`${pathToFileURL(path.join(buildDir, 'lib', 'ofp.js')).href}?test=${Date.now()}`);
   const sample = {
     origin: { icao_code: 'KIND', notams: [
       { text: 'KIND RWY 05R CLSD DLY 0200-1000' },
@@ -42,7 +54,24 @@ try {
   assert.equal(notams.find(item => /RWY 05R CLSD/.test(item.text))?.priority, 'critical');
   assert.equal(notams.find(item => /AMDT 4A/.test(item.text))?.priority, 'amendment');
   assert.equal(notams.find(item => /TOWER 912/.test(item.text))?.important, false, 'tower obstacle should remain in all NOTAMs without being promoted');
+
+  const tlr = ofp.getStructuredTlr({ tlr: {
+    takeoff: { conditions: { airport_icao: 'KMSP', planned_runway: '17', planned_weight: '154013', wind_direction: '160', wind_speed: '6', temperature: '24', altimeter: '29.91', surface_condition: 'dry' }, runway: [
+      { identifier: '17', length_tora: '8000', length_toda: '8000', length_asda: '8000', length_lda: '8000', headwind_component: '6', crosswind_component: '1', flap_setting: '5', thrust_setting: 'D-TO', flex_temperature: '51', max_weight: '182200', speeds_v1: '142', speeds_vr: '142', speeds_v2: '149', distance_reject: '7482', distance_continue: '7998', distance_margin: '518' }
+    ] },
+    landing: { conditions: { airport_icao: 'KMDW', planned_runway: '31R', planned_weight: '148359', flap_setting: '40', wind_direction: '354', wind_speed: '4', temperature: '21', altimeter: '29.91', surface_condition: 'dry' }, distance_dry: { weight: '150000', flap_setting: '40', brake_setting: 'MAX MAN', reverser_credit: 'YES', speeds_vref: '139', actual_distance: '3030', factored_distance: '4230' }, distance_wet: { weight: '150000', flap_setting: '40', brake_setting: 'MAX MAN', reverser_credit: 'YES', speeds_vref: '139', actual_distance: '4205', factored_distance: '5581' }, runway: [
+      { identifier: '31R', length_lda: '5826', ils_frequency: '109.90', max_weight_dry: '152800', max_weight_wet: '152800', headwind_component: '3', crosswind_component: '2' }
+    ] }
+  }});
+  assert.equal(tlr.available, true, 'structured TLR should be detected');
+  assert.equal(tlr.takeoff?.conditions.plannedRunway, '17');
+  assert.equal(tlr.takeoff?.runways[0].v1, 142);
+  assert.equal(tlr.takeoff?.runways[0].distanceMargin, 518);
+  assert.equal(tlr.landing?.conditions.plannedRunway, '31R');
+  assert.equal(tlr.landing?.dry?.factoredDistance, 4230);
+  assert.equal(tlr.landing?.wet?.factoredDistance, 5581);
+  assert.equal(tlr.landing?.runways[0].lda, 5826);
 } finally {
   fs.rmSync(buildDir, { recursive: true, force: true });
 }
-console.log(`Workflow regression passed: airports=${airports.length}, countries=${new Set(airports.map(item => item.country)).size}, persistent providers, clipboard parser, NOTAM priorities`);
+console.log(`Workflow regression passed: airports=${airports.length}, countries=${new Set(airports.map(item => item.country)).size}, persistent providers, clipboard parser, NOTAM priorities, structured TLR`);
