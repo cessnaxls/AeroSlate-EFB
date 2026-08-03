@@ -21,9 +21,32 @@ try {
   ], { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' });
   if (compile.status !== 0) throw new Error(`Parser test compilation failed:\n${compile.stdout}\n${compile.stderr}`);
 
-  const parser = await import(`${pathToFileURL(path.join(buildDir, 'dispatchlink.js')).href}?test=${Date.now()}`);
+  const compiledParserPath = path.join(buildDir, 'lib', 'dispatchlink.js');
+  const airlineData = fs.readFileSync(path.join(root, 'src/data/airline-codes.json'), 'utf8');
+  const compiledParser = fs.readFileSync(compiledParserPath, 'utf8').replace(/import airlineCodes from ['"]\.\.\/data\/airlineCodes['"];?/, `const airlineCodes = ${airlineData};`);
+  fs.writeFileSync(compiledParserPath, compiledParser);
+  const parser = await import(`${pathToFileURL(compiledParserPath).href}?test=${Date.now()}`);
   const airports = parser.airportMap(parser.parseAirportsDat(fs.readFileSync(path.join(root, 'public/data/airports.dat'), 'utf8')));
   const fixture = fs.readFileSync(path.join(here, 'fixtures/fr24-paste-formats.txt'), 'utf8');
+  assert.ok(parser.AIRLINE_CODE_COUNT >= 500, `airline dictionary should contain at least 500 IATA/ICAO mappings, got ${parser.AIRLINE_CODE_COUNT}`);
+  const venezuelaPaste = `Flight tracker map
+Aviation data
+Airports
+Venezuela
+Caracas
+CCS/SVMI
+Departures
+TIME	FLIGHT	TO	AIRLINE	AIRCRAFT	STATUS
+Sunday, Aug 02
+3:30 PM	V0123	Maracaibo (MAR)	Conviasa	A320 (YV1000)	Scheduled
+1:10 PM	QL456	Porlamar (PMV)	LASER Airlines	B737 (YV-5555)	Scheduled
+* All times are in local timezone`;
+  const venezuela = parser.parseFr24PasteDetailed(venezuelaPaste, airports);
+  assert.equal(venezuela.flights.length, 2);
+  assert.deepEqual(venezuela.flights.map(row => row.flightNumber), ['LER456', 'VCV123'], 'international airline codes should normalize and rows should sort chronologically');
+  assert.equal(venezuela.flights[0].registration, 'YV-5555');
+  assert.equal(venezuela.flights[1].registration, 'YV1000');
+
   const documents = fixture
     .split(/^\s*LOG IN\s*$/gmi)
     .map(value => value.trim())

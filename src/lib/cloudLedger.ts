@@ -1,5 +1,5 @@
 export type RecordData = Record<string, string | number | boolean>;
-export type RecordKind = 'logbook' | 'duty';
+export type RecordKind = 'logbook' | 'duty' | 'trip';
 
 export interface LedgerEntry {
   id: string;
@@ -22,9 +22,10 @@ export interface AuditEntry {
 }
 
 export interface AeroSlateLedger {
-  version: 2;
+  version: 3;
   logbook: LedgerEntry[];
   duty: LedgerEntry[];
+  trips: LedgerEntry[];
   audit: AuditEntry[];
   updatedAt: string;
 }
@@ -52,15 +53,16 @@ const API_VERSION = '2022-11-28';
 const PBKDF2_ITERATIONS = 250_000;
 
 export function emptyLedger(): AeroSlateLedger {
-  return { version: 2, logbook: [], duty: [], audit: [], updatedAt: new Date(0).toISOString() };
+  return { version: 3, logbook: [], duty: [], trips: [], audit: [], updatedAt: new Date(0).toISOString() };
 }
 
 export function normalizeLedger(value: unknown): AeroSlateLedger {
   const source = value && typeof value === 'object' ? value as Partial<AeroSlateLedger> : {};
   return {
-    version: 2,
+    version: 3,
     logbook: Array.isArray(source.logbook) ? source.logbook.filter(Boolean) as LedgerEntry[] : [],
     duty: Array.isArray(source.duty) ? source.duty.filter(Boolean) as LedgerEntry[] : [],
+    trips: Array.isArray((source as any).trips) ? (source as any).trips.filter(Boolean) as LedgerEntry[] : [],
     audit: Array.isArray(source.audit) ? source.audit.filter(Boolean) as AuditEntry[] : [],
     updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : new Date(0).toISOString()
   };
@@ -147,9 +149,10 @@ export function mergeLedgers(localInput: AeroSlateLedger, cloudInput: AeroSlateL
   const local = normalizeLedger(localInput);
   const cloud = normalizeLedger(cloudInput);
   return {
-    version: 2,
+    version: 3,
     logbook: uniqueById(local.logbook, cloud.logbook),
     duty: uniqueById(local.duty, cloud.duty),
+    trips: uniqueById(local.trips, cloud.trips),
     audit: uniqueById(local.audit, cloud.audit),
     updatedAt: new Date(Math.max(Date.parse(local.updatedAt) || 0, Date.parse(cloud.updatedAt) || 0, Date.now())).toISOString()
   };

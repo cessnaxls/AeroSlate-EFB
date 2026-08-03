@@ -1,63 +1,44 @@
-# AeroSlate EFB 0.5.2
+# AeroSlate EFB 0.6.0
 
-## Changed
+## Navigation and layout
+- Shortened sidebar labels and reduced their visual weight.
+- Added a persistent landscape sidebar-collapse control; the choice is stored locally.
+- Kept the full drawer behavior on phones and narrow tablets.
+- Simplified the Flight Finder layout and aligned every parsed-flight column with fixed table geometry.
+- Increased spacing around Build, Trip, and Tail actions.
+- Made the navlog intentionally horizontally scrollable so data remains readable instead of being compressed to unusable sizes.
 
-- Rebuilt the sidebar as a fixed safe-area shell: brand at the physical top-left, independently scrolling navigation, and anchored connection status.
-- Improved sidebar grouping, active states, spacing, and short-landscape behavior without changing its width.
-- Added persistent EQUIP and REG badges to the top flight header in portrait and landscape.
-- Expanded NOTAM extraction across SimBrief general, airport, FIR, enroute, briefing, weather, and navlog branches.
-- Retained every complete imported notice and deduplicated exact duplicates rather than filtering the legal briefing by operational keywords.
-- Added station inference from ICAO A) fields, station-level counts, complete-briefing search, and clearer critical/amendment highlighting.
-- Preserved all tower, obstacle, airspace, and general advisories in the complete imported briefing while keeping the quick-glance scan focused.
+## Global flight parsing
+- Bundled 983 IATA/ICAO airline-code records, exceeding the requested 500-airline target.
+- Retained page-provided `Code XX / YYY` mappings as the highest-priority source.
+- Expanded registration parsing for N-numbers and global registrations including broad hyphenated formats such as VQ-, VP-, RA-, UR-, 9H-, and similar prefixes.
+- Normalized parsed flights into chronological order, including multi-day and midnight-rollover schedules.
 
-# AeroSlate EFB 0.5.1
+## Trips and dispatch loads
+- Added a Trips module reachable from Flight Finder and the sidebar.
+- Trips are stored in the existing local-first ledger and can synchronize through the free encrypted private GitHub Gist vault.
+- Scheduled trips can be dispatched directly to SimBrief.
+- Passenger loads are randomized by local departure-time band when the source paste supplied local time.
+- Passenger weight is 190 lb each; bag count is 80–100% of passenger count at 40 lb each.
+- Freight appears on approximately 17.5% of dispatches and never exceeds 25% of passenger-plus-bag weight.
 
-## Flight finder and FR24 tail workflow
+## NOTAM briefing
+- Preserved the complete imported SimBrief NOTAM set for legal review.
+- Added pilot-friendly FAA-style categories for airport, runway, taxiway, lighting, procedure, navaid, communications, obstacle, airspace, and services.
+- `U/S` is presented as **Unserviceable**; `OOS` is presented as **Out of service**.
+- Procedure `NA` / Not applicable items are yellow review items rather than red outages.
+- Procedure visibility/minima increases are yellow operational changes, not equipment outages.
+- Closures and actual runway/procedure/equipment unavailability remain red.
 
-- Added a **Tail** action beside **Build** for every parsed flight with a registration.
-- Tail actions open the matching FR24 aircraft-history page.
-- Added **Random tail on FR24** to select any usable registration from the parsed airport list.
-- Tail-history pages can be copied and fed back through the same one-button **Paste & Parse** workflow.
-
-## Flight Deck and provider destinations
-
-- Rebalanced the active-route card in portrait and landscape layouts.
-- Centered route distance and separated it from the aircraft icon and route text.
-- Renamed **Charts & binder** to **Charts**.
-- Charts uses `https://charts.navigraph.com/flights/current`.
-- Runway Analysis uses `https://dispatch.simbrief.com/tools`.
-- OFP actions use the exact PDF URL returned by SimBrief, including its `ofp/flightplans/<flightplan>.pdf` path.
-- Persistent provider panes remain mounted when another AeroSlate tab is selected.
-
-## Navlog
-
-- Condensed the planned navlog to fit without horizontal scrolling in normal portrait and landscape views.
-- Retained the most operational columns while hiding only sequence/via/course on the narrowest phone layout.
-- Added calculated ETA at every waypoint from scheduled departure and cumulative planned leg time.
-- Active Navlog now carries an inline ATA estimate downstream from the latest entered crossing time.
-- Replaced the tall checkpoint editor with one line for ATA, NOW, altitude, actual fuel, remarks, completion, and fuel variance.
-- Preserved sequential planned-fuel subtraction and active fuel-trend monitoring.
-
-## Weather and NOTAM briefing
-
-- Replaced the broad outage detector with pilot-focused triage.
-- Red operational cards are limited to airport/runway/taxiway closures, runway-lighting or approach-equipment outages, and unavailable instrument procedures.
-- Yellow cards are reserved for instrument-procedure amendments and revisions.
-- Status badges normalize `CLSD` to **CLOSED**, `OOS`/unserviceable text to **Out of service**, and procedure `NA` to **Not applicable**.
-- Operational cards are grouped and sorted by airport with critical/amendment counts.
-- All original NOTAM text remains available in the complete collapsible set.
-- Tower, crane, and obstacle notices are retained but no longer dominate the quick-glance operational panel.
-
-## iPad polish
-
-- Made the full AeroSlate brand/safe-area cap opaque.
-- Extended its background to the top and side edge without moving the logo or text.
-- Sidebar text can no longer be seen scrolling behind the iPad status bar.
+## Runway analysis and scratchpad
+- Removed the raw plaintext “Generated OFP runway-analysis section” panel.
+- Added parsed takeoff and landing result cards with runway dropdowns based on the returned SimBrief TLR content.
+- Kept SimBrief Tools embedded as the authoritative interactive workspace.
+- Added a Taxi scratchpad and simplified scratchpad actions and template behavior.
 
 ## Validation
-
-- TypeScript project check passed.
-- All four exact FR24 parser fixtures passed.
-- Airport catalog and workflow regressions passed.
-- NOTAM closure/amendment/obstacle prioritization tests passed.
-- Node/Electron syntax and both Python simulator bridges passed.
+- TypeScript 5.8.3 project check passed.
+- Exact four-format FR24 parser regression passed.
+- Workflow and NOTAM-priority regression passed.
+- Node/Electron syntax checks passed.
+- MSFS and X-Plane bridge Python compilation passed.

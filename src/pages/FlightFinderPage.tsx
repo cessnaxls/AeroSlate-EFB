@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Clipboard, ExternalLink, MapPinned, Plane, RefreshCw, Search, Shuffle } from 'lucide-react';
+import { CalendarPlus, Clipboard, ExternalLink, MapPinned, Plane, RefreshCw, Search, Shuffle } from 'lucide-react';
 import airportCatalog from '../data/airports.catalog.json';
 import { airportMap, buildSimbriefDispatch, parseFr24PasteDetailed, type Airport, type FlightCandidate, type Fr24ParseResult, type Fr24PasteFormat } from '../lib/dispatchlink';
 import { loadLocal, saveLocal } from '../lib/storage';
 
 interface Props {
   onDispatch: (url: string, flight: FlightCandidate, staticId: string) => void;
+  onSelect?: (flight: FlightCandidate | null) => void;
+  onSchedule?: (flight: FlightCandidate) => void;
   notify: (message: string) => void;
 }
 
@@ -34,7 +36,7 @@ function fr24TailUrl(registration?: string) {
   return reg ? `https://www.flightradar24.com/data/aircraft/${encodeURIComponent(reg)}` : '';
 }
 
-export function FlightFinderPage({ onDispatch, notify }: Props) {
+export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: Props) {
   const airports = AIRPORTS;
   const [country, setCountry] = useState(() => loadLocal('aeroslate.finder.country', 'United States'));
   const [size, setSize] = useState<'large' | 'medium' | 'small'>(() => loadLocal('aeroslate.finder.size', 'large'));
@@ -48,7 +50,7 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
   useEffect(() => { saveLocal('aeroslate.finder.country', country); saveLocal('aeroslate.finder.size', size); }, [country, size]);
   useEffect(() => saveLocal('aeroslate.finder.airport', selectedAirport), [selectedAirport]);
   useEffect(() => saveLocal('aeroslate.finder.flights', flights), [flights]);
-  useEffect(() => saveLocal('aeroslate.finder.flight', selectedFlight), [selectedFlight]);
+  useEffect(() => { saveLocal('aeroslate.finder.flight', selectedFlight); onSelect?.(selectedFlight); }, [selectedFlight, onSelect]);
 
   const countries = useMemo(() => [...new Set(airports.map(airport => airport.country).filter(Boolean))].sort(), [airports]);
   useEffect(() => {
@@ -109,7 +111,7 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
   return <div className="finder-layout finder-streamlined">
     <section className="card airport-picker-card">
       <header><div><MapPinned size={18} /><h3>Choose an airport</h3></div><span className="pill good">{airports.length.toLocaleString()} AIRPORTS</span></header>
-      <div className="card-body">
+      <div className="card-body finder-compact-body">
         <div className="form-grid three airport-filter-grid">
           <label><span>Country</span><select value={country} onChange={event => setCountry(event.target.value)}>{countries.map(item => <option key={item}>{item}</option>)}</select></label>
           <label><span>Airport size</span><select value={size} onChange={event => setSize(event.target.value as typeof size)}><option value="large">Large</option><option value="medium">Medium</option><option value="small">Small</option></select></label>
@@ -145,7 +147,7 @@ export function FlightFinderPage({ onDispatch, notify }: Props) {
             <td className="reg-cell">{row.registration || '—'}</td>
             <td className="schedule-cell"><span title={row.rawStd ? `Pasted: ${row.rawStd}` : undefined}><small>STD</small>{row.std}</span><span title={row.rawSta ? `Pasted: ${row.rawSta}` : undefined}><small>STA</small>{row.sta}</span></td>
             <td className="ete-cell">{row.ete}</td>
-            <td className="dispatch-cell"><div className="flight-row-actions"><button className="primary compact" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button><button className="compact tail-button" disabled={!fr24TailUrl(row.registration)} title={row.registration ? `Open ${row.registration} on Flightradar24` : 'No registration available'} onClick={event => { event.stopPropagation(); const url = fr24TailUrl(row.registration); if (url) window.open(url, 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900'); }}><ExternalLink size={14} /> Tail</button></div></td>
+            <td className="dispatch-cell"><div className="flight-row-actions"><button className="primary compact" onClick={event => { event.stopPropagation(); dispatch(row); }}>Build</button>{onSchedule && <button className="compact schedule-button" title="Add to trip calendar" onClick={event => { event.stopPropagation(); onSchedule(row); }}><CalendarPlus size={14} /> Trip</button>}<button className="compact tail-button" disabled={!fr24TailUrl(row.registration)} title={row.registration ? `Open ${row.registration} on Flightradar24` : 'No registration available'} onClick={event => { event.stopPropagation(); const url = fr24TailUrl(row.registration); if (url) window.open(url, 'aeroslate-fr24-tail', 'popup=yes,width=1300,height=900'); }}><ExternalLink size={14} /> Tail</button></div></td>
           </tr>)}
           {!flights.length && <tr><td colSpan={7} className="empty-cell">Copy a supported FR24 page, then press <strong>Paste & Parse</strong>.</td></tr>}
         </tbody></table>

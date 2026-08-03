@@ -1037,3 +1037,164 @@ main { min-height: 100dvh; }
   .nav-group > span { padding-top: 3px; padding-bottom: 3px; }
   .sidebar nav button { min-height: 34px; padding-block: 6px; }
 }
+
+/* AeroSlate 0.6.0 — compact rail, aligned finder, trips and parsed TOLR */
+.sidebar-collapse { margin-left: auto; min-width: 34px; width: 34px; height: 34px; padding: 0; border-radius: 8px; }
+.sidebar nav button { font-size: 13px; gap: 9px; }
+.nav-group > span { font-size: 8px; letter-spacing: 1.35px; }
+.app-shell.sidebar-collapsed .sidebar { width: 74px; }
+.app-shell.sidebar-collapsed .main-shell { margin-left: 74px; }
+.sidebar.collapsed .brand { padding-inline: 15px; justify-content: center; }
+.sidebar.collapsed .brand > div:last-of-type, .sidebar.collapsed .nav-group > span, .sidebar.collapsed .sidebar-status, .sidebar.collapsed nav button > span, .sidebar.collapsed nav button > svg:last-child { display: none; }
+.sidebar.collapsed .brand-mark { margin: 0; }
+.sidebar.collapsed .sidebar-collapse { position: absolute; right: -17px; bottom: 10px; background: #123044; }
+.sidebar.collapsed nav button { justify-content: center; padding-inline: 0; }
+.sidebar.collapsed nav button svg { margin: 0; }
+
+.finder-streamlined { gap: 14px; }
+.finder-compact-body, .paste-action-body { gap: 11px; }
+.airport-results { max-height: 168px; }
+.flight-table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+.flight-table th, .flight-table td { box-sizing: border-box; vertical-align: middle; }
+.flight-table th:nth-child(1) { width: 14%; }.flight-table th:nth-child(2) { width: 18%; }.flight-table th:nth-child(3) { width: 9%; }.flight-table th:nth-child(4) { width: 12%; }.flight-table th:nth-child(5) { width: 20%; }.flight-table th:nth-child(6) { width: 8%; }.flight-table th:nth-child(7) { width: 19%; }
+.flight-table td { height: 58px; }
+.flight-row-actions { display: flex; justify-content: flex-end; align-items: center; gap: 7px; }
+.flight-row-actions button { min-width: 58px; padding: 7px 9px; font-size: 11px; }
+.flight-row-actions .schedule-button { min-width: 62px; }
+.flight-row-actions .tail-button { min-width: 58px; }
+.reg-cell, .equip-cell, .ete-cell { white-space: nowrap; }
+
+.navlog-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.rich-navlog { min-width: 980px; font-size: 11px; }
+.rich-navlog.active-mode { min-width: 1240px; }
+.rich-navlog th { font-size: 9px; }
+.rich-navlog td small { font-size: 9px; }
+
+.trips-page { display: grid; gap: 14px; }
+.trip-add-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.trip-add-row > div { display: grid; gap: 4px; }.trip-add-row span { color: var(--muted); font-size: 12px; }
+.trip-list { display: grid; gap: 8px; }
+.trip-list article { display: grid; grid-template-columns: 150px minmax(210px,1fr) 190px auto; align-items: center; gap: 14px; padding: 12px; border: 1px solid var(--border); border-radius: 11px; background: #0a1721; }
+.trip-date, .trip-route, .trip-load { display: grid; gap: 3px; }.trip-list span { color: var(--muted); font-size: 10px; }
+
+.runway-results { border: 1px solid var(--border); border-radius: 13px; overflow: hidden; background: #0a1721; }
+.runway-results-header { padding: 12px 14px; border-bottom: 1px solid var(--border); background: #10202c; }
+.runway-results-header > div { display: flex; align-items: center; gap: 10px; }.runway-results-header span { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
+.runway-result-columns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; padding: 12px; }
+.runway-result-card { border: 1px solid #2a4354; border-radius: 11px; overflow: hidden; background: #08141d; }
+.runway-result-card > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 11px; background: #102330; border-bottom: 1px solid #2a4354; }
+.runway-result-card > header > div { display: flex; align-items: center; gap: 7px; }.runway-result-card select { min-width: 132px; min-height: 34px; }
+.runway-result-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1px; background: #253a48; }
+.runway-result-grid > div { display: grid; gap: 3px; padding: 10px; background: #091722; }.runway-result-grid span { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .55px; }.runway-result-grid strong { font-size: 14px; }
+.runway-result-grid p { grid-column: 1/-1; margin: 0; padding: 8px 10px; background: #091722; font: 11px/1.45 "SFMono-Regular",Consolas,monospace; }
+
+.scratch-body { display: grid; gap: 10px; }.scratch-tabs { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); }.scratch-tabs button { width: 100%; }.scratch-actions button span { display: inline; }
+
+@media (max-width: 1100px) {
+  .trip-list article { grid-template-columns: 120px minmax(180px,1fr) 160px auto; }
+}
+@media (max-width: 900px) {
+  .app-shell.sidebar-collapsed .main-shell { margin-left: 0; }
+  .sidebar.collapsed { width: min(320px,88vw); }
+  .sidebar.collapsed .brand > div:last-of-type, .sidebar.collapsed .nav-group > span, .sidebar.collapsed .sidebar-status, .sidebar.collapsed nav button > span { display: initial; }
+  .sidebar.collapsed nav button { justify-content: flex-start; padding-inline: 10px; }
+  .sidebar-collapse { display: none; }
+  .trip-list article { grid-template-columns: 1fr auto; }.trip-date, .trip-route, .trip-load { grid-column: 1; }.trip-list article button { grid-column: 2; grid-row: 1 / span 3; }
+}
+@media (max-width: 700px) {
+  .flight-table th:nth-child(1), .flight-table th:nth-child(2), .flight-table th:nth-child(3), .flight-table th:nth-child(4), .flight-table th:nth-child(5), .flight-table th:nth-child(6), .flight-table th:nth-child(7) { width: auto; }
+  .flight-row-actions { flex-wrap: nowrap; justify-content: stretch; }.flight-row-actions button { min-width: 0; flex: 1; }
+  .runway-result-columns { grid-template-columns: 1fr; }.runway-result-grid { grid-template-columns: 1fr 1fr; }
+  .trip-add-row { align-items: stretch; flex-direction: column; }.trip-list article { grid-template-columns: 1fr; }.trip-list article button { grid-column: 1; grid-row: auto; width: 100%; }
+  .scratch-actions button span { display: none; }
+}
+
+/* AeroSlate 0.6.0 — compact navigation, trip calendar, aligned finder rows */
+.sidebar nav button { min-height: 34px; padding: 6px 9px; gap: 8px; font-size: 12px; border-radius: 8px; }
+.sidebar nav button svg { width: 16px; height: 16px; }
+.nav-group > span { font-size: 8px; letter-spacing: 1.25px; padding: 4px 9px 3px; }
+.sidebar-collapse { margin-left: auto; padding: 6px; min-width: 31px; min-height: 31px; }
+.always-menu { display: inline-flex; }
+.app-shell.sidebar-collapsed { grid-template-columns: 66px 1fr; }
+.app-shell.sidebar-collapsed main { grid-column: 2; }
+.sidebar.collapsed { width: 66px; padding-inline: 7px; }
+.sidebar.collapsed .brand { margin-inline: -7px; justify-content: center; padding-inline: 7px; }
+.sidebar.collapsed .brand > div:not(.brand-mark), .sidebar.collapsed .nav-group > span, .sidebar.collapsed nav button > span,
+.sidebar.collapsed nav button svg:last-child, .sidebar.collapsed .sidebar-status { display: none; }
+.sidebar.collapsed .brand-mark { width: 38px; height: 38px; }
+.sidebar.collapsed .sidebar-collapse { position: absolute; right: -16px; bottom: 7px; width: 30px; background: #112838; box-shadow: 0 5px 14px #0008; }
+.sidebar.collapsed nav button { justify-content: center; padding: 8px; }
+.sidebar.collapsed nav { padding-inline: 0; }
+
+.finder-streamlined { grid-template-columns: minmax(300px,.78fr) minmax(360px,1.22fr); }
+.finder-compact-body { padding: 12px; }
+.airport-filter-grid { gap: 8px; }
+.airport-results { max-height: 190px; }
+.paste-action-body { padding: 12px; }
+.paste-action-copy p { margin: 3px 0 0; line-height: 1.35; font-size: 11px; }
+.flight-row-actions { display: grid; grid-template-columns: repeat(3,minmax(58px,1fr)); gap: 6px; align-items: center; }
+.flight-row-actions button { min-width: 0; min-height: 32px; padding: 6px 8px; white-space: nowrap; }
+.responsive-flight-table tbody tr { height: 58px; }
+.responsive-flight-table td { vertical-align: middle; }
+.responsive-flight-table .schedule-cell { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 4px; }
+.responsive-flight-table .route-cell { display: flex; align-items: center; gap: 5px; }
+.responsive-flight-table th:nth-child(7) { width: 210px; }
+
+.trips-page { display: grid; gap: 14px; }
+.trip-add-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.trip-add-row > div { display: grid; gap: 4px; }
+.trip-add-row span { color: var(--muted); font-size: 12px; }
+.trip-list { display: grid; gap: 8px; }
+.trip-list article { display: grid; grid-template-columns: 125px minmax(220px,1fr) minmax(170px,.7fr) auto; gap: 14px; align-items: center; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; background: #09151f; }
+.trip-list article > div { display: grid; gap: 3px; }
+.trip-list article span { color: var(--muted); font-size: 11px; }
+
+/* Planned navlog is intentionally readable and horizontally scrollable. */
+.navlog-scroll { overflow-x: auto; }
+.rich-navlog:not(.active-mode) { min-width: 1180px; table-layout: auto; font-size: 11px; }
+.rich-navlog:not(.active-mode) th, .rich-navlog:not(.active-mode) td { padding: 8px 7px; }
+.rich-navlog.active-mode { min-width: 1420px; }
+
+.runway-input-strip label { min-height: 80px; padding: 11px; display: grid; align-content: center; border: 1px solid var(--border); border-radius: 10px; background: #09151f; }
+.runway-input-strip label select { margin-top: 5px; min-height: 36px; }
+.tlr-parsed-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tlr-result-panel { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #0a1721; }
+.tlr-result-panel > header { padding: 11px 13px; border-bottom: 1px solid var(--border); background: #102230; }
+.tlr-result-panel > header > div { display: flex; align-items: center; gap: 8px; }
+.tlr-result-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1px; background: #203341; }
+.tlr-result-grid > div { min-height: 58px; padding: 9px 11px; display: grid; align-content: center; gap: 4px; background: #09151f; }
+.tlr-result-grid span { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .6px; }
+.tlr-result-grid strong { font-family: "SFMono-Regular",Consolas,monospace; font-size: 12px; overflow-wrap: anywhere; }
+.tlr-result-grid p { grid-column: 1/-1; padding: 15px; background: #09151f; margin: 0; }
+
+.scratch-quick { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.scratch-quick button { padding: 5px 8px; min-height: 29px; font-size: 10px; color: #acd0e6; }
+
+.notam-category.taxiway, .notam-category.lighting, .notam-category.navaid { color: #ffd184; border-color: #806323; }
+.notam-category.communication, .notam-category.service { color: #a9d4ed; border-color: #3e6075; }
+.notam-category.obstacle { color: #9bafbd; border-color: #40515d; }
+
+@media (max-width: 1180px) {
+  .app-shell.sidebar-collapsed { grid-template-columns: 1fr; }
+  .sidebar.collapsed { width: min(320px,88vw); }
+  .sidebar.collapsed .brand > div:not(.brand-mark), .sidebar.collapsed .nav-group > span, .sidebar.collapsed nav button > span,
+  .sidebar.collapsed nav button svg:last-child, .sidebar.collapsed .sidebar-status { display: initial; }
+  .sidebar.collapsed nav button { justify-content: flex-start; }
+  .sidebar-collapse { display: none; }
+}
+@media (max-width: 820px) {
+  .flight-row-actions { grid-template-columns: 1fr; }
+  .responsive-flight-table tr { grid-template-columns: minmax(0,1.25fr) minmax(0,1fr) 68px; }
+  .responsive-flight-table th:nth-child(7) { width: 68px; }
+  .trip-list article { grid-template-columns: 92px 1fr auto; }
+  .trip-load { grid-column: 2; }
+  .tlr-parsed-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .finder-streamlined { display: block; }
+  .trip-add-row { align-items: stretch; flex-direction: column; }
+  .trip-list article { grid-template-columns: 78px 1fr; gap: 8px; }
+  .trip-list article > button { grid-column: 1/-1; }
+  .trip-load { grid-column: 2; }
+  .tlr-result-grid { grid-template-columns: 1fr; }
+}

@@ -35,7 +35,12 @@ const buildDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aeroslate-workflow-'));
 try {
   const compile = spawnSync('tsc', [path.join(root, 'src/lib/ofp.ts'), path.join(root, 'src/lib/dispatchlink.ts'), '--target', 'ES2022', '--module', 'ES2022', '--moduleResolution', 'Bundler', '--lib', 'ES2022,DOM,DOM.Iterable', '--skipLibCheck', '--outDir', buildDir], { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' });
   if (compile.status !== 0) throw new Error(`Workflow test compilation failed:\n${compile.stdout}\n${compile.stderr}`);
-  const ofp = await import(`${pathToFileURL(path.join(buildDir, 'ofp.js')).href}?test=${Date.now()}`);
+  const dispatchPath = path.join(buildDir, 'lib', 'dispatchlink.js');
+  if (fs.existsSync(dispatchPath)) {
+    const airlineData = fs.readFileSync(path.join(root, 'src/data/airline-codes.json'), 'utf8');
+    fs.writeFileSync(dispatchPath, fs.readFileSync(dispatchPath, 'utf8').replace(/import airlineCodes from ['"]\.\.\/data\/airlineCodes['"];?/, `const airlineCodes = ${airlineData};`));
+  }
+  const ofp = await import(`${pathToFileURL(path.join(buildDir, 'lib', 'ofp.js')).href}?test=${Date.now()}`);
   const sample = {
     origin: { icao_code: 'KIND', notams: [
       { text: 'KIND RWY 05R CLSD DLY 0200-1000' },

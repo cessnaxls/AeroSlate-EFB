@@ -3,13 +3,16 @@ import { AlertTriangle, ChevronDown, CloudSun, Filter, Search, ShieldCheck } fro
 import { getAllNotams, getWeather, type AnyRecord, type FlightSummary, type ParsedNotam } from '../lib/ofp';
 
 function categoryLabel(category: ParsedNotam['category']) {
-  return ({ runway: 'Runway', procedure: 'Procedure', airport: 'Airport', airspace: 'Airspace', navaid: 'Navaid', other: 'Other' } as const)[category];
+  return ({ airport: 'Airport', runway: 'Runway', taxiway: 'Taxiway', lighting: 'Lighting', procedure: 'Procedure / FDC', navaid: 'Navaid', communication: 'Communications', service: 'Services', airspace: 'Airspace', obstacle: 'Obstacles', other: 'Other' } as const)[category];
 }
 function statusLabel(item: ParsedNotam) {
-  if (item.priority === 'amendment') return 'AMENDED';
   if (/\b(?:CLSD|CLOSED)\b/i.test(item.text)) return 'CLOSED';
+  if (/UNSERVICEABLE|\bU\/S\b/i.test(item.text)) return 'Unserviceable';
+  if (/OUT OF SERVICE|\bOOS\b|\bOTS\b|INOPERATIVE|\bINOP\b/i.test(item.text)) return 'Out of service';
+  if (/NOT AVBL|NOT AVAILABLE|SUSPENDED/i.test(item.text)) return 'Not available';
   if (/\b(?:NA|NOT APPLICABLE|NOT AUTHORIZED)\b/i.test(item.text) && item.category === 'procedure') return 'Not applicable';
-  if (/OUT OF SERVICE|\bOOS\b|UNSERVICEABLE|\bU\/S\b|\bOTS\b|NOT AVBL|INOPERATIVE|\bINOP\b/i.test(item.text)) return 'Out of service';
+  if (item.category === 'procedure' && /INCREASE|RAISE|VISIBILITY|CEILING|MINIMA/i.test(item.text)) return 'Minima / procedure change';
+  if (item.priority === 'amendment') return 'Procedure change';
   return item.priority === 'critical' ? 'UNAVAILABLE' : 'ADVISORY';
 }
 function operationalRank(item: ParsedNotam) {
@@ -68,7 +71,7 @@ export function WeatherPage({ ofp, flight }: { ofp: AnyRecord | null; flight: Fl
     <section className="briefing-section card all-notams">
       <details>
         <summary><div><Filter size={18} /><span><strong>Complete imported NOTAM set</strong><small>All {allNotams.length} imported notices retained; review this section for the complete briefing</small></span></div><div className="summary-badges"><span className="pill neutral">{allNotams.length}</span><ChevronDown size={17} /></div></summary>
-        <div className="notam-toolbar"><div className="notam-filter-bar">{(['all', 'runway', 'procedure', 'airport', 'navaid', 'airspace', 'other'] as const).map(item => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item === 'all' ? `All ${allNotams.length}` : categoryLabel(item)}</button>)}</div><label className="notam-search"><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search station or NOTAM text" /></label></div>
+        <div className="notam-toolbar"><div className="notam-filter-bar">{(['all', 'airport', 'runway', 'taxiway', 'lighting', 'procedure', 'navaid', 'communication', 'service', 'airspace', 'obstacle', 'other'] as const).map(item => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item === 'all' ? `All ${allNotams.length}` : categoryLabel(item)}</button>)}</div><label className="notam-search"><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search station or NOTAM text" /></label></div>
         <div className="card-body notam-groups">
           {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([station, items]) => <details key={station} className="notam-station"><summary><span><strong>{station}</strong><small>{items.length} NOTAM{items.length === 1 ? '' : 's'} · {items.filter(item => item.priority === 'critical').length} critical · {items.filter(item => item.priority === 'amendment').length} changed</small></span><ChevronDown size={15} /></summary><div>{items.sort((a, b) => operationalRank(a) - operationalRank(b)).map(item => <article key={item.id} className={`full-notam priority-${item.priority}`}><div><span className={`notam-category ${item.category}`}>{categoryLabel(item.category)}</span>{item.priority !== 'advisory' && <span className={`notam-status ${item.priority}`}>{statusLabel(item)}</span>}</div><p>{item.text}</p></article>)}</div></details>) }
           {!allNotams.length && <div className="empty-inline"><AlertTriangle size={18} /> No NOTAM text was found in the imported OFP. Regenerate with NOTAMs and FIR NOTAMs enabled, then synchronize the OFP again.</div>}

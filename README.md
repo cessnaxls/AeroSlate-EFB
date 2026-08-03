@@ -1,9 +1,21 @@
-# AeroSlate EFB 0.5.2 — Free Render Edition
+# AeroSlate EFB 0.6.0 — Free Render Edition
 
 AeroSlate is a responsive, local-first electronic flight bag for **Microsoft Flight Simulator 2020 and X-Plane 11/12**. The hosted service deploys on Render's free web-service plan. SimBrief supplies the dispatch/OFP data, the official Navigraph Charts website is presented as an authenticated provider workspace, and the local simulator bridge supplies live telemetry and simulator Zulu time.
 
 > **Flight-simulation and recordkeeping aid.** AeroSlate is not an approved source for real-world navigation, certified takeoff/landing performance, operational control, or operator flight-time-limit calculations.
 
+
+## 0.6.0 workflow update
+
+- Compact sidebar labels with an optional landscape collapsed rail.
+- Flight Finder rows are chronologically sorted, aligned, and use roomier Build / Trip / Tail actions.
+- A bundled 983-airline IATA-to-ICAO dictionary improves worldwide parsing, including South America and the Caribbean.
+- Global registration parsing supports common non-N-number formats.
+- Trips can be saved to the local-first calendar, synchronized through the encrypted private GitHub Gist vault, and dispatched directly to SimBrief with realistic randomized passenger, baggage, and occasional freight loads.
+- The complete NOTAM briefing remains available, while pilot-priority cards use clearer FAA-style categories and distinguish **Unserviceable**, **Out of service**, **Not applicable**, and procedure-minima increases.
+- Navlog data is readable at normal size through deliberate horizontal scrolling.
+- SimBrief TLR output is presented as selectable takeoff/landing runway cards rather than a raw plaintext dump.
+- Scratchpads now include Clearance, ATIS, Taxi, and Notes templates.
 
 ## 0.5.2 interface and briefing changes
 
