@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, BookOpenCheck, Calculator, CalendarDays, Check, ChevronRight, CloudSun, FileText, Fuel, Gauge, HelpCircle, Import,
-  LayoutDashboard, Link2, Map, MapPin, Menu, PanelLeftClose, PanelLeftOpen, Plane, RefreshCw, Route, Search, Settings, Timer, X
+  LayoutDashboard, Link2, Map, MapPin, Menu, PanelLeftClose, PanelLeftOpen, Plane, RefreshCw, Route, Search, Settings, Timer, X, CheckCircle2
 } from 'lucide-react';
 import { AeroSlateLogo } from './components/AeroSlateLogo';
 import { isNativeApp } from './components/ProviderPortal';
@@ -80,10 +80,13 @@ export default function App() {
   const [selectedCandidate, setSelectedCandidate] = useState<FlightCandidate | null>(() => loadLocal<FlightCandidate | null>('aeroslate.finder.flight', null));
   const [dispatchFlight, setDispatchFlight] = useState<FlightCandidate | null>(() => loadLocal('aeroslate.dispatch.flight', loadLocal<FlightCandidate | null>('dispatchlink.dispatch.flight', null)));
   const [dispatchStaticId, setDispatchStaticId] = useState(() => loadLocal('aeroslate.dispatch.staticId', loadLocal('dispatchlink.dispatch.staticId', '')));
+  const [theme, setTheme] = useState(() => loadLocal('aeroslate.theme', 'ocean'));
+  const [vatsimStatus, setVatsimStatus] = useState<{filed:boolean;routeMatch:boolean}|null>(null);
   const flight = useMemo(() => summary(ofp, dispatchFlight), [ofp, dispatchFlight]);
   const notify = useCallback((text: string) => setMessage(text), []);
 
   useEffect(() => saveLocal('aeroslate.sidebar.collapsed', sidebarCollapsed), [sidebarCollapsed]);
+  useEffect(() => { document.documentElement.dataset.theme = theme; saveLocal('aeroslate.theme', theme); }, [theme]);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 699px), (orientation: portrait) and (max-width: 1180px)');
     const update = () => { setPortraitDrawer(query.matches); if (query.matches) setMenuOpen(false); };
@@ -136,6 +139,21 @@ export default function App() {
     return true;
   },[notify]);
 
+  const verifyVatsimTopbar = useCallback(async () => {
+    if (!flight.origin || !flight.destination || flight.origin === '----') return;
+    try {
+      const q = new URLSearchParams({ callsign: flight.callsign || `${flight.airline}${flight.flightNumber}`, origin: flight.origin, destination: flight.destination });
+      const response = await fetch(`/api/vatsim/flightplan?${q}`, { cache: 'no-store' });
+      if (response.ok) setVatsimStatus(await response.json());
+    } catch { setVatsimStatus(null); }
+  }, [flight.callsign, flight.airline, flight.flightNumber, flight.origin, flight.destination]);
+  useEffect(() => { void verifyVatsimTopbar(); const timer = window.setInterval(() => void verifyVatsimTopbar(), 30000); return () => clearInterval(timer); }, [verifyVatsimTopbar]);
+  const openVatsimPrefile = () => {
+    const route = String(flight.route || '');
+    const params = new URLSearchParams({ callsign: flight.callsign || `${flight.airline}${flight.flightNumber}`, departure: flight.origin, arrival: flight.destination, alternate: flight.alternate || '', aircraft: flight.aircraft || '', altitude: String(flight.cruiseAltitude || '').replace(/[^0-9]/g,''), route, remarks: String(dig(ofp,'general.remarks') || dig(ofp,'atc.remarks') || ''), deptime: String(flight.schedOut || '').replace(/[^0-9]/g,'').slice(0,4), enroute: String(flight.ete || '').replace(/[^0-9]/g,'').slice(0,4) });
+    window.open(`https://my.vatsim.net/pilots/flightplan?${params.toString()}`, 'aeroslate-vatsim-prefile');
+  };
+
   const navigate = (next: Page) => { setPage(next); setMenuOpen(false); };
   const grouped = ['Plan', 'Brief', 'Fly', 'Record', 'System'] as const;
 
@@ -149,7 +167,7 @@ export default function App() {
     </aside>
 
     <main>
-      <header className="topbar"><button className="menu-button always-menu" onClick={() => { const landscapeTablet = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; if (landscapeTablet || window.innerWidth > 1180) setSidebarCollapsed(value => !value); else setMenuOpen(true); }}><Menu /></button><div className="flight-ident"><div className="flight-primary"><span>{flight.airline}{flight.flightNumber || '—'}</span><strong>{flight.origin} <Plane size={16} /> {flight.destination}</strong></div><div className="flight-aircraft"><span><b>EQUIP</b>{flight.aircraft}</span><span><b>REG</b>{flight.registration}</span></div></div><div className="topbar-actions"><div className="zulu-clock"><span>ZULU</span><strong>{clock.toISOString().slice(11, 19)}</strong></div><button className="primary top-import" onClick={() => void importOFP()} disabled={loadingOFP}>{loadingOFP ? <RefreshCw className="spin" size={16} /> : <Import size={16} />} {loadingOFP ? 'Syncing' : 'Import OFP'}</button></div></header>
+      <header className="topbar"><button className="menu-button always-menu" onClick={() => { const landscapeTablet = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; if (landscapeTablet || window.innerWidth > 1180) setSidebarCollapsed(value => !value); else setMenuOpen(true); }}><Menu /></button><div className="flight-ident"><div className="flight-primary"><span>{flight.airline}{flight.flightNumber || '—'}</span><strong>{flight.origin} <Plane size={16} /> {flight.destination}</strong></div><div className="flight-aircraft"><span><b>EQUIP</b>{flight.aircraft}</span><span><b>REG</b>{flight.registration}</span></div></div><div className="topbar-actions"><button className={`vatsim-top ${vatsimStatus?.filed && vatsimStatus.routeMatch ? 'filed' : ''}`} onClick={openVatsimPrefile} title="Open VATSIM prefile with current OFP data">{vatsimStatus?.filed && vatsimStatus.routeMatch ? <CheckCircle2 size={15}/> : <Activity size={15}/>}<span>{vatsimStatus?.filed && vatsimStatus.routeMatch ? 'Filed' : 'VATSIM'}</span></button><div className="zulu-clock"><span>ZULU</span><strong>{clock.toISOString().slice(11, 19)}</strong></div><button className="primary top-import" onClick={() => void importOFP()} disabled={loadingOFP}>{loadingOFP ? <RefreshCw className="spin" size={16} /> : <Import size={16} />} {loadingOFP ? 'Syncing' : 'Import OFP'}</button></div></header>
       {message && <div className="toast toast-auto" role="status">{message}<span className="toast-progress" /></div>}
       <div className="page-content">
         {/* Provider and document workspaces stay mounted so authenticated sessions, OFP position, and tool state survive tab changes. */}
@@ -169,7 +187,7 @@ export default function App() {
         {page === 'dutylogs' && <RecordsPage flight={flight} mode="duty" />}
         {page === 'gates' && <GatePage ofp={ofp} flight={flight} notify={notify} />}
         {page === 'help' && <HelpPage />}
-        {page === 'settings' && <SettingsPage simbriefKey={simbriefKey} setSimbriefKey={setSimbriefKey} mode={simbriefMode} setMode={setSimbriefMode} loading={loadingOFP} importOFP={async () => { await importOFP(); }} loadDemo={loadDemo} runtime={runtime} refreshRuntime={refreshRuntime} notify={notify} />}
+        {page === 'settings' && <SettingsPage simbriefKey={simbriefKey} setSimbriefKey={setSimbriefKey} mode={simbriefMode} setMode={setSimbriefMode} loading={loadingOFP} importOFP={async () => { await importOFP(); }} loadDemo={loadDemo} runtime={runtime} refreshRuntime={refreshRuntime} notify={notify} theme={theme} setTheme={setTheme} />}
       </div>
       <nav className="mobile-tabbar">{MOBILE_ITEMS.map(id => { const item = NAV_ITEMS.find(entry => entry.id === id)!; return <button key={id} className={page === id ? 'active' : ''} onClick={() => navigate(id)}><item.icon size={20} /><span>{item.shortLabel}</span></button>; })}<button className={menuOpen ? 'active' : ''} onClick={() => setMenuOpen(true)}><Menu size={20} /><span>More</span></button></nav>
     </main>
@@ -192,14 +210,21 @@ function Dashboard({ ofp, flight, setPage }: { ofp: AnyRecord | null; flight: Re
   </div>;
 }
 
-function SettingsPage({ simbriefKey, setSimbriefKey, mode, setMode, loading, importOFP, loadDemo, runtime, refreshRuntime, notify }: { simbriefKey: string; setSimbriefKey: (value: string) => void; mode: 'username' | 'userid'; setMode: (value: 'username' | 'userid') => void; loading: boolean; importOFP: () => Promise<void>; loadDemo: () => void; runtime: RuntimeStatus; refreshRuntime: () => Promise<void>; notify: (message: string) => void; }) {
+function SettingsPage({ simbriefKey, setSimbriefKey, mode, setMode, loading, importOFP, loadDemo, runtime, refreshRuntime, notify, theme, setTheme }: { simbriefKey: string; setSimbriefKey: (value: string) => void; mode: 'username' | 'userid'; setMode: (value: 'username' | 'userid') => void; loading: boolean; importOFP: () => Promise<void>; loadDemo: () => void; runtime: RuntimeStatus; refreshRuntime: () => Promise<void>; notify: (message: string) => void; theme: string; setTheme: (value:string)=>void; }) {
   const native = isNativeApp(); const api = (window as any).aeroslateNative || (window as any).dispatchlinkNative;
+  const [vatsimCid,setVatsimCid]=useState(()=>loadLocal('aeroslate.vatsim.cid',''));
+  const [gistId,setGistId]=useState(()=>loadLocal('aeroslate.records.gistId',''));
+  const [gistToken,setGistToken]=useState(()=>loadLocal('aeroslate.records.gistToken',''));
+  const [atisApi,setAtisApi]=useState(()=>loadLocal('aeroslate.atis.api',''));
+  const themes=[['ocean','Ocean'],['midnight','Midnight'],['slate','Slate'],['emerald','Emerald'],['amber','Amber'],['violet','Violet'],['crimson','Crimson'],['arctic','Arctic'],['cobalt','Cobalt'],['graphite','Graphite']];
   const install = async () => { const prompt = (window as any).deferredPrompt; if (prompt) await prompt.prompt(); else notify('Use the browser menu and choose Add to Home Screen.'); };
   const changeBackend = async () => { if (!api?.setAppUrl) return; const current = await api.getAppUrl?.(); const next = window.prompt('Render service URL', current || 'https://your-aeroslate.onrender.com'); if (next) await api.setAppUrl(next); };
+  const saveConnections=()=>{ saveLocal('aeroslate.vatsim.cid',vatsimCid.trim()); saveLocal('aeroslate.records.gistId',gistId.trim()); saveLocal('aeroslate.records.gistToken',gistToken.trim()); saveLocal('aeroslate.atis.api',atisApi.trim()); notify('Connection and API settings saved on this device.'); };
   return <div className="content-grid two settings-grid">
-    <Card title="SimBrief synchronization" icon={Plane}><p>The account identifier imports the latest generated OFP and makes it the single source for schedule, route, fuel, weather, NOTAMs and documents.</p><div className="segmented"><button className={mode === 'username' ? 'active' : ''} onClick={() => setMode('username')}>Username</button><button className={mode === 'userid' ? 'active' : ''} onClick={() => setMode('userid')}>Pilot ID</button></div><label className="stacked-input"><span>{mode === 'username' ? 'SimBrief username' : 'Numeric Pilot ID'}</span><input value={simbriefKey} onChange={event => setSimbriefKey(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void importOFP(); }} /></label><div className="button-row"><button className="primary" onClick={() => void importOFP()} disabled={loading}>{loading ? <RefreshCw className="spin" /> : <Import />} {loading ? 'Synchronizing…' : 'Import latest OFP'}</button><button onClick={loadDemo}>Load demo</button></div></Card>
-    <Card title="Provider workspaces" icon={Map}><div className="connection-cards"><div className="ok"><Check /><span><strong>SimBrief</strong><small>In-app dispatch and tools</small></span></div><div className="ok"><Check /><span><strong>Navigraph Charts</strong><small>Persistent authenticated provider workspace</small></span></div><div className={runtime.simLinked ? 'ok' : 'blocked'}>{runtime.simLinked ? <Check /> : <X />}<span><strong>Simulator bridge</strong><small>{runtime.simLinked ? 'Connected' : 'Optional for flight data'}</small></span></div></div><p className="muted">AeroSlate uses your authenticated Navigraph Charts session for charts and maps. AeroSlate stores only your separate notes, not Navigraph chart images.</p><button onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh status</button></Card>
-    <Card title={native ? 'Native application' : 'Install AeroSlate'} icon={LayoutDashboard}>{native ? <><p>Provider sessions remain signed in across launches and are displayed in AeroSlate’s own workspace.</p><button onClick={() => void changeBackend()}><Settings size={16} /> Change Render backend</button></> : <><p>Install the PWA for safe-area support, full-screen layout and device-local settings.</p><button onClick={() => void install()}>Install / Add to Home Screen</button></>}</Card>
-    <Card title="Data ownership" icon={Link2}><div className="status-list"><div><span>Planned flight</span><strong>SimBrief OFP</strong></div><div><span>Charts</span><strong>Navigraph authenticated session</strong></div><div><span>Actual times</span><strong>OOOI</strong></div><div><span>Records</span><strong>OOOI copied automatically</strong></div><div><span>Device settings</span><strong>Stored locally</strong></div></div></Card>
+    <Card title="Accounts & data sources" icon={Link2}><div className="settings-fields"><label><span>VATSIM CID</span><input value={vatsimCid} onChange={e=>setVatsimCid(e.target.value)} placeholder="Optional"/></label><label><span>GitHub Gist ID</span><input value={gistId} onChange={e=>setGistId(e.target.value)} placeholder="Private sync vault"/></label><label><span>GitHub token</span><input type="password" value={gistToken} onChange={e=>setGistToken(e.target.value)} placeholder="Gist permission only"/></label><label><span>D-ATIS API base URL</span><input value={atisApi} onChange={e=>setAtisApi(e.target.value)} placeholder="Optional custom provider"/></label></div><button className="primary" onClick={saveConnections}>Save connections</button></Card>
+    <Card title="Appearance" icon={Settings}><p className="muted">Choose one of ten device-local AeroSlate themes.</p><div className="theme-grid">{themes.map(([id,label])=><button key={id} className={theme===id?'active':''} onClick={()=>setTheme(id)}><i className={`theme-swatch ${id}`}/><span>{label}</span></button>)}</div></Card>
+    <Card title="SimBrief synchronization" icon={Plane}><p>The account identifier imports the latest generated OFP and makes it the source for route, fuel, weather and NOTAMs.</p><div className="segmented"><button className={mode === 'username' ? 'active' : ''} onClick={() => setMode('username')}>Username</button><button className={mode === 'userid' ? 'active' : ''} onClick={() => setMode('userid')}>Pilot ID</button></div><label className="stacked-input"><span>{mode === 'username' ? 'SimBrief username' : 'Numeric Pilot ID'}</span><input value={simbriefKey} onChange={event => setSimbriefKey(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void importOFP(); }} /></label><div className="button-row"><button className="primary" onClick={() => void importOFP()} disabled={loading}>{loading ? <RefreshCw className="spin" /> : <Import />} {loading ? 'Synchronizing…' : 'Import latest OFP'}</button><button onClick={loadDemo}>Load demo</button></div></Card>
+    <Card title="Provider workspaces" icon={Map}><div className="connection-cards"><div className="ok"><Check /><span><strong>SimBrief</strong><small>In-app dispatch and tools</small></span></div><div className="ok"><Check /><span><strong>Navigraph Charts</strong><small>Persistent authenticated workspace</small></span></div><div className={runtime.simLinked ? 'ok' : 'blocked'}>{runtime.simLinked ? <Check /> : <X />}<span><strong>Simulator bridge</strong><small>{runtime.simLinked ? 'Connected' : 'Optional for flight data'}</small></span></div></div><button onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh status</button></Card>
+    <Card title={native ? 'Native application' : 'Install AeroSlate'} icon={LayoutDashboard}>{native ? <button onClick={() => void changeBackend()}><Settings size={16} /> Change Render backend</button> : <button onClick={() => void install()}>Install / Add to Home Screen</button>}</Card>
   </div>;
 }

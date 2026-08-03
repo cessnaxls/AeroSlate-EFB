@@ -1,9 +1,9 @@
 export function AeroSlateLogo({ size = 38 }: { size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 64 64" aria-label="AeroSlate logo" role="img">
-    <defs><linearGradient id="aeroslateGradient" x1="8" y1="7" x2="56" y2="58" gradientUnits="userSpaceOnUse"><stop stopColor="#65D4FF" /><stop offset="1" stopColor="#176B9D" /></linearGradient></defs>
-    <rect x="3" y="3" width="58" height="58" rx="14" fill="#071019" />
-    <rect x="7" y="7" width="50" height="50" rx="12" fill="url(#aeroslateGradient)" />
-    <path fill="#06131D" d="M14 43 30 15h15L29 37h23l-7 11H22Z" />
-    <path fill="#E7F8FF" d="m26 38 27-12-7 11-20 9Z" />
+    <defs><linearGradient id="asWing" x1="8" y1="54" x2="56" y2="10"><stop stopColor="var(--accent)"/><stop offset="1" stopColor="var(--accent-2)"/></linearGradient></defs>
+    <rect x="4" y="4" width="56" height="56" rx="15" fill="#07131d" stroke="var(--accent)" strokeWidth="2"/>
+    <path d="M11 39 50 15 38 35 55 41 50 49 31 42 18 52Z" fill="url(#asWing)"/>
+    <path d="M20 36 46 22 34 36 47 40 43 43 29 39 21 45Z" fill="#eefbff" opacity=".92"/>
+    <circle cx="17" cy="18" r="4" fill="var(--accent-2)"/>
   </svg>;
 }

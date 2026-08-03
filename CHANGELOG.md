@@ -1,3 +1,12 @@
+# AeroSlate EFB 0.12.1
+
+- Compact runway-analysis and trip-planner layouts.
+- Collapsible D-ATIS panel.
+- Top-bar VATSIM filing status and prefile shortcut populated from the active OFP.
+- Centralized account/API settings.
+- Ten persistent color themes.
+- New AeroSlate wing-and-route logo.
+
 # Changelog
 
 ## 0.12.0

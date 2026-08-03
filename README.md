@@ -34,10 +34,20 @@ npm run native:dist
 
 The Windows build uses the persistent `aeroslate-providers` Electron session partition, so Navigraph authentication can remain available between launches.
 
-## 0.12.0 operational briefing additions
+## 0.12.1 operational briefing additions
 
 AeroSlate now verifies the active callsign against the public VATSIM live-data feed, including both connected pilots and prefiled plans. The Weather / NOTAMs page also retrieves VATSIM text ATIS and attempts a public real-world D-ATIS lookup for the departure and destination.
 
 Public real-world D-ATIS feeds can be delayed or unavailable because many are derived from ACARS requests. They are shown as supplemental simulation information. When flying on VATSIM, use the current VATSIM ATIS whenever available.
 
 The OFP page is a compact pilot-release view rather than a PDF replica. It preserves the complete ICAO flight-plan text and dispatcher remarks while keeping the commonly used release, route, procedure, schedule, aircraft, weather, fuel and weight data within the device workspace.
+
+
+## 0.12.1 interface update
+
+- Compact side-by-side runway analysis that collapses cleanly on narrow screens.
+- More efficient trip builder and unscheduled-trip layout.
+- Collapsible D-ATIS panel.
+- VATSIM filing status and prefile shortcut in the top flight bar.
+- Centralized account/API settings.
+- Ten persistent visual themes and a new AeroSlate logo.
