@@ -2047,3 +2047,122 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   .portrait-workflow-bar button:active{transform:scale(.97)}
   .sidebar-backdrop{bottom:calc(var(--portrait-workflow-height) + var(--safe-bottom))!important}
 }
+
+/* AeroSlate 0.12.6 — sleek NOTAM station rail and persistent navlog axis state */
+.foreflight-alert-layout{
+  grid-template-columns:156px minmax(0,1fr);
+}
+.foreflight-stations{
+  padding:8px 7px;
+  gap:1px;
+  background:color-mix(in srgb,var(--surface-deep) 76%,transparent)!important;
+}
+.foreflight-stations button{
+  position:relative;
+  grid-template-columns:1fr auto;
+  grid-template-areas:"code count" "label count";
+  align-items:center;
+  min-height:48px;
+  padding:7px 9px 7px 13px!important;
+  border:0!important;
+  border-radius:5px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:var(--text)!important;
+}
+.foreflight-stations button::before{
+  content:"";
+  position:absolute;
+  inset:8px auto 8px 0;
+  width:2px;
+  border-radius:99px;
+  background:transparent;
+}
+.foreflight-stations button:hover{
+  background:color-mix(in srgb,var(--accent) 7%,transparent)!important;
+}
+.foreflight-stations button.active{
+  background:color-mix(in srgb,var(--accent) 11%,transparent)!important;
+}
+.foreflight-stations button.active::before{background:var(--accent)}
+.foreflight-stations .station-code{
+  grid-area:code;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:.035em;
+  line-height:1.05;
+}
+.foreflight-stations .station-count{
+  grid-area:count;
+  display:grid;
+  place-items:center;
+  min-width:25px;
+  height:25px;
+  padding:0 6px;
+  border:1px solid color-mix(in srgb,var(--border) 76%,transparent);
+  border-radius:99px;
+  color:var(--muted)!important;
+  font-size:10px!important;
+  font-weight:800;
+}
+.foreflight-stations button.active .station-count{
+  border-color:color-mix(in srgb,var(--accent) 60%,var(--border));
+  background:color-mix(in srgb,var(--accent) 14%,transparent);
+  color:var(--accent-2)!important;
+}
+.foreflight-stations button small{
+  grid-area:label;
+  color:var(--muted)!important;
+  font-size:8px!important;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}
+
+.compact-axis{
+  position:relative;
+  isolation:isolate;
+  margin:0!important;
+  padding:2px!important;
+  border-radius:9px!important;
+  background:var(--surface-deep)!important;
+}
+.compact-axis button{
+  position:relative;
+  z-index:1;
+  min-width:70px;
+  min-height:30px!important;
+  padding:5px 9px!important;
+  border:0!important;
+  border-radius:7px!important;
+  background:transparent!important;
+  color:var(--muted)!important;
+  box-shadow:none!important;
+  transition:color .15s ease,background .15s ease;
+}
+.compact-axis button.active,
+.compact-axis button[aria-pressed="true"]{
+  background:color-mix(in srgb,var(--accent) 19%,var(--surface-raised))!important;
+  color:var(--text)!important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 68%,var(--border)),0 2px 8px rgba(0,0,0,.16)!important;
+}
+.compact-axis button.active svg,
+.compact-axis button[aria-pressed="true"] svg{color:var(--accent-2)!important}
+.compact-axis button span{font-size:9px;font-weight:750;letter-spacing:.02em}
+
+@media(max-width:760px){
+  .foreflight-alert-layout{grid-template-columns:1fr}
+  .foreflight-stations{
+    display:flex;
+    gap:3px;
+    padding:6px;
+    scrollbar-width:none;
+  }
+  .foreflight-stations::-webkit-scrollbar{display:none}
+  .foreflight-stations button{
+    flex:0 0 auto;
+    min-width:94px;
+    min-height:43px;
+    padding:6px 9px!important;
+  }
+  .foreflight-stations button::before{inset:auto 10px 0 10px;width:auto;height:2px}
+}

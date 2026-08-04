@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.12.5
+## 0.12.6
 - Rebuilt portrait navigation as a permanent icon rail with a blurred overlay drawer.
 - Removed the separate portrait bottom tab bar.
 - Restored flat, professional sidebar navigation rows.
@@ -30,3 +30,7 @@
 - Added a six-item bottom workflow bar: Home, Find, Trips, Dispatch, OFP, and More.
 - Reworked the portrait drawer so the visible rail shows the actual navigation icons rather than an empty strip.
 - Preserved the blurred app backdrop while the full sidebar is open.
+
+## 0.12.6
+- Replaced the bulky Alert NOTAM airport buttons with a compact station rail using an accent marker and count badges.
+- Made the navlog Rows/Columns selection persistent and unmistakable with `aria-pressed` state and theme-aware active styling.
