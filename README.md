@@ -1,53 +1,35 @@
-# AeroSlate EFB 0.12.3 0.11.6 — Navigraph Edition
+# AeroSlate EFB 0.13.1
 
-AeroSlate is a free Render/GitHub-hosted simulator EFB built around SimBrief planning, FR24 flight discovery, trip scheduling, OFP briefing, navlog, fuel monitoring, OOOI, records, and a persistent Navigraph Charts workspace.
+AeroSlate is a GitHub/Render-ready electronic flight bag for flight simulation. This release introduces a complete XML-backed operational flight plan generator.
 
-## Navigraph Charts
+## Complete SimBrief OFP ingestion
 
-The previous FAA/public chart catalog, PDF renderer, chart binder, and local chart drawing system have been removed. The Charts page now relies exclusively on the official Navigraph Charts application at the current-flight workspace.
+The OFP generator recursively reads the entire imported SimBrief XML/JSON tree. Every nonempty scalar value is accounted for in one of three ways:
 
-- The Electron desktop edition embeds Navigraph directly inside AeroSlate using a persistent provider session.
-- The Charts page remains mounted while you use other AeroSlate tabs, so the Navigraph session and workspace are not intentionally reloaded.
-- On mobile/PWA builds, AeroSlate attempts an inline provider frame and also offers a persistent in-app/provider-window fallback when browser security blocks framing.
-- Reload, expand/restore, notes, and open-provider controls remain inside AeroSlate.
+1. **Standard operational section** — recognized flight, route, aircraft, fuel, load, weather, navlog, NOTAM, ATC, TLR, and remarks data.
+2. **Supplemental Flight Data** — nonempty values for which AeroSlate does not yet have a dedicated operational layout.
+3. **Suppressed metadata** — credentials, internal provider transport data, and duplicate document URLs that do not belong in a pilot OFP.
 
-## Persistent chart notes
+The PDF includes an XML Coverage Summary with the exact counts for all three categories.
 
-Because AeroSlate cannot inspect or draw directly over a cross-origin Navigraph webpage, notes are stored separately from the chart image. Notes can be kept for:
+## PDF presentation
 
-- The active flight
-- Departure airport
-- Destination airport
-- Alternate airport
-- A manually named chart or procedure
+- Multipage, scrollable telex-style PDF
+- Stable randomized professional format per flight release
+- Page header with flight, route, release, and generation time
+- Page numbering
+- Properly labeled tables and sections
+- No raw XML tags
+- No JavaScript object rendering
+- No `[object Object]`
+- Download, print, and separate-window controls
 
-Notes autosave to device local storage and persist across tab changes and app restarts. AeroSlate does not cache or redistribute Navigraph chart images.
-
-## Deploy
-
-Push the project to GitHub and deploy it with the included free `render.yaml`. For the cleanest embedded Navigraph experience, build the included Electron desktop edition with:
+## Development checks
 
 ```bash
 npm install
-npm run native:dist
+npm run check
+npm run test:parser
+npm run test:workflow
+npm run build
 ```
-
-The Windows build uses the persistent `aeroslate-providers` Electron session partition, so Navigraph authentication can remain available between launches.
-
-## 0.12.1 operational briefing additions
-
-AeroSlate now verifies the active callsign against the public VATSIM live-data feed, including both connected pilots and prefiled plans. The Weather / NOTAMs page also retrieves VATSIM text ATIS and attempts a public real-world D-ATIS lookup for the departure and destination.
-
-Public real-world D-ATIS feeds can be delayed or unavailable because many are derived from ACARS requests. They are shown as supplemental simulation information. When flying on VATSIM, use the current VATSIM ATIS whenever available.
-
-The OFP page is a compact pilot-release view rather than a PDF replica. It preserves the complete ICAO flight-plan text and dispatcher remarks while keeping the commonly used release, route, procedure, schedule, aircraft, weather, fuel and weight data within the device workspace.
-
-
-## 0.12.1 interface update
-
-- Compact side-by-side runway analysis that collapses cleanly on narrow screens.
-- More efficient trip builder and unscheduled-trip layout.
-- Collapsible D-ATIS panel.
-- VATSIM filing status and prefile shortcut in the top flight bar.
-- Centralized account/API settings.
-- Ten persistent visual themes and a new AeroSlate logo.

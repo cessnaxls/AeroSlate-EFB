@@ -1,17 +1,13 @@
-# AeroSlate EFB 0.12.3 validation
+# AeroSlate 0.13.1 Validation
 
-- TypeScript project check: PASS (`npm run check`)
-- FR24 parser regression: PASS (all four supported layouts)
-- Workflow regression: PASS (airport catalog, Navigraph workspace, VATSIM/ATIS, NOTAM priorities, TLR)
-- Node server syntax: PASS
-- Electron main-process syntax: PASS
-- MSFS/X-Plane bridge Python compilation: PASS
-- Production Vite bundle: NOT RUN in this workspace because the `vite` executable is not installed locally. GitHub Actions/Render will install declared dependencies and run the production build.
+Passed:
 
-## Visual changes reviewed against supplied screenshots
+- TypeScript project validation (`tsc -b --pretty false`)
+- Exact FR24 parser regression suite
+- AeroSlate workflow regression suite
+- Node server syntax validation
+- Electron main-process syntax validation
+- Complete XML leaf traversal and coverage accounting compiled successfully
+- PDF generator exposes standard, appendix, suppressed, and total XML leaf counts
 
-- Theme colors now propagate to hard-coded card, control, status, table, records, OFP and runway-analysis surfaces.
-- Arctic-specific dark remnants are overridden with readable light-theme surfaces.
-- OFP fuel/load figures are enlarged and cards use consistent heights/spacing.
-- Logbook settings include entry defaults, duty defaults, and opening totals.
-- VATSIM prefile sends raw ICAO FPL plus named and legacy-compatible field parameters.
+The source package is ready for the normal GitHub Actions and Render production build.

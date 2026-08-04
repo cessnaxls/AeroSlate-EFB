@@ -1,16 +1,18 @@
 import { asArray, dig, getICAOFlightPlan, getNavlog, getProcedures, getSelcal, getWeather, leafText, type AnyRecord, type FlightSummary } from './ofp';
 
-interface PdfBuildResult { bytes: Uint8Array; filename: string; styleName: string; }
+interface PdfBuildResult { bytes: Uint8Array; filename: string; styleName: string; coverage: CoverageSummary; }
 interface Section { title: string; lines: string[]; }
+interface Leaf { path: string; parts: string[]; value: string; }
+interface CoverageSummary { totalLeaves: number; standardLeaves: number; appendixLeaves: number; suppressedLeaves: number; }
 
 const PAGE_W = 612;
 const PAGE_H = 792;
 const MARGIN_X = 34;
 const MARGIN_TOP = 38;
 const MARGIN_BOTTOM = 34;
-const FONT_SIZE = 8.4;
-const LEADING = 10.2;
-const MAX_COLS = 103;
+const FONT_SIZE = 8.2;
+const LEADING = 10;
+const MAX_COLS = 105;
 
 const scalar = (v: unknown, fallback = '—') => leafText(v, fallback);
 const numeric = (v: unknown, unit = '') => {
@@ -20,7 +22,7 @@ const numeric = (v: unknown, unit = '') => {
 const clean = (v: unknown) => scalar(v, '').replace(/\s+/g, ' ').trim();
 const humanize = (key: string) => key
   .replace(/[_-]+/g, ' ')
-  .replace(/\b(?:icao|iata|atc|oew|zfw|tow|ldw|mtow|mlw|etops|pbn|selcal|metar|taf|utc|tas|isa|oat|vor|ils|rvr|sid|star)\b/gi, m => m.toUpperCase())
+  .replace(/\b(?:icao|iata|atc|oew|zfw|tow|ldw|mtow|mlw|etops|pbn|selcal|metar|taf|utc|tas|isa|oat|vor|ils|rvr|sid|star|fir|fpl|nav|com|dat|sur|rnp|rvsm|etd|eta|std|sta)\b/gi, m => m.toUpperCase())
   .replace(/\b\w/g, m => m.toUpperCase());
 
 function wrap(text: string, width = MAX_COLS): string[] {
@@ -41,7 +43,7 @@ function wrap(text: string, width = MAX_COLS): string[] {
   return output;
 }
 
-function kv(label: string, value: unknown, width = 22): string {
+function kv(label: string, value: unknown, width = 24): string {
   return `${label.toUpperCase().padEnd(width, ' ')} ${clean(value) || '—'}`;
 }
 
@@ -56,35 +58,73 @@ function hash(text: string): number {
   return h >>> 0;
 }
 
-function collectLeaves(value: unknown, path: string[] = [], out: { path: string[]; value: string }[] = [], seen = new Set<unknown>()): { path: string[]; value: string }[] {
+function collectLeaves(value: unknown, parts: string[] = [], out: Leaf[] = [], seen = new Set<unknown>()): Leaf[] {
   if (value === null || value === undefined || value === '') return out;
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     const text = String(value).trim();
-    if (text) out.push({ path, value: text });
+    if (text) out.push({ path: parts.join('.'), parts, value: text });
     return out;
   }
   if (typeof value !== 'object' || seen.has(value)) return out;
   seen.add(value);
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => collectLeaves(item, [...path, String(index + 1)], out, seen));
-  } else {
-    Object.entries(value as Record<string, unknown>).forEach(([key, item]) => collectLeaves(item, [...path, key], out, seen));
-  }
+  if (Array.isArray(value)) value.forEach((item, index) => collectLeaves(item, [...parts, String(index)], out, seen));
+  else Object.entries(value as Record<string, unknown>).forEach(([key, item]) => collectLeaves(item, [...parts, key], out, seen));
   return out;
 }
 
-function buildSections(ofp: AnyRecord, flight: FlightSummary, style: number): Section[] {
+function pathMatches(path: string, pattern: string): boolean {
+  return path === pattern || path.startsWith(`${pattern}.`);
+}
+
+function isSuppressedLeaf(leaf: Leaf): boolean {
+  const p = leaf.path.toLowerCase();
+  const value = leaf.value.trim();
+  if (!value) return true;
+  if (/^(fetch\.|params\.(?:username|userid|api|token|apikey|password)|links?\.|urls?\.)/.test(p)) return true;
+  if (/(?:pdf|image|map|xml|json|html|kml|csv|api)_?url$/.test(p)) return true;
+  if (/^(?:https?:\/\/|data:)/i.test(value)) return true;
+  if (/^(?:0|false|null|undefined)$/i.test(value) && /(enabled|available|success|error|status)/.test(p)) return true;
+  return false;
+}
+
+function labelForLeaf(leaf: Leaf): string {
+  return leaf.parts
+    .filter(part => part !== '')
+    .map(part => /^\d+$/.test(part) ? `ITEM ${Number(part) + 1}` : humanize(part))
+    .join(' / ');
+}
+
+function buildSections(ofp: AnyRecord, flight: FlightSummary, style: number): { sections: Section[]; coverage: CoverageSummary } {
+  const consumed = new Set<string>();
+  const consume = (...patterns: string[]) => patterns.forEach(pattern => consumed.add(pattern));
+  const consumeValue = (patterns: string[], value: unknown) => { if (clean(value)) consume(...patterns); return value; };
+
   const { sid, star } = getProcedures(ofp);
+  consume('general.sid', 'general.star', 'origin.sid', 'destination.star', 'navlog.fix');
   const alternates = asArray(dig(ofp, 'alternate')).map((a: any) => clean(a?.icao_code || a?.icao)).filter(Boolean).join(', ') || flight.alternate || 'NONE';
+  consume('alternate');
   const originWx = getWeather(ofp, 'origin');
   const destWx = getWeather(ofp, 'destination');
   const altWx = getWeather(ofp, 'alternate');
+  consume('origin.metar', 'origin.taf', 'destination.metar', 'destination.taf', 'alternate.metar', 'alternate.taf', 'weather');
   const atc = getICAOFlightPlan(ofp);
+  consume('text.atc', 'atc', 'general.icao_fpl');
   const navlog = getNavlog(ofp);
+  consume('navlog');
   const units = flight.units || clean(dig(ofp, 'params.units')) || 'LBS';
+  consume('params.units');
   const release = flight.release || clean(dig(ofp, 'general.release')) || '1';
+  consume('general.release');
   const flightId = `${flight.airline}${flight.flightNumber}`;
   const line = style === 1 ? '='.repeat(MAX_COLS) : style === 2 ? '*'.repeat(MAX_COLS) : '-'.repeat(MAX_COLS);
+
+  consume(
+    'general.icao_airline','general.flight_number','general.callsign','general.route','general.route_distance','general.gc_distance',
+    'general.initial_altitude','general.costindex','general.cruise_tas','general.cruise_mach','general.dx_name','general.dispatcher',
+    'params.planformat','params.ofp_layout','general.planformat','params.orig','params.dest','params.altn','params.type','params.reg','params.civalue',
+    'origin.icao_code','origin.iata_code','origin.name','origin.plan_rwy','destination.icao_code','destination.iata_code','destination.name','destination.plan_rwy',
+    'times.sched_out','times.sched_in','times.block_time','times.est_time_enroute'
+  );
 
   const overview: string[] = [
     line,
@@ -114,6 +154,7 @@ function buildSections(ofp: AnyRecord, flight: FlightSummary, style: number): Se
     ...wrap(flight.route || clean(dig(ofp, 'general.route', 'atc.route')) || '—', MAX_COLS),
   ];
 
+  consume('aircraft');
   const aircraft: string[] = [
     kv('Aircraft', `${flight.aircraft} / ${clean(dig(ofp, 'aircraft.name')) || '—'}`),
     kv('Registration', flight.registration),
@@ -123,6 +164,7 @@ function buildSections(ofp: AnyRecord, flight: FlightSummary, style: number): Se
     kv('PBN / equipment', clean(dig(ofp, 'general.pbn', 'aircraft.equipment', 'atc.equipment')) || '—'),
   ];
 
+  consume('fuel');
   const fuelRows = [
     ['RAMP', numeric(dig(ofp, 'fuel.plan_ramp'), ` ${units}`)],
     ['TAXI', numeric(dig(ofp, 'fuel.taxi'), ` ${units}`)],
@@ -134,8 +176,9 @@ function buildSections(ofp: AnyRecord, flight: FlightSummary, style: number): Se
     ['EXTRA', numeric(dig(ofp, 'fuel.extra'), ` ${units}`)],
     ['LANDING', numeric(dig(ofp, 'fuel.plan_landing'), ` ${units}`)],
   ];
-  const fuel = table(['ITEM', 'PLANNED'], fuelRows, [20, 30]);
+  const fuel = table(['ITEM', 'PLANNED'], fuelRows, [22, 34]);
 
+  consume('weights');
   const weightRows = [
     ['BASIC/EMPTY', numeric(dig(ofp, 'weights.oew', 'weights.bow'), ` ${units}`)],
     ['PAX COUNT', numeric(dig(ofp, 'weights.pax_count'))],
@@ -148,7 +191,7 @@ function buildSections(ofp: AnyRecord, flight: FlightSummary, style: number): Se
     ['TOW / MAX', `${numeric(dig(ofp, 'weights.est_tow'), ` ${units}`)} / ${numeric(dig(ofp, 'weights.max_tow'), ` ${units}`)}`],
     ['LDW / MAX', `${numeric(dig(ofp, 'weights.est_ldw'), ` ${units}`)} / ${numeric(dig(ofp, 'weights.max_ldw'), ` ${units}`)}`],
   ];
-  const weights = table(['LOAD ITEM', 'VALUE'], weightRows, [24, 44]);
+  const weights = table(['LOAD ITEM', 'VALUE'], weightRows, [26, 50]);
 
   const weather: string[] = [
     `${flight.origin} METAR`, ...wrap(originWx.metar || 'NOT AVAILABLE'),
@@ -165,11 +208,13 @@ function buildSections(ofp: AnyRecord, flight: FlightSummary, style: number): Se
     numeric(dig(fix, 'altitude_feet', 'altitude'), ''),
     `${clean(dig(fix, 'wind_dir')) || '—'}/${clean(dig(fix, 'wind_spd')) || '—'}`,
     clean(dig(fix, 'oat')) || '—',
+    clean(dig(fix, 'isa_dev', 'isa_deviation')) || '—',
     numeric(dig(fix, 'fuel_leg'), ''),
     numeric(dig(fix, 'fuel_total'), ''),
   ]);
-  const nav = navRows.length ? table(['#','FIX','VIA','ALT','WIND','OAT','BURN','REMAIN'], navRows, [3,9,9,8,8,5,8,10]) : ['NO NAVLOG DATA AVAILABLE'];
+  const nav = navRows.length ? table(['#','FIX','VIA','ALT','WIND','OAT','ISA','BURN','REMAIN'], navRows, [3,9,9,8,8,5,5,8,10]) : ['NO NAVLOG DATA AVAILABLE'];
 
+  consume('notams');
   const notamLines: string[] = [];
   const notams = dig<any>(ofp, 'notams');
   if (notams) {
@@ -186,28 +231,46 @@ function buildSections(ofp: AnyRecord, flight: FlightSummary, style: number): Se
   }
   if (!notamLines.length) notamLines.push('NO NOTAMS INCLUDED IN THE IMPORTED OFP.');
 
-  const remarks = [
-    ...wrap(clean(dig(ofp, 'general.dx_rmk', 'params.manualrmk', 'general.remarks')) || 'NO DISPATCHER REMARKS.'),
-  ];
-
+  consume('general.dx_rmk','params.manualrmk','general.remarks','text.remarks');
+  const remarks = [...wrap(clean(dig(ofp, 'general.dx_rmk', 'params.manualrmk', 'general.remarks', 'text.remarks')) || 'NO DISPATCHER REMARKS.')];
   const atcLines = atc ? wrap(atc) : ['NO ICAO FLIGHT PLAN INCLUDED.'];
 
-  const tlrRaw = clean(dig(ofp, 'text.tlr', 'tlr'));
-  const tlr = tlrRaw ? wrap(tlrRaw) : ['NO RUNWAY ANALYSIS TEXT INCLUDED.'];
+  consume('text.tlr','tlr');
+  const tlrRaw = clean(dig(ofp, 'text.tlr'));
+  const tlr = tlrRaw ? wrap(tlrRaw) : ['STRUCTURED TLR DATA IS INCLUDED IN THE SUPPLEMENTAL RUNWAY-ANALYSIS SECTION.'];
 
-  const knownTop = new Set(['fetch','params','general','origin','destination','alternate','aircraft','times','fuel','weights','navlog','notams','text','tlr']);
+  const allLeaves = collectLeaves(ofp);
+  const suppressed = allLeaves.filter(isSuppressedLeaf);
+  const standard = allLeaves.filter(leaf => !isSuppressedLeaf(leaf) && [...consumed].some(pattern => pathMatches(leaf.path, pattern)));
+  const appendixLeaves = allLeaves.filter(leaf => !isSuppressedLeaf(leaf) && ![...consumed].some(pattern => pathMatches(leaf.path, pattern)));
+
   const supplemental: string[] = [];
-  Object.entries(ofp).filter(([key]) => !knownTop.has(key)).forEach(([group, value]) => {
-    const leaves = collectLeaves(value);
-    if (!leaves.length) return;
-    supplemental.push(`[${humanize(group)}]`);
-    leaves.slice(0, 180).forEach(item => {
-      const label = item.path.map(part => /^\d+$/.test(part) ? `ITEM ${part}` : humanize(part)).join(' / ');
-      supplemental.push(...wrap(`${label}: ${item.value}`));
-    });
-    supplemental.push('');
+  let currentGroup = '';
+  appendixLeaves.forEach(leaf => {
+    const group = humanize(leaf.parts[0] || 'Additional Data');
+    if (group !== currentGroup) {
+      if (supplemental.length) supplemental.push('');
+      supplemental.push(`[${group}]`);
+      currentGroup = group;
+    }
+    supplemental.push(...wrap(`${labelForLeaf(leaf)}: ${leaf.value}`));
   });
-  if (!supplemental.length) supplemental.push('NO ADDITIONAL STRUCTURED DATA WAS INCLUDED.');
+  if (!supplemental.length) supplemental.push('ALL NONEMPTY OFP VALUES WERE PLACED IN STANDARD OPERATIONAL SECTIONS.');
+
+  const coverage: CoverageSummary = {
+    totalLeaves: allLeaves.length,
+    standardLeaves: standard.length,
+    appendixLeaves: appendixLeaves.length,
+    suppressedLeaves: suppressed.length,
+  };
+  const coverageLines = [
+    kv('Nonempty XML values', coverage.totalLeaves),
+    kv('Standard OFP sections', coverage.standardLeaves),
+    kv('Supplemental appendix', coverage.appendixLeaves),
+    kv('Suppressed metadata', coverage.suppressedLeaves),
+    '',
+    'Suppressed values are limited to internal identifiers, duplicate provider URLs, credentials, and transport metadata.',
+  ];
 
   const sections: Section[] = [
     { title: 'FLIGHT RELEASE', lines: overview },
@@ -221,21 +284,22 @@ function buildSections(ofp: AnyRecord, flight: FlightSummary, style: number): Se
     { title: 'ICAO FLIGHT PLAN', lines: atcLines },
     { title: 'RUNWAY ANALYSIS / TLR', lines: tlr },
     { title: 'DISPATCH REMARKS', lines: remarks },
-    { title: 'SUPPLEMENTAL OPERATIONAL DATA', lines: supplemental },
+    { title: 'SUPPLEMENTAL FLIGHT DATA', lines: supplemental },
+    { title: 'XML COVERAGE SUMMARY', lines: coverageLines },
   ];
 
   const orders = [
     sections,
-    [sections[0],sections[1],sections[3],sections[4],sections[2],sections[5],sections[6],sections[8],sections[9],sections[7],sections[10],sections[11]],
-    [sections[0],sections[2],sections[1],sections[5],sections[3],sections[4],sections[9],sections[6],sections[7],sections[8],sections[10],sections[11]],
-    [sections[0],sections[1],sections[5],sections[2],sections[4],sections[3],sections[6],sections[7],sections[9],sections[8],sections[10],sections[11]],
+    [sections[0],sections[1],sections[3],sections[4],sections[2],sections[5],sections[6],sections[8],sections[9],sections[7],sections[10],sections[11],sections[12]],
+    [sections[0],sections[2],sections[1],sections[5],sections[3],sections[4],sections[9],sections[6],sections[7],sections[8],sections[10],sections[11],sections[12]],
+    [sections[0],sections[1],sections[5],sections[2],sections[4],sections[3],sections[6],sections[7],sections[9],sections[8],sections[10],sections[11],sections[12]],
   ];
-  return orders[style % orders.length];
+  return { sections: orders[style % orders.length], coverage };
 }
 
 function escapePdfText(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)').replace(/[^\x20-\x7E]/g, ch => {
-    const map: Record<string,string> = { '→':'->', '—':'-', '–':'-', '·':'/', '°':' DEG ', '’':"'", '“':'"', '”':'"' };
+    const map: Record<string,string> = { '→':'->', '—':'-', '–':'-', '·':'/', '°':' DEG ', '’':"'", '“':'"', '”':'"', '−':'-' };
     return map[ch] ?? '?';
   });
 }
@@ -249,10 +313,10 @@ function makePdf(pages: string[][], title: string): Uint8Array {
   const boldId = add('<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold >>');
   const pageIds: number[] = [];
 
-  pages.forEach((lines, pageIndex) => {
+  pages.forEach(lines => {
     const commands: string[] = ['BT', `/F1 ${FONT_SIZE} Tf`, `${LEADING} TL`, `${MARGIN_X} ${PAGE_H - MARGIN_TOP} Td`];
     lines.forEach((line, i) => {
-      const isHeader = /^\s*(?:AEROSLATE|FLIGHT RELEASE|ROUTE AND|AIRCRAFT AND|FUEL PLAN|WEIGHTS AND|WEATHER|NAVIGATION LOG|NOTAMS|ICAO FLIGHT PLAN|RUNWAY ANALYSIS|DISPATCH REMARKS|SUPPLEMENTAL OPERATIONAL DATA)/.test(line);
+      const isHeader = /^\s*(?:AEROSLATE|FLIGHT RELEASE|ROUTE AND|AIRCRAFT AND|FUEL PLAN|WEIGHTS AND|WEATHER|NAVIGATION LOG|NOTAMS|ICAO FLIGHT PLAN|RUNWAY ANALYSIS|DISPATCH REMARKS|SUPPLEMENTAL FLIGHT DATA|XML COVERAGE SUMMARY|PAGE HEADER)/.test(line);
       commands.push(`${isHeader ? '/F2' : '/F1'} ${FONT_SIZE} Tf`);
       commands.push(`(${escapePdfText(line)}) Tj`);
       if (i < lines.length - 1) commands.push('T*');
@@ -284,24 +348,32 @@ export function buildOFPpdf(ofp: AnyRecord, flight: FlightSummary): PdfBuildResu
   const seed = hash(`${flight.airline}${flight.flightNumber}-${flight.origin}-${flight.destination}-${flight.flightDate}-${flight.release}`);
   const style = seed % 4;
   const styleNames = ['Classic Telex', 'Dispatch Release', 'Air Operations', 'Crew Briefing'];
-  const sections = buildSections(ofp, flight, style);
+  const { sections, coverage } = buildSections(ofp, flight, style);
   const lines: string[] = [];
   sections.forEach((section, index) => {
     if (index) lines.push('', '');
     lines.push(section.title, '-'.repeat(Math.min(MAX_COLS, Math.max(28, section.title.length + 8))), ...section.lines);
   });
 
-  const usableLines = Math.floor((PAGE_H - MARGIN_TOP - MARGIN_BOTTOM) / LEADING) - 2;
-  const pages: string[][] = [];
-  for (let i = 0; i < lines.length; i += usableLines) {
-    const page = lines.slice(i, i + usableLines);
-    page.push('', `${`${flight.airline}${flight.flightNumber} ${flight.origin}-${flight.destination}`.padEnd(70)} PAGE ${pages.length + 1}`);
-    pages.push(page);
-  }
+  const generatedAt = new Date().toISOString().replace('T', ' ').slice(0, 19) + 'Z';
+  const header = `${flight.airline}${flight.flightNumber}  ${flight.origin}-${flight.destination}  RELEASE ${flight.release}  GENERATED ${generatedAt}`;
+  const usableLines = Math.floor((PAGE_H - MARGIN_TOP - MARGIN_BOTTOM) / LEADING) - 6;
+  const chunks: string[][] = [];
+  for (let i = 0; i < lines.length; i += usableLines) chunks.push(lines.slice(i, i + usableLines));
+  const pages = chunks.map((chunk, index) => [
+    'PAGE HEADER',
+    header,
+    '-'.repeat(MAX_COLS),
+    ...chunk,
+    '',
+    `${`${flight.airline}${flight.flightNumber} ${flight.origin}-${flight.destination}`.padEnd(78)} PAGE ${index + 1} OF ${chunks.length}`,
+  ]);
+
   const title = `${flight.airline}${flight.flightNumber} ${flight.origin}-${flight.destination} OFP`;
   return {
     bytes: makePdf(pages, title),
     filename: `${flight.airline}${flight.flightNumber}_${flight.origin}-${flight.destination}_OFP.pdf`,
     styleName: styleNames[style],
+    coverage,
   };
 }
