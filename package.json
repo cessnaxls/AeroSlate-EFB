@@ -2,7 +2,7 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.13.3",
+  "version": "0.13.4",
   "description": "AeroSlate EFB with a compact in-app operational flight plan and professional portrait navigation header.",
   "main": "electron/main.cjs",
   "type": "module",
