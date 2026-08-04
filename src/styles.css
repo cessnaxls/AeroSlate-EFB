@@ -1860,44 +1860,116 @@ input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--muted) 78
 @media(max-width:950px){.settings-fields.logbook-settings,.settings-fields.opening-totals{grid-template-columns:repeat(2,minmax(0,1fr))}.opening-balance-strip{grid-template-columns:repeat(3,1fr)}.opening-balance-strip>span{grid-column:1/-1}}
 @media(max-width:600px){.settings-fields.logbook-settings,.settings-fields.opening-totals{grid-template-columns:1fr}.settings-fields .wide{grid-column:auto}.opening-balance-strip{grid-template-columns:repeat(2,1fr)}}
 
+/* AeroSlate 0.12.4 — professional navigation shell and complete neutral-theme pass */
+:root{
+  --sidebar-width:232px;
+  --sidebar-rail:72px;
+  --topbar-height:72px;
+  --surface:var(--panel);
+  --surface-soft:color-mix(in srgb,var(--panel) 82%,var(--bg) 18%);
+  --surface-raised:var(--panel-2);
+  --surface-deep:color-mix(in srgb,var(--bg) 88%,var(--panel) 12%);
+}
+/* Neutral-only theme family. Old theme ids still resolve safely but are no longer offered. */
+:root[data-theme="ocean"]{--bg:#06131d;--panel:#0b1b27;--panel-2:#102938;--border:#214256;--muted:#89a9bb;--text:#edf9ff;--blue:#27b8ff;--blue-2:#087bb5;--accent:#27b8ff;--accent-2:#79d5ff;--accent-rgb:39,184,255;--sidebar-a:#09202d;--sidebar-b:#06141d;color-scheme:dark}
+:root[data-theme="midnight"]{--bg:#050912;--panel:#0a111f;--panel-2:#111d31;--border:#263650;--muted:#8fa2bd;--text:#f1f6ff;--blue:#789cff;--blue-2:#435fb7;--accent:#789cff;--accent-2:#afc2ff;--accent-rgb:120,156,255;--sidebar-a:#091321;--sidebar-b:#040914;color-scheme:dark}
+:root[data-theme="cobalt"]{--bg:#071126;--panel:#0d1c38;--panel-2:#142b52;--border:#294b83;--muted:#8fa8cf;--text:#f0f6ff;--blue:#418cff;--blue-2:#1c57b5;--accent:#418cff;--accent-2:#87b6ff;--accent-rgb:65,140,255;--sidebar-a:#0d2040;--sidebar-b:#071126;color-scheme:dark}
+:root[data-theme="slate"]{--bg:#11171b;--panel:#1a2228;--panel-2:#253039;--border:#40505b;--muted:#a5b2ba;--text:#f3f7f9;--blue:#91b9cf;--blue-2:#5f899f;--accent:#91b9cf;--accent-2:#c7dce7;--accent-rgb:145,185,207;--sidebar-a:#1b242a;--sidebar-b:#11171b;color-scheme:dark}
+:root[data-theme="graphite"]{--bg:#0b0d0f;--panel:#15191d;--panel-2:#22282d;--border:#3c454c;--muted:#9ba5ac;--text:#f2f4f5;--blue:#b2bac0;--blue-2:#727d85;--accent:#b2bac0;--accent-2:#e2e6e8;--accent-rgb:178,186,192;--sidebar-a:#191d21;--sidebar-b:#0b0d0f;color-scheme:dark}
+:root[data-theme="arctic"]{--bg:#eef6f9;--panel:#ffffff;--panel-2:#e5eff3;--border:#b9ccd5;--muted:#607681;--text:#122630;--blue:#168ab1;--blue-2:#0b6485;--accent:#168ab1;--accent-2:#5fc5e1;--accent-rgb:22,138,177;--sidebar-a:#e4f0f4;--sidebar-b:#d7e8ee;--surface-deep:#f7fbfc;color-scheme:light}
 
-/* AeroSlate 0.12.4 — restrained palettes, true full-theme propagation, flat sidebar, settings reflow */
-:root[data-theme="sky"]{--bg:#dfeef5;--panel:#f5fbfe;--panel-2:#d6e8f1;--border:#9fb9c7;--muted:#506b79;--text:#102630;--blue:#168cc0;--blue-2:#0b6790;--accent:#168cc0;--accent-2:#58b9df;--accent-rgb:22,140,192;--sidebar-a:#d2e6ef;--sidebar-b:#c6dce7;--surface:#f5fbfe;--surface-soft:#edf7fb;--surface-raised:#d6e8f1;--surface-deep:#e3f0f6;color-scheme:light;--on-accent:#fff}
-:root[data-theme="ocean"]{--bg:#06131d;--panel:#0b1b27;--panel-2:#102938;--border:#214256;--muted:#89a9bb;--text:#edf9ff;--blue:#27b8ff;--blue-2:#087bb5;--accent:#27b8ff;--accent-2:#79d5ff;--accent-rgb:39,184,255;--sidebar-a:#09202d;--sidebar-b:#06141d;--surface:#0b1b27;--surface-soft:#0a1a25;--surface-raised:#102938;--surface-deep:#06131d;color-scheme:dark;--on-accent:#fff}
-:root[data-theme="navy"]{--bg:#050b17;--panel:#0a1426;--panel-2:#10213d;--border:#284568;--muted:#8ba2bd;--text:#f0f6ff;--blue:#5ba9ff;--blue-2:#236db6;--accent:#5ba9ff;--accent-2:#9acbff;--accent-rgb:91,169,255;--sidebar-a:#081629;--sidebar-b:#050b17;--surface:#0a1426;--surface-soft:#091321;--surface-raised:#10213d;--surface-deep:#050b17;color-scheme:dark;--on-accent:#07101e}
-:root[data-theme="midnight"]{--bg:#07090e;--panel:#0e1219;--panel-2:#171d27;--border:#303947;--muted:#939dab;--text:#f4f7fb;--blue:#8ab8e6;--blue-2:#527fa9;--accent:#8ab8e6;--accent-2:#c2dcf4;--accent-rgb:138,184,230;--sidebar-a:#0d121a;--sidebar-b:#07090e;--surface:#0e1219;--surface-soft:#0c1017;--surface-raised:#171d27;--surface-deep:#07090e;color-scheme:dark;--on-accent:#07101a}
-:root[data-theme="black"]{--bg:#000;--panel:#090909;--panel-2:#151515;--border:#333;--muted:#9b9b9b;--text:#fff;--blue:#d7e7f4;--blue-2:#7d96aa;--accent:#d7e7f4;--accent-2:#fff;--accent-rgb:215,231,244;--sidebar-a:#070707;--sidebar-b:#000;--surface:#090909;--surface-soft:#070707;--surface-raised:#151515;--surface-deep:#000;color-scheme:dark;--on-accent:#000}
-:root[data-theme="graphite"]{--bg:#111417;--panel:#1a1f24;--panel-2:#252c32;--border:#414b53;--muted:#a2adb5;--text:#f5f7f8;--blue:#a8c3d3;--blue-2:#68889a;--accent:#a8c3d3;--accent-2:#d8e6ed;--accent-rgb:168,195,211;--sidebar-a:#181d21;--sidebar-b:#101316;--surface:#1a1f24;--surface-soft:#171c20;--surface-raised:#252c32;--surface-deep:#111417;color-scheme:dark;--on-accent:#10161a}
-:root[data-theme="slate"]{--bg:#26313a;--panel:#313e48;--panel-2:#3e4d58;--border:#61717d;--muted:#c0cbd1;--text:#fff;--blue:#b4d8ec;--blue-2:#789fb5;--accent:#b4d8ec;--accent-2:#e3f3fb;--accent-rgb:180,216,236;--sidebar-a:#2b3740;--sidebar-b:#222c34;--surface:#313e48;--surface-soft:#2d3942;--surface-raised:#3e4d58;--surface-deep:#26313a;color-scheme:dark;--on-accent:#17232b}
-:root[data-theme="arctic"]{--bg:#f2f5f7;--panel:#fff;--panel-2:#e7edf1;--border:#b5c1c9;--muted:#5e6d76;--text:#111a20;--blue:#2b6f98;--blue-2:#174c6b;--accent:#2b6f98;--accent-2:#6fa8c7;--accent-rgb:43,111,152;--sidebar-a:#eef2f4;--sidebar-b:#e2e8ec;--surface:#fff;--surface-soft:#f7f9fa;--surface-raised:#e7edf1;--surface-deep:#edf2f5;color-scheme:light;--on-accent:#fff}
+html,body,#root,.app-shell,main,.page-content,.page-panel{background:var(--bg)!important;color:var(--text)!important}
+.sidebar{background:linear-gradient(180deg,var(--sidebar-a),var(--sidebar-b))!important;border-color:var(--border)!important}
+.topbar{background:color-mix(in srgb,var(--bg) 94%,transparent)!important;border-color:var(--border)!important;backdrop-filter:blur(18px)}
+.card,.metric,.performance-airport,.runway-result-card,.tlr-group,.tlr-distance-card,.notam-card,.notam-airport,.atis-station,.itinerary-card,.unscheduled-trip,.trip-calendar-day,.chart-shell,.provider-shell,.selected-airport,.airport-results,.record-list article,.records-connect-grid>div,.workspace-row>div,fieldset{
+  background:var(--surface-soft)!important;border-color:var(--border)!important;color:var(--text)!important;
+}
+.card>header,.performance-airport>header,.runway-result-card>header,.tlr-group>header,.data-table th,.provider-strip,.dispatch-bar{
+  background:color-mix(in srgb,var(--surface-raised) 82%,var(--bg) 18%)!important;border-color:var(--border)!important;color:var(--text)!important;
+}
+button,.button-link,.segmented,.flight-aircraft span,.vatsim-top,.theme-grid button,.catalog-chip,.filter-chip,.navlog-mode,.chart-toolbar button,.upload-button{
+  background:var(--surface-raised)!important;border-color:var(--border)!important;color:var(--text)!important;
+}
+button:hover,.button-link:hover{background:color-mix(in srgb,var(--surface-raised) 76%,var(--accent) 24%)!important;border-color:var(--accent)!important}
+button.primary,.button-link.primary,.top-import,.theme-grid button.active{background:linear-gradient(135deg,var(--accent),var(--blue-2))!important;color:#fff!important;border-color:var(--accent-2)!important}
+input,textarea,select,.zulu-input,input[readonly]{background:var(--surface-deep)!important;border-color:var(--border)!important;color:var(--text)!important}
+input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8}
+.muted,small,label>span,.metric span,.metric small,.ofp-rows span,.ofp-mini-kpis span{color:var(--muted)!important}
 
-/* Every visible app surface inherits the active palette. */
-html,body,#root,.app-shell,.content,.page-content,.page-panel,.records-page,.dashboard-page,.settings-grid,.ofp-release-frame,.provider-page,.chart-page,.trips-page{background:var(--bg)!important;color:var(--text)!important}
-.sidebar{background:linear-gradient(180deg,var(--sidebar-a),var(--sidebar-b))!important;color:var(--text)!important;border-color:var(--border)!important}
-.topbar,.mobile-nav,.sidebar-status,.card,.metric,.notice,.hero-empty,.active-flight-banner,.records-layout>section,.record-history,.record-editor,.runway-result-card,.tlr-group,.trip-calendar,.itinerary-card,.unscheduled-trip,.provider-shell,.chart-shell,.chart-panel,.notam-card,.notam-airport,.atis-station,.workspace-row>div,.connection-cards>div,.cloud-stats>div,.record-list article,fieldset,.flight-table,.flight-table-row,.available-flights,.airport-result,.airport-list,.airport-picker,.import-panel,.navlog-shell,.active-navlog-row,.fuel-checkpoint,.weather-panel,.gate-card,.sim-card,.oooi-card{background:var(--surface-soft)!important;color:var(--text)!important;border-color:var(--border)!important}
-.card>header,.runway-result-card>header,.tlr-group>header,.flight-table thead,.table-head,.section-head,.modal header,.drawer header{background:var(--surface-raised)!important;color:var(--text)!important;border-color:var(--border)!important}
-.card-body,.table-body,.modal-body,.drawer-body{color:var(--text)!important}
-strong,h1,h2,h3,h4,h5,h6,legend,label,.route-display,.flight-call,.flight-route,.flight-aircraft,.top-route,.top-flight,.sidebar .brand-copy{color:var(--text)!important}
-p,small,.muted,.field-hint,.subtle,.sidebar small,.card span,.metric span,.tlr-value span,.ofp-mini-kpis span{color:var(--muted)!important}
-input,textarea,select,.zulu-input,[contenteditable="true"]{background:var(--surface-deep)!important;color:var(--text)!important;border-color:var(--border)!important;box-shadow:none!important}
-input:disabled,textarea:disabled,select:disabled{opacity:.65!important;background:var(--surface-soft)!important}
-button,.button-link,.segmented,.pill,.filter-chip,.catalog-chip,.top-import,.vatsim-top,.flight-aircraft span,.chart-toolbar button{background:var(--surface-raised)!important;color:var(--text)!important;border-color:var(--border)!important;box-shadow:none!important}
-button:hover,.button-link:hover{background:color-mix(in srgb,var(--surface-raised) 78%,var(--accent) 22%)!important}
-button.primary,.button-link.primary,.top-import,.theme-grid button.active{background:linear-gradient(135deg,var(--accent),var(--blue-2))!important;color:var(--on-accent)!important;border-color:var(--accent-2)!important}
-svg{color:currentColor}.card>header svg,.section-head svg,.brand-mark,.active svg{color:var(--accent)!important}
-hr,.divider,.group-divider{border-color:var(--border)!important}
+/* Flat professional sidebar rows: no pill-box framing around every tab. */
+.sidebar nav{padding:10px 12px 86px!important}
+.sidebar .nav-group{margin:0 0 10px!important;padding:0 0 8px;border-bottom:1px solid color-mix(in srgb,var(--border) 65%,transparent)}
+.sidebar .nav-group:last-child{border-bottom:0}
+.sidebar .nav-group>span{padding:0 10px 5px!important;color:var(--muted)!important;font-size:9px!important;letter-spacing:.18em}
+.sidebar nav button{width:100%;min-height:40px!important;margin:0!important;padding:8px 10px!important;border:0!important;border-radius:7px!important;background:transparent!important;box-shadow:none!important;color:color-mix(in srgb,var(--text) 80%,var(--muted) 20%)!important;justify-content:flex-start}
+.sidebar nav button:hover{background:color-mix(in srgb,var(--accent) 9%,transparent)!important}
+.sidebar nav button.active{background:linear-gradient(90deg,rgba(var(--accent-rgb),.18),rgba(var(--accent-rgb),.03))!important;box-shadow:inset 3px 0 var(--accent)!important;color:var(--text)!important}
+.sidebar nav button>svg:last-child{margin-left:auto}
+.brand{background:linear-gradient(180deg,color-mix(in srgb,var(--sidebar-a) 96%,transparent),color-mix(in srgb,var(--sidebar-a) 88%,transparent))!important;border-color:var(--border)!important}
+.brand-mark{background:transparent!important;filter:drop-shadow(0 5px 16px rgba(var(--accent-rgb),.25))}
 
-/* Restore the clean, flat sidebar navigation. */
-.sidebar nav button{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;margin:0!important;padding:8px 12px!important;min-height:34px!important;color:color-mix(in srgb,var(--text) 72%,var(--muted) 28%)!important}
-.sidebar nav button:hover{background:color-mix(in srgb,var(--accent) 7%,transparent)!important;color:var(--text)!important}
-.sidebar nav button.active{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 16%,transparent),transparent 88%)!important;box-shadow:inset 3px 0 var(--accent)!important;color:var(--text)!important}
-.sidebar nav .nav-group{gap:0!important}.sidebar nav{gap:0!important}
+/* Settings never overlap and all controls stay inside their cards. */
+.settings-grid{align-items:start!important}
+.settings-grid>.card{min-width:0!important;overflow:hidden!important}
+.settings-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.settings-fields label,.settings-fields input,.settings-fields select{min-width:0!important;width:100%!important;box-sizing:border-box}
+.settings-fields .wide{grid-column:1/-1}
+.logbook-settings{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.opening-totals{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.theme-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.theme-grid button{min-width:0}
+.theme-swatch.ocean{background:#27b8ff}.theme-swatch.midnight{background:#789cff}.theme-swatch.cobalt{background:#418cff}.theme-swatch.slate{background:#91b9cf}.theme-swatch.graphite{background:#b2bac0}.theme-swatch.arctic{background:#eef6f9;border:1px solid #168ab1}
 
-/* Settings: no overlapping controls, predictable rows, balanced cards. */
-.settings-grid{align-items:start!important;grid-auto-rows:auto!important}.settings-grid>.card{min-width:0!important;overflow:hidden!important;height:auto!important}.settings-fields,.settings-fields.logbook-settings,.settings-fields.opening-totals{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;align-items:start!important}.settings-fields label{min-width:0!important;overflow:visible!important}.settings-fields input,.settings-fields select,.settings-fields textarea{width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important}.settings-fields .wide{grid-column:1/-1!important}.settings-checks{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.settings-checks label{min-width:0!important;background:var(--surface-deep)!important;border:1px solid var(--border)!important;border-radius:9px!important;padding:10px!important}.theme-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}.theme-grid button{min-width:0!important}.theme-swatch.sky{background:#bfe9ff}.theme-swatch.ocean{background:#27b8ff}.theme-swatch.navy{background:#416f9f}.theme-swatch.midnight{background:#839ab0}.theme-swatch.black{background:#050505;border:1px solid #777}.theme-swatch.graphite{background:#697984}.theme-swatch.slate{background:#9eb2bf}.theme-swatch.arctic{background:#fff;border:1px solid #7a8a94}
-@media(max-width:950px){.settings-fields,.settings-fields.logbook-settings,.settings-fields.opening-totals{grid-template-columns:1fr!important}.settings-checks{grid-template-columns:1fr!important}.theme-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
-@media(max-width:620px){.theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+/* More legible OFP load-sheet values and balanced card sizing. */
+.ofp-scrollable-release .ofp-frame-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:auto!important;align-items:stretch!important}
+.ofp-scrollable-release .ofp-frame-grid>.card{height:100%;min-height:190px!important}
+.ofp-scrollable-release .ofp-route-card{grid-column:1/-1!important;min-height:150px!important}
+.ofp-mini-kpis>div{min-height:78px!important;padding:12px!important}
+.ofp-mini-kpis strong{font-size:18px!important;line-height:1.15!important;font-variant-numeric:tabular-nums}
+.ofp-rows strong{font-size:14px!important;font-variant-numeric:tabular-nums}
 
-/* Light themes must not retain dark hard-coded tiles. */
-:root[data-theme="sky"] .card,:root[data-theme="sky"] .runway-result-card,:root[data-theme="sky"] .tlr-group,:root[data-theme="sky"] .metric,:root[data-theme="sky"] .flight-table-row,:root[data-theme="arctic"] .card,:root[data-theme="arctic"] .runway-result-card,:root[data-theme="arctic"] .tlr-group,:root[data-theme="arctic"] .metric,:root[data-theme="arctic"] .flight-table-row{box-shadow:none!important}
-:root[data-theme="sky"] .brand-copy h1,:root[data-theme="arctic"] .brand-copy h1{color:var(--text)!important}
+/* Portrait uses a permanent icon rail. Opening it overlays a blurred, still-visible app. */
+.mobile-tabbar{display:none!important}
+@media (max-width:699px), (orientation:portrait) and (max-width:1180px){
+  .app-shell,.app-shell.sidebar-collapsed{display:grid!important;grid-template-columns:var(--sidebar-rail) minmax(0,1fr)!important;min-height:100dvh!important}
+  .app-shell main,.app-shell.sidebar-collapsed main{grid-column:2!important;min-width:0!important;margin:0!important}
+  .sidebar.portrait-sidebar{position:fixed!important;z-index:60!important;left:0!important;top:0!important;bottom:0!important;width:min(310px,84vw)!important;transform:translateX(calc(-100% + var(--sidebar-rail)))!important;transition:transform .24s ease!important;box-shadow:12px 0 36px rgba(0,0,0,.24)!important}
+  .sidebar.portrait-sidebar.open{transform:translateX(0)!important}
+  .sidebar.portrait-sidebar.collapsed .brand{width:var(--sidebar-rail)!important;padding:calc(var(--safe-top) + 14px) 12px 14px!important;justify-content:center!important}
+  .sidebar.portrait-sidebar.collapsed .brand>div:not(.brand-mark),.sidebar.portrait-sidebar.collapsed .sidebar-collapse,.sidebar.portrait-sidebar.collapsed .mobile-close,.sidebar.portrait-sidebar.collapsed nav .nav-group>span,.sidebar.portrait-sidebar.collapsed nav button span,.sidebar.portrait-sidebar.collapsed nav button>svg:last-child,.sidebar.portrait-sidebar.collapsed .sidebar-status{display:none!important}
+  .sidebar.portrait-sidebar.collapsed nav{width:var(--sidebar-rail)!important;padding:10px 8px 18px!important;overflow:hidden!important}
+  .sidebar.portrait-sidebar.collapsed .nav-group{border:0!important;margin:0 0 6px!important;padding:0!important}
+  .sidebar.portrait-sidebar.collapsed nav button{width:56px!important;height:48px!important;min-height:48px!important;padding:0!important;display:grid!important;place-items:center!important;border-radius:10px!important}
+  .sidebar.portrait-sidebar.collapsed nav button.active{box-shadow:inset 3px 0 var(--accent)!important}
+  .sidebar.portrait-sidebar.open .mobile-close{display:inline-flex!important;margin-left:auto!important}
+  .sidebar.portrait-sidebar.open .sidebar-collapse{display:none!important}
+  .sidebar-backdrop{left:var(--sidebar-rail)!important;background:rgba(3,10,16,.28)!important;backdrop-filter:blur(12px) saturate(.8)!important;-webkit-backdrop-filter:blur(12px) saturate(.8)!important}
+  .topbar{left:var(--sidebar-rail)!important;width:auto!important;min-height:var(--topbar-height)!important;padding:calc(var(--safe-top) + 8px) 10px 8px!important}
+  .menu-button.always-menu{display:inline-flex!important}
+  .topbar-actions{gap:6px!important}
+  .vatsim-top{min-width:78px!important;padding:7px 9px!important}
+  .vatsim-top span{display:inline!important;font-size:9px!important}
+  .top-import{display:inline-flex!important;min-width:108px!important;padding:8px 10px!important;white-space:nowrap!important}
+  .flight-ident{min-width:0!important}
+  .flight-primary strong{font-size:15px!important;white-space:nowrap!important}
+  .flight-primary>span{font-size:17px!important}
+  .flight-aircraft{display:none!important}
+  .zulu-clock{display:none!important}
+  .page-content{padding:12px!important;padding-bottom:18px!important}
+  .settings-fields,.logbook-settings,.opening-totals{grid-template-columns:1fr!important}
+  .theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .ofp-scrollable-release .ofp-frame-grid{grid-template-columns:1fr!important}
+  .ofp-scrollable-release .ofp-route-card{grid-column:auto!important}
+}
+@media (max-width:560px){
+  .topbar{gap:6px!important}
+  .flight-primary strong{font-size:13px!important}
+  .flight-primary>span{font-size:15px!important}
+  .vatsim-top{min-width:42px!important;width:42px!important;padding:7px!important}
+  .vatsim-top span{display:none!important}
+  .top-import{min-width:94px!important;font-size:10px!important}
+}
+
+/* Light theme fixes every remaining hard-dark surface. */
+:root[data-theme="arctic"] .brand,:root[data-theme="arctic"] .sidebar,:root[data-theme="arctic"] .topbar,:root[data-theme="arctic"] .card,:root[data-theme="arctic"] .metric,:root[data-theme="arctic"] .runway-result-card,:root[data-theme="arctic"] .tlr-group,:root[data-theme="arctic"] .data-table th{color:var(--text)!important}
+:root[data-theme="arctic"] .brand span,:root[data-theme="arctic"] .sidebar nav button,:root[data-theme="arctic"] .flight-aircraft span,:root[data-theme="arctic"] .vatsim-top{color:var(--text)!important}
