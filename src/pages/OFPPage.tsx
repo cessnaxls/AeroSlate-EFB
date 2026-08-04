@@ -33,7 +33,7 @@ export function OFPPage({ ofp, flight, notify }: Props) {
     <header className="ofp-pdf-toolbar">
       <div>
         <FileText size={18}/>
-        <div><strong>{flight.airline}{flight.flightNumber} · {flight.origin}–{flight.destination}</strong><span>{generated.styleName} · Release {flight.release} · {generated.coverage.standardLeaves + generated.coverage.appendixLeaves} XML values presented</span></div>
+        <div><strong>{flight.airline}{flight.flightNumber} · {flight.origin}–{flight.destination}</strong><span>{generated.styleName} · Release {flight.release} · Operational briefing PDF</span></div>
       </div>
       <nav>
         <button onClick={download}><Download size={16}/>Download</button>

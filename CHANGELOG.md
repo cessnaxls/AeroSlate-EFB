@@ -1,3 +1,8 @@
+## 0.13.2
+- Rebuilt OFP PDF output for concise operational presentation.
+- Removed XML paths, raw transport metadata, duplicate NOTAM fields, and coverage appendix from crew-facing documents.
+- Added aligned fixed-width tables, readable NOTAM summaries, ATIS blocks, flight-profile data, and weight margins.
+
 # Changelog
 
 ## 0.13.1 — Complete XML-backed OFP
