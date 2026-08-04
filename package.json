@@ -2,7 +2,7 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.13.2",
+  "version": "0.13.3",
   "description": "AeroSlate EFB with a concise, professionally tabulated telex-style operational flight plan rendered as a scrollable PDF.",
   "main": "electron/main.cjs",
   "type": "module",
