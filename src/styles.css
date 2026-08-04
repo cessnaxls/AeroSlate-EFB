@@ -2622,3 +2622,99 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
 @media (max-width:760px){
   .departure-clock{display:none!important}
 }
+
+/* AeroSlate 0.13.6 — quieter, better-balanced operational header */
+.flight-time-cluster{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  padding:0 2px;
+}
+.time-divider{
+  width:1px;
+  height:26px;
+  flex:0 0 1px;
+  background:color-mix(in srgb,var(--border) 72%,transparent);
+}
+.topbar-actions{
+  gap:10px!important;
+}
+.vatsim-top,
+.top-import{
+  min-height:40px!important;
+  border-radius:10px!important;
+  box-shadow:none!important;
+}
+.vatsim-top{
+  min-width:96px!important;
+  padding-inline:12px!important;
+  background:color-mix(in srgb,var(--panel-2) 76%,transparent)!important;
+}
+.top-import{
+  min-width:128px!important;
+  padding-inline:14px!important;
+}
+.flight-aircraft{
+  gap:5px!important;
+}
+.flight-aircraft span{
+  border-color:color-mix(in srgb,var(--border) 78%,transparent)!important;
+  background:transparent!important;
+  padding:4px 7px!important;
+}
+.departure-clock,
+.zulu-clock{
+  min-width:auto!important;
+  padding:0!important;
+}
+.departure-clock{align-items:flex-end!important}
+.zulu-clock{align-items:flex-end!important}
+.departure-clock>span,
+.zulu-clock>span{
+  font-size:7px!important;
+  letter-spacing:.16em!important;
+}
+.departure-clock>strong{
+  font-size:11px!important;
+  gap:4px!important;
+}
+.zulu-clock strong{
+  font-size:14px!important;
+  line-height:1.05!important;
+}
+
+@media (max-width:699px), (orientation:portrait) and (max-width:1180px){
+  .topbar{
+    grid-template-columns:48px minmax(0,1fr) auto!important;
+    gap:8px!important;
+  }
+  .topbar-actions{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:8px!important;
+    width:auto!important;
+  }
+  .flight-time-cluster{gap:8px!important}
+  .time-divider{height:24px!important}
+  .vatsim-top{min-width:84px!important;padding-inline:10px!important}
+  .top-import{min-width:112px!important;padding-inline:11px!important}
+  .flight-aircraft span{padding:3px 6px!important}
+}
+
+@media (max-width:900px) and (orientation:portrait){
+  .topbar-actions{gap:6px!important}
+  .flight-time-cluster{gap:6px!important}
+  .vatsim-top{min-width:74px!important;padding-inline:8px!important}
+  .top-import{min-width:100px!important;padding-inline:9px!important}
+  .departure-clock>strong{font-size:10px!important}
+  .zulu-clock strong{font-size:13px!important}
+}
+
+@media (max-width:760px){
+  .departure-clock{display:none!important}
+  .time-divider{display:none!important}
+  .top-import span{display:none!important}
+  .top-import{min-width:44px!important;width:44px!important;padding:0!important}
+}

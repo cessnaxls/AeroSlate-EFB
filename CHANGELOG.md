@@ -1,3 +1,6 @@
+## 0.13.6
+- Simplified the top information bar, grouped departure and Zulu timing, and reduced visual weight around aircraft and provider controls.
+
 ## 0.13.5
 - Show aircraft type and registration in the portrait information bar.
 - Stretch the OFP Route & Airports panel across the full available content width.

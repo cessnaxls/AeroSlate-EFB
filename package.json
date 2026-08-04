@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.13.5",
-  "description": "AeroSlate EFB with full-width OFP briefing panels and complete portrait flight identity.",
+  "version": "0.13.6",
+  "description": "AeroSlate EFB with a quieter, balanced operational header and compact portrait timing controls.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
