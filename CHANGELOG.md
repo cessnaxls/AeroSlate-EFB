@@ -1,3 +1,8 @@
+## 0.12.9
+
+- Moved each active-navlog fuel variance directly below the planned remaining fuel value in the Fuel column.
+- Removed the detached variance label from the active-entry controls.
+
 
 ## 0.12.8
 - Removed the remaining Clear flights button surface so it is a true inline text action.

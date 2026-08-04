@@ -876,7 +876,7 @@ main { min-height: 100dvh; }
 .active-checkpoint-line .now-mini { font-size: 8px; }
 .fuel-inline { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 3px; }
 .fuel-inline input { min-width: 0; width: 100%; }
-.active-checkpoint-line .fuel-variance { position: absolute; right: 42px; bottom: -10px; font-size: 7px; }
+.fuel-plan-cell .fuel-variance { display: block; margin-top: 2px; font-size: 8px; line-height: 1.15; font-weight: 800; white-space: nowrap; }
 
 /* Pilot-critical NOTAM scan */
 .operational-notam-groups { display: grid; gap: 12px; }
