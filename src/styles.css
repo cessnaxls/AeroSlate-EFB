@@ -1787,3 +1787,75 @@ input,textarea,select{background:color-mix(in srgb,var(--bg) 70%,var(--panel) 30
 .structured-tlr .tlr-phase-stack{grid-template-columns:1fr 1fr!important;gap:14px}.tlr-detail-grid,.tlr-detail-grid.landing{grid-template-columns:1fr!important}.tlr-distance-columns{grid-template-columns:1fr 1fr}.tlr-values{grid-template-columns:repeat(2,minmax(0,1fr))}.runway-result-card>header{min-height:64px}.tlr-value{min-height:64px;padding:10px}.tlr-value strong{font-size:14px;line-height:1.25}.tlr-caveat{font-size:10px;line-height:1.45}
 @media(max-width:1250px){.structured-tlr .tlr-phase-stack{grid-template-columns:1fr!important}.tlr-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.tlr-detail-grid.landing{grid-template-columns:1fr 1fr!important}.tlr-detail-grid.landing>.tlr-group:last-child{grid-column:1/-1}.runway-result-card>header{flex-direction:row;align-items:center}.structured-tlr .runway-result-card select{width:auto}}
 @media(max-width:700px){.tlr-detail-grid,.tlr-detail-grid.landing{grid-template-columns:1fr!important}.tlr-distance-columns,.tlr-values{grid-template-columns:1fr}.runway-result-card>header{flex-direction:column;align-items:stretch}.structured-tlr .runway-result-card select{width:100%}}
+
+/* v0.12.3: complete theme propagation and balanced OFP/logbook presentation */
+:root{
+  --surface:var(--panel);
+  --surface-soft:color-mix(in srgb,var(--panel) 78%,var(--bg) 22%);
+  --surface-raised:var(--panel-2);
+  --surface-deep:color-mix(in srgb,var(--bg) 82%,var(--panel) 18%);
+  --line:var(--border);
+  --on-accent:#fff;
+}
+:root[data-theme="arctic"]{--on-accent:#fff}
+body,.app-shell,main,.page-content,.page-panel,.records-page,.ofp-release-frame{background:var(--bg);color:var(--text)}
+.card,.metric,.wx-snapshot>div,.quick-grid button,.route-string,.block-text,.flightplan-text,.weather-block p,
+.records-connect-grid>div:not(.notice),.workspace-row>div,.cloud-stats>div,.record-list article,fieldset,
+.tlr-group,.tlr-distance-card,.tlr-value,.runway-result-card,.runway-result-card .card-body,
+.connection-cards>div,.ofp-route-strip>div,.ofp-mini-kpis>div,.ofp-weather-compact>div,
+.trip-calendar,.trip-calendar-day,.itinerary-card,.unscheduled-trip,.notam-airport,.notam-card,
+.atis-station,.fuel-checkpoint,.active-navlog-row,.navlog-toolbar,.chart-shell,.provider-shell{
+  background:var(--surface-soft)!important;color:var(--text)!important;border-color:var(--line)!important;
+}
+.card>header,.runway-result-card>header,.tlr-group>header,.records-connect header,.record-defaults header{
+  background:color-mix(in srgb,var(--surface-raised) 72%,transparent)!important;border-color:var(--line)!important;
+}
+button,.button-link,.segmented,.flight-aircraft span,.vatsim-top,.top-import,.theme-grid button,
+.pill,.catalog-chip,.filter-chip,.navlog-mode,.chart-toolbar button{
+  background:var(--surface-raised)!important;color:var(--text)!important;border-color:var(--line)!important;
+}
+button.primary,.button-link.primary,.top-import,.theme-grid button.active{
+  background:linear-gradient(135deg,var(--accent),var(--blue-2))!important;color:var(--on-accent)!important;border-color:var(--accent-2)!important;
+}
+input,textarea,select,.zulu-input,input[readonly]{background:var(--surface-deep)!important;color:var(--text)!important;border-color:var(--line)!important}
+input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--muted) 78%,transparent)}
+.sidebar-status,.sidebar-status div{background:transparent!important;color:var(--muted)!important}
+.sidebar nav button{color:color-mix(in srgb,var(--text) 76%,var(--muted) 24%)!important}
+.sidebar nav button.active{color:var(--text)!important}
+.brand-mark{background:linear-gradient(145deg,var(--accent),var(--blue-2))!important}
+.topbar,.ofp-release-header{background:color-mix(in srgb,var(--bg) 90%,var(--panel) 10%)!important;border-color:var(--line)!important}
+.toast{background:var(--surface-raised)!important;border-color:var(--accent)!important;color:var(--text)!important}
+.pill.good{background:color-mix(in srgb,var(--green) 22%,var(--surface))!important;color:color-mix(in srgb,var(--green) 78%,var(--text))!important;border-color:var(--green)!important}
+.pill.warn{background:color-mix(in srgb,var(--yellow) 22%,var(--surface))!important;color:color-mix(in srgb,var(--yellow) 78%,var(--text))!important;border-color:var(--yellow)!important}
+.pill.bad{background:color-mix(in srgb,var(--red) 22%,var(--surface))!important;color:color-mix(in srgb,var(--red) 78%,var(--text))!important;border-color:var(--red)!important}
+.pill.blue{background:color-mix(in srgb,var(--accent) 18%,var(--surface))!important;color:var(--accent-2)!important;border-color:var(--accent)!important}
+:root[data-theme="arctic"] .connection-cards>div,:root[data-theme="arctic"] .flight-aircraft span,:root[data-theme="arctic"] .vatsim-top{color:#13262f!important}
+:root[data-theme="arctic"] .sidebar-status{background:transparent!important}
+:root[data-theme="arctic"] .sidebar-status div{color:#405d68!important}
+:root[data-theme="arctic"] .card>header,:root[data-theme="arctic"] .runway-result-card>header{background:#e7f1f5!important}
+:root[data-theme="arctic"] .ofp-mini-kpis strong,:root[data-theme="arctic"] .ofp-rows strong{color:#102b36!important}
+
+.ofp-scrollable-release .ofp-frame-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:auto;align-items:stretch}
+.ofp-scrollable-release .ofp-frame-grid>.card{height:100%;display:flex;flex-direction:column}
+.ofp-scrollable-release .ofp-frame-grid>.card>.card-body{flex:1}
+.ofp-scrollable-release .ofp-route-card{grid-column:1/-1}
+.ofp-mini-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ofp-mini-kpis>div{min-height:66px;padding:10px 12px;display:flex;flex-direction:column;justify-content:center}
+.ofp-mini-kpis span{font-size:10px}
+.ofp-mini-kpis strong{font-size:16px!important;line-height:1.2;white-space:normal;font-variant-numeric:tabular-nums}
+.ofp-rows>div{min-height:38px;align-items:center}
+.ofp-rows strong{font-size:13px}
+.ofp-weather-compact>div{min-height:92px}
+.ofp-route-strip>div{min-height:68px}
+.ofp-bottom-card .card-body{min-height:145px}
+.ofp-icao-line{font-size:12px;line-height:1.5}
+.ofp-remarks-line{font-size:13px;line-height:1.5}
+@media(min-width:1200px){.ofp-scrollable-release .ofp-frame-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ofp-release-frame{max-width:1500px;margin:0 auto}}
+@media(max-width:800px){.ofp-mini-kpis strong{font-size:14px!important}.ofp-mini-kpis>div{min-height:58px}.ofp-scrollable-release .ofp-frame-grid{grid-template-columns:1fr}}
+
+.settings-fields.logbook-settings,.settings-fields.opening-totals{grid-template-columns:repeat(3,minmax(0,1fr))}
+.settings-fields .wide{grid-column:span 2}.settings-checks{display:flex;gap:18px;flex-wrap:wrap;margin:4px 0 14px}.settings-checks label{display:flex;align-items:center;gap:8px;color:var(--text)}
+.opening-balance-strip{display:grid;grid-template-columns:auto repeat(6,minmax(70px,1fr));gap:8px;align-items:center;margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-deep)}
+.opening-balance-strip>span{font-weight:800}.opening-balance-strip>div{display:grid;gap:2px}.opening-balance-strip small{color:var(--muted);font-size:9px;text-transform:uppercase}.opening-balance-strip strong{font-size:16px}
+@media(max-width:950px){.settings-fields.logbook-settings,.settings-fields.opening-totals{grid-template-columns:repeat(2,minmax(0,1fr))}.opening-balance-strip{grid-template-columns:repeat(3,1fr)}.opening-balance-strip>span{grid-column:1/-1}}
+@media(max-width:600px){.settings-fields.logbook-settings,.settings-fields.opening-totals{grid-template-columns:1fr}.settings-fields .wide{grid-column:auto}.opening-balance-strip{grid-template-columns:repeat(2,1fr)}}
