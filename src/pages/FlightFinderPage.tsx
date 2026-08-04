@@ -168,7 +168,7 @@ export function FlightFinderPage({ onDispatch, onSelect, onSchedule, notify }: P
         <button className="primary" onClick={() => void pasteAndParse()} disabled={readingClipboard}><Clipboard size={18} /> {readingClipboard ? 'Reading…' : 'Paste & Parse'}</button>
         <button onClick={() => { if (!flights.length) return notify('Paste and parse flights first.'); const row = flights[Math.floor(Math.random() * flights.length)]; focusFlight(row); notify(`Selected ${row.flightNumber} and brought it into view.`); }}><Shuffle size={17} /> Random flight</button>
         <button onClick={openRandomTail} disabled={!flights.some(row => Boolean(fr24TailUrl(row.registration)))}><Plane size={17} /> Random tail on FR24</button>
-        <button className="text-button" onClick={() => { setFlights([]); setSelectedFlight(null); setParseInfo(null); }}><RefreshCw size={15} /> Clear flights</button>
+        <button className="text-button clear-flights-link" onClick={() => { setFlights([]); setSelectedFlight(null); setParseInfo(null); }}><RefreshCw size={15} /> Clear flights</button>
         {parseInfo && <div className="parser-result compact-parser-result"><div className="parser-format-row">{parseInfo.formats.map(format => <span className="pill blue" key={format}>{FORMAT_LABELS[format]}</span>)}{parseInfo.timeModes.map(mode => <span className={mode === 'local-unresolved' || mode === 'unknown' ? 'pill warn' : 'pill good'} key={mode}>{timeModeLabel(mode)}</span>)}</div>{parseInfo.warnings.slice(0, 2).map(warning => <small key={warning}>{warning}</small>)}</div>}
       </div>
     </section>

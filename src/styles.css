@@ -1560,7 +1560,31 @@ main { min-height: 100dvh; }
 
 
 /* AeroSlate 0.10.1 refinements */
-.compact-import-card .import-button-stack > .text-button { justify-self: center; width: min(190px, 80%); }
+.compact-import-card .import-button-stack > .text-button { justify-self: center; width: auto; }
+.compact-import-card .clear-flights-link {
+  appearance: none;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--blue);
+  font-weight: 650;
+  justify-self: center;
+}
+.compact-import-card .clear-flights-link:hover,
+.compact-import-card .clear-flights-link:focus-visible {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.compact-import-card .clear-flights-link:active { transform: none; opacity: .72; }
 .foreflight-notam-icon { min-width: 112px !important; width: auto !important; padding: 8px 10px !important; font-size: 11px !important; letter-spacing: .04em !important; text-align: center; }
 .polished-chart-layout { grid-template-columns: minmax(300px, 34%) minmax(0, 1fr) !important; align-items: stretch; gap: 14px; }
 .polished-chart-layout .faa-chart-browser, .polished-chart-layout .chart-viewer-card { min-height: calc(100dvh - 230px); }

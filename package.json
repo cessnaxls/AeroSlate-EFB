@@ -2,7 +2,7 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.12.6",
+  "version": "0.12.7",
   "description": "AeroSlate EFB with a rebuilt portrait navigation rail, neutral app-wide themes, balanced OFP load sheet, and polished settings layout.",
   "main": "electron/main.cjs",
   "type": "module",
