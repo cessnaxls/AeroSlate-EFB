@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.12.6",
-  "description": "AeroSlate EFB with restrained blue/black/white/grey themes, complete palette propagation, restored flat sidebar navigation, corrected settings layout, and centralized logbook defaults.",
+  "version": "0.12.7",
+  "description": "AeroSlate EFB with centralized semantic theme tokens and complete first-party color propagation.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {

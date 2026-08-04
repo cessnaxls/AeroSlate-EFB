@@ -1,3 +1,9 @@
+# 0.12.7
+
+- Replaced component-level fixed colors with semantic theme tokens across the native AeroSlate shell.
+- Added centralized surface, control, text, border, accent, success, warning, danger, and shadow variables.
+- Preserved provider-owned SimBrief/Navigraph webview colors.
+
 # AeroSlate EFB 0.12.6
 
 - Replaced residual hard-coded native UI colors with full theme-token propagation across every first-party page, card, table, toolbar, metric, form control, NOTAM panel, fuel panel, runway panel, trip planner, and record workspace.
