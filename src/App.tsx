@@ -50,6 +50,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'settings', label: 'Settings', shortLabel: 'More', icon: Settings, group: 'System' }
 ];
 
+const PORTRAIT_BOTTOM_ITEMS: Page[] = ['dashboard', 'finder', 'trips', 'simbrief', 'ofp'];
+
 function Card({ title, icon: Icon, action, children, className = '' }: { title: string; icon?: typeof Plane; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return <section className={`card ${className}`}><header><div>{Icon && <Icon size={18} />}<h3>{title}</h3></div>{action}</header><div className="card-body">{children}</div></section>;
 }
@@ -236,6 +238,14 @@ export default function App() {
         {page === 'settings' && <SettingsPage simbriefKey={simbriefKey} setSimbriefKey={setSimbriefKey} mode={simbriefMode} setMode={setSimbriefMode} loading={loadingOFP} importOFP={async () => { await importOFP(); }} loadDemo={loadDemo} runtime={runtime} refreshRuntime={refreshRuntime} notify={notify} theme={theme} setTheme={setTheme} />}
       </div>
     </main>
+    {portraitDrawer && <nav className="portrait-workflow-bar" aria-label="Primary workflow">
+      {PORTRAIT_BOTTOM_ITEMS.map(id => {
+        const item = NAV_ITEMS.find(entry => entry.id === id)!;
+        const Icon = item.icon;
+        return <button key={id} className={page === id ? 'active' : ''} onClick={() => navigate(id)} aria-label={item.label}><Icon size={20}/><span>{item.shortLabel}</span></button>;
+      })}
+      <button className={menuOpen ? 'active' : ''} onClick={() => setMenuOpen(true)} aria-label="Open all sections"><Menu size={20}/><span>More</span></button>
+    </nav>}
   </div>;
 }
 

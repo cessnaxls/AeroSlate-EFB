@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.12.4
+## 0.12.5
 - Rebuilt portrait navigation as a permanent icon rail with a blurred overlay drawer.
 - Removed the separate portrait bottom tab bar.
 - Restored flat, professional sidebar navigation rows.
@@ -24,3 +24,9 @@
 - Enlarged OFP load-sheet figures and balanced release cards into a consistent two-column scrollable layout.
 - Added extensive logbook and duty defaults plus opening/carry-forward totals in Settings.
 - Improved VATSIM prefile mapping with raw ICAO FPL, legacy-compatible fields, PBN/NAV/DAT/SUR, registration, operator, performance, EET, SELCAL, equipment, wake, time, speed, and fuel endurance.
+
+## 0.12.5
+- Added a persistent portrait icon rail with every app section available as an icon.
+- Added a six-item bottom workflow bar: Home, Find, Trips, Dispatch, OFP, and More.
+- Reworked the portrait drawer so the visible rail shows the actual navigation icons rather than an empty strip.
+- Preserved the blurred app backdrop while the full sidebar is open.
