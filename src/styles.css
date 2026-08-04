@@ -2068,3 +2068,136 @@ hr,.divider,.group-divider,.status-list>div,.chart-list>button,.notam-full-item{
 /* Theme picker swatches are previews only; all surrounding controls still use the active theme. */
 .theme-grid button{background:var(--surface-soft)!important;color:var(--text)!important;border-color:var(--border)!important}
 .theme-grid button.active{background:var(--selection-strong)!important;color:var(--text)!important;border-color:var(--accent)!important}
+
+/* v0.12.6 — tab-by-tab theme background audit
+   All page backgrounds are generated from the active theme tokens. No page retains
+   the default Ocean/deep-blue canvas when another theme is selected. */
+.app-shell{
+  --section-wash: 7%;
+  --section-glow: .11;
+  --page-canvas: color-mix(in srgb,var(--bg) 93%,var(--accent) 7%);
+  --page-canvas-deep: color-mix(in srgb,var(--surface-deep) 94%,var(--accent) 6%);
+  --page-surface: color-mix(in srgb,var(--surface-soft) 96%,var(--accent) 4%);
+  --page-raised: color-mix(in srgb,var(--surface-raised) 94%,var(--accent) 6%);
+}
+.app-shell.section-plan{--section-wash:6%;--section-glow:.10}
+.app-shell.section-brief{--section-wash:9%;--section-glow:.14}
+.app-shell.section-fly{--section-wash:5%;--section-glow:.08}
+.app-shell.section-record{--section-wash:4%;--section-glow:.06}
+.app-shell.section-system{--section-wash:3%;--section-glow:.05}
+
+.app-shell.section-plan{--page-canvas:color-mix(in srgb,var(--bg) 94%,var(--accent) 6%);--page-canvas-deep:color-mix(in srgb,var(--surface-deep) 95%,var(--accent) 5%);--page-surface:color-mix(in srgb,var(--surface-soft) 97%,var(--accent) 3%);--page-raised:color-mix(in srgb,var(--surface-raised) 95%,var(--accent) 5%)}
+.app-shell.section-brief{--page-canvas:color-mix(in srgb,var(--bg) 91%,var(--accent) 9%);--page-canvas-deep:color-mix(in srgb,var(--surface-deep) 92%,var(--accent) 8%);--page-surface:color-mix(in srgb,var(--surface-soft) 95%,var(--accent) 5%);--page-raised:color-mix(in srgb,var(--surface-raised) 93%,var(--accent) 7%)}
+.app-shell.section-fly{--page-canvas:color-mix(in srgb,var(--bg) 95%,var(--accent) 5%);--page-canvas-deep:color-mix(in srgb,var(--surface-deep) 96%,var(--accent) 4%);--page-surface:color-mix(in srgb,var(--surface-soft) 97%,var(--accent) 3%);--page-raised:color-mix(in srgb,var(--surface-raised) 96%,var(--accent) 4%)}
+.app-shell.section-record{--page-canvas:color-mix(in srgb,var(--bg) 96%,var(--accent) 4%);--page-canvas-deep:color-mix(in srgb,var(--surface-deep) 97%,var(--accent) 3%);--page-surface:color-mix(in srgb,var(--surface-soft) 98%,var(--accent) 2%);--page-raised:color-mix(in srgb,var(--surface-raised) 97%,var(--accent) 3%)}
+.app-shell.section-system{--page-canvas:color-mix(in srgb,var(--bg) 97%,var(--accent) 3%);--page-canvas-deep:color-mix(in srgb,var(--surface-deep) 98%,var(--accent) 2%);--page-surface:color-mix(in srgb,var(--surface-soft) 98%,var(--accent) 2%);--page-raised:color-mix(in srgb,var(--surface-raised) 97%,var(--accent) 3%)}
+
+/* The page canvas changes as one atomic themed layer. */
+.app-shell main,
+.app-shell .page-content,
+.app-shell .page-panel,
+.app-shell .dashboard-page,
+.app-shell .flight-finder-page,
+.app-shell .trips-page,
+.app-shell .provider-page,
+.app-shell .navigraph-page,
+.app-shell .ofp-release-frame,
+.app-shell .navlog-page,
+.app-shell .weather-page,
+.app-shell .fuel-page,
+.app-shell .runway-tools-page,
+.app-shell .sim-data-page,
+.app-shell .oooi-page,
+.app-shell .gate-page,
+.app-shell .records-page,
+.app-shell .help-page,
+.app-shell .settings-page,
+.app-shell .settings-grid{
+  background-color:var(--page-canvas)!important;
+  color:var(--text)!important;
+}
+.app-shell .page-content{
+  background-image:
+    radial-gradient(circle at 88% -8%,rgba(var(--accent-rgb),var(--section-glow)),transparent 34%),
+    linear-gradient(180deg,var(--page-canvas),var(--page-canvas-deep))!important;
+  min-height:calc(100dvh - var(--topbar-height,64px));
+}
+
+/* Section identity is subtle and remains palette-correct. */
+.app-shell.section-plan .page-content{background-image:radial-gradient(circle at 10% 0,rgba(var(--accent-rgb),.09),transparent 30%),linear-gradient(180deg,var(--page-canvas),var(--page-canvas-deep))!important}
+.app-shell.section-brief .page-content{background-image:radial-gradient(circle at 82% 0,rgba(var(--accent-rgb),.15),transparent 35%),linear-gradient(180deg,var(--page-canvas),var(--page-canvas-deep))!important}
+.app-shell.section-fly .page-content{background-image:linear-gradient(155deg,var(--page-canvas),var(--page-canvas-deep) 68%)!important}
+.app-shell.section-record .page-content{background-image:linear-gradient(180deg,var(--page-canvas),var(--page-canvas-deep))!important}
+.app-shell.section-system .page-content{background-image:radial-gradient(circle at 50% -10%,rgba(var(--accent-rgb),.06),transparent 32%),linear-gradient(180deg,var(--page-canvas),var(--page-canvas-deep))!important}
+
+/* Every native page surface follows the active page canvas instead of a stale deep-blue fallback. */
+.app-shell .card,
+.app-shell .panel,
+.app-shell .subpanel,
+.app-shell .metric,
+.app-shell .tile,
+.app-shell .widget,
+.app-shell .runway-result-card,
+.app-shell .tlr-group,
+.app-shell .runway-analysis-summary,
+.app-shell .trip-builder,
+.app-shell .trip-calendar,
+.app-shell .planner-card,
+.app-shell .itinerary-card,
+.app-shell .flight-table,
+.app-shell .available-flights,
+.app-shell .airport-picker,
+.app-shell .import-panel,
+.app-shell .navlog-shell,
+.app-shell .notam-card,
+.app-shell .notam-airport,
+.app-shell .weather-panel,
+.app-shell .atis-station,
+.app-shell .vatsim-filing,
+.app-shell .fuel-checkpoint,
+.app-shell .record-editor,
+.app-shell .record-history,
+.app-shell .provider-shell,
+.app-shell .provider-card,
+.app-shell .navigraph-workspace{
+  background-color:var(--page-surface)!important;
+  border-color:var(--border)!important;
+}
+.app-shell .card>header,
+.app-shell .panel>header,
+.app-shell .subpanel>header,
+.app-shell .runway-result-card>header,
+.app-shell .tlr-group>header,
+.app-shell .table-head,
+.app-shell .flight-table thead,
+.app-shell .section-head,
+.app-shell .chart-subbar,
+.app-shell .chart-toolbar{
+  background-color:var(--page-raised)!important;
+  color:var(--text)!important;
+  border-color:var(--border)!important;
+}
+
+/* Remove remaining default-blue page chrome from legacy selectors. */
+.app-shell .chart-subbar,
+.app-shell .chart-toolbar,
+.app-shell .chart-catalog,
+.app-shell .chart-workspace,
+.app-shell .navigraph-topbar,
+.app-shell .navigraph-web-help{
+  background:var(--page-raised)!important;
+}
+.app-shell .chart-scroll,
+.app-shell .navigraph-webview,
+.app-shell .navigraph-iframe{
+  background:var(--page-canvas-deep)!important;
+}
+
+/* Light themes use the same system with readable, non-dark residual surfaces. */
+:root[data-theme="sky"] .app-shell,
+:root[data-theme="arctic"] .app-shell{
+  --page-canvas:color-mix(in srgb,var(--bg) 95%,var(--accent) 5%);
+  --page-canvas-deep:color-mix(in srgb,var(--surface-deep) 96%,var(--accent) 4%);
+  --page-surface:color-mix(in srgb,var(--surface-soft) 97%,var(--accent) 3%);
+  --page-raised:color-mix(in srgb,var(--surface-raised) 94%,var(--accent) 6%);
+}

@@ -50,6 +50,13 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'settings', label: 'Settings', shortLabel: 'More', icon: Settings, group: 'System' }
 ];
 const MOBILE_ITEMS: Page[] = ['dashboard', 'finder', 'simbrief', 'charts', 'times'];
+const PAGE_GROUP: Record<Page, 'plan' | 'brief' | 'fly' | 'record' | 'system'> = {
+  dashboard: 'plan', finder: 'plan', trips: 'plan', simbrief: 'plan',
+  charts: 'brief', ofp: 'brief', navlog: 'brief', weather: 'brief', fuel: 'brief', performance: 'brief',
+  sim: 'fly', times: 'fly', gates: 'fly',
+  flightlogs: 'record', dutylogs: 'record',
+  help: 'system', settings: 'system'
+};
 
 function Card({ title, icon: Icon, action, children, className = '' }: { title: string; icon?: typeof Plane; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return <section className={`card ${className}`}><header><div>{Icon && <Icon size={18} />}<h3>{title}</h3></div>{action}</header><div className="card-body">{children}</div></section>;
@@ -205,7 +212,7 @@ export default function App() {
   const grouped = ['Plan', 'Brief', 'Fly', 'Record', 'System'] as const;
 
   const effectiveCollapsed = !portraitDrawer && sidebarCollapsed;
-  return <div className={`app-shell ${effectiveCollapsed ? 'sidebar-collapsed' : ''}`}>
+  return <div className={`app-shell page-${page} section-${PAGE_GROUP[page]} ${effectiveCollapsed ? 'sidebar-collapsed' : ''}`} data-page={page} data-section={PAGE_GROUP[page]}>
     {menuOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
     <aside className={`${menuOpen ? 'sidebar open' : 'sidebar'} ${effectiveCollapsed ? 'collapsed' : ''}`}>
       <div className="brand"><div className="brand-mark"><AeroSlateLogo size={40} /></div><div><strong>AeroSlate</strong><span>Electronic flight bag</span></div><button className="sidebar-collapse" title={effectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setSidebarCollapsed(value => !value)}>{effectiveCollapsed ? <PanelLeftOpen size={18}/> : <PanelLeftClose size={18}/>}</button><button className="mobile-close" onClick={() => setMenuOpen(false)}><X /></button></div>
@@ -216,7 +223,7 @@ export default function App() {
     <main>
       <header className="topbar"><button className="menu-button always-menu" onClick={() => { const landscapeTablet = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; if (landscapeTablet || window.innerWidth > 1180) setSidebarCollapsed(value => !value); else setMenuOpen(true); }}><Menu /></button><div className="flight-ident"><div className="flight-primary"><span>{flight.airline}{flight.flightNumber || '—'}</span><strong>{flight.origin} <Plane size={16} /> {flight.destination}</strong></div><div className="flight-aircraft"><span><b>EQUIP</b>{flight.aircraft}</span><span><b>REG</b>{flight.registration}</span></div></div><div className="topbar-actions"><button className={`vatsim-top ${vatsimStatus?.filed && vatsimStatus.routeMatch ? 'filed' : ''}`} onClick={openVatsimPrefile} title="Open VATSIM prefile with current OFP data">{vatsimStatus?.filed && vatsimStatus.routeMatch ? <CheckCircle2 size={15}/> : <Activity size={15}/>}<span>{vatsimStatus?.filed && vatsimStatus.routeMatch ? 'Filed' : 'VATSIM'}</span></button><div className="zulu-clock"><span>ZULU</span><strong>{clock.toISOString().slice(11, 19)}</strong></div><button className="primary top-import" onClick={() => void importOFP()} disabled={loadingOFP}>{loadingOFP ? <RefreshCw className="spin" size={16} /> : <Import size={16} />} {loadingOFP ? 'Syncing' : 'Import OFP'}</button></div></header>
       {message && <div className="toast toast-auto" role="status">{message}<span className="toast-progress" /></div>}
-      <div className="page-content">
+      <div className={`page-content page-content-${page}`}>
         {/* Provider and document workspaces stay mounted so authenticated sessions, OFP position, and tool state survive tab changes. */}
         <div className={`page-panel ${page === 'simbrief' ? 'active' : ''}`}><SimBriefDispatchPage url={dispatchUrl} flight={dispatchFlight} staticId={dispatchStaticId} loading={loadingOFP} onImport={importOFP} /></div>
         <div className={`page-panel ${page === 'charts' ? 'active' : ''}`}><ChartsPage ofp={ofp} flight={flight} /></div>

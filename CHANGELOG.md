@@ -1,3 +1,8 @@
+## 0.12.6 — Tab background theme re-audit
+- Added page and section-aware theme canvases for every tab.
+- Removed stale default deep-blue page backgrounds when switching themes.
+- Unified page cards, headers, tables, provider shells and legacy chart chrome under active theme tokens.
+
 ## 0.12.5
 - Audited and converted all native AeroSlate UI surfaces to semantic theme tokens.
 - Added themed controls, overlays, tables, scrollbars, sticky chrome, chart workspace chrome, operational state colors, and SVG logo surfaces.
