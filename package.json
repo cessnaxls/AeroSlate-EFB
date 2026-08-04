@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.12.10",
-  "description": "AeroSlate EFB with centralized flight and duty log configuration in Settings, plus polished active-navlog fuel variance placement.",
+  "version": "0.13.0",
+  "description": "AeroSlate EFB with a randomized telex-style operational flight plan rendered as a scrollable PDF.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {

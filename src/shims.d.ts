@@ -22,7 +22,7 @@ declare module 'lucide-react' {
   export const CloudDownload: any; export const CloudUpload: any; export const Download: any; export const ExternalLink: any; export const FileCheck2: any; export const Eraser: any; export const FileText: any; export const Filter: any; export const Fuel: any; export const Gauge: any; export const HelpCircle: any;
   export const HardDrive: any; export const LockKeyhole: any; export const Highlighter: any; export const Import: any; export const KeyRound: any; export const LayoutDashboard: any; export const Link2: any; export const Map: any; export const MapPin: any; export const Layers: any; export const Radar: any;
   export const MapPinned: any; export const FolderPlus: any; export const Plus: any; export const Trash2: any; export const Menu: any; export const Minus: any; export const PanelLeftClose: any; export const PanelLeftOpen: any; export const MousePointer2: any; export const NotebookPen: any;
-  export const PenLine: any; export const Plane: any; export const Redo2: any; export const RefreshCw: any; export const RotateCcw: any;
+  export const PenLine: any; export const Plane: any; export const Printer: any; export const Redo2: any; export const RefreshCw: any; export const RotateCcw: any;
   export const Route: any; export const Save: any; export const Send: any; export const ShieldCheck: any; export const Shuffle: any; export const Search: any; export const Settings: any; export const Settings2: any; export const Square: any; export const Timer: any;
   export const Type: any; export const Undo2: any; export const Upload: any; export const Wifi: any; export const WifiOff: any; export const X: any;
   export const Wind: any; export const ZoomIn: any; export const ZoomOut: any;
