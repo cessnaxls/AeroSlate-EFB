@@ -2311,92 +2311,106 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
 .ofp-pdf-workspace{display:flex;flex-direction:column;min-height:calc(100dvh - var(--topbar-height,76px) - 18px);gap:10px;padding:0 0 10px}.ofp-pdf-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;border:1px solid var(--border);border-radius:14px;background:var(--panel);box-shadow:var(--shadow-sm)}.ofp-pdf-toolbar>div{display:flex;align-items:center;gap:10px;min-width:0}.ofp-pdf-toolbar>div>div{display:grid;gap:2px;min-width:0}.ofp-pdf-toolbar strong{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ofp-pdf-toolbar span{font-size:12px;color:var(--muted)}.ofp-pdf-toolbar nav{display:flex;align-items:center;gap:8px}.ofp-pdf-toolbar button{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);color:var(--text);font:inherit}.ofp-pdf-toolbar button:first-child{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent)}.ofp-pdf-viewer-shell{flex:1;min-height:720px;overflow:hidden;border:1px solid var(--border);border-radius:14px;background:#43474b}.ofp-pdf-viewer{display:block;width:100%;height:calc(100dvh - var(--topbar-height,76px) - 92px);min-height:720px;border:0;background:#525659}.ofp-pdf-empty .card-body{min-height:420px;display:grid;place-content:center;text-align:center;gap:8px;color:var(--muted)}.ofp-pdf-empty h2,.ofp-pdf-empty p{margin:0}
 @media(max-width:760px){.ofp-pdf-workspace{min-height:calc(100dvh - 126px);padding:0}.ofp-pdf-toolbar{border-radius:0;border-left:0;border-right:0;padding:8px 10px}.ofp-pdf-toolbar nav{gap:5px}.ofp-pdf-toolbar button{padding:0 9px;font-size:0}.ofp-pdf-toolbar button svg{width:18px;height:18px}.ofp-pdf-viewer-shell{border-radius:0;border-left:0;border-right:0;min-height:calc(100dvh - 190px)}.ofp-pdf-viewer{height:calc(100dvh - 190px);min-height:600px}}
 
-/* AeroSlate 0.13.3 — in-app OFP and single-row portrait flight toolbar */
-.portrait-top-logo{display:none}
-
-/* The OFP is an app-native briefing again: dense enough for operations, but not a PDF replica. */
-.ofp-release-frame{padding-bottom:18px}
-.ofp-release-header{
-  position:relative!important;
-  display:flex;align-items:center;justify-content:space-between;gap:16px;
-  margin-bottom:12px;padding:14px 16px!important;
-  border:1px solid var(--border);border-radius:13px!important;
-  background:var(--panel)!important;backdrop-filter:none!important;
-}
-.ofp-release-header>div{display:flex!important;align-items:baseline;flex-wrap:wrap;gap:5px 14px!important}
-.ofp-release-header>div span{font-size:20px;font-weight:850;color:var(--accent-2)}
-.ofp-release-header>div strong{font-size:20px}
-.ofp-release-header>div small{flex-basis:100%;grid-column:auto!important;color:var(--muted)}
-.ofp-release-header button{white-space:nowrap}
-.ofp-frame-grid{gap:10px!important}
-.ofp-frame-grid>.card{border-radius:12px!important;box-shadow:none!important}
-.ofp-frame-grid .card header{min-height:44px!important;padding:10px 14px!important}
-.ofp-frame-grid .card-body{padding:12px 14px!important}
-.ofp-route-card .route-briefing-text{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;line-height:1.55;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--panel-2)}
-.ofp-route-strip{gap:8px!important;margin-top:10px!important}
-.ofp-route-strip>div,.ofp-mini-kpis>div{border:1px solid var(--border)!important;background:var(--panel-2)!important;border-radius:9px!important;box-shadow:none!important}
-.ofp-mini-kpis{gap:7px!important}
-.ofp-mini-kpis>div{min-height:58px!important;padding:9px 11px!important}
-.ofp-mini-kpis strong{font-size:17px!important}
-.ofp-rows>div{min-height:38px!important;padding:7px 0!important}
-.ofp-weather-compact p,.ofp-remarks-line{line-height:1.5}
-
+/* AeroSlate 0.13.3 — compact in-app OFP and professional portrait header */
 @media (max-width:699px), (orientation:portrait) and (max-width:1180px){
   :root{--topbar-height:72px}
-  .topbar{
-    position:relative!important;
+
+  /* Keep the AeroSlate mark visible at the upper-left of the portrait rail. */
+  .sidebar.portrait-sidebar.collapsed .brand{
     display:flex!important;
     align-items:center!important;
+    justify-content:center!important;
+    min-height:calc(var(--topbar-height) + var(--safe-top))!important;
+    padding:var(--safe-top) 6px 6px!important;
+  }
+  .sidebar.portrait-sidebar.collapsed .brand-mark{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:48px!important;
+    height:48px!important;
+  }
+  .sidebar.portrait-sidebar.collapsed .brand-mark svg{width:44px!important;height:44px!important}
+  .sidebar.portrait-sidebar.collapsed .brand>div:not(.brand-mark),
+  .sidebar.portrait-sidebar.collapsed .brand .sidebar-collapse,
+  .sidebar.portrait-sidebar.collapsed .brand .mobile-close{display:none!important}
+
+  /* One clean operational row: menu, flight, VATSIM, Zulu, import. */
+  .topbar{
+    display:grid!important;
+    grid-template-columns:48px minmax(250px,1fr) auto auto auto!important;
+    grid-template-rows:1fr!important;
+    align-items:center!important;
     gap:10px!important;
-    min-height:calc(72px + var(--safe-top))!important;
-    height:calc(72px + var(--safe-top))!important;
-    padding:var(--safe-top) 12px 0 12px!important;
+    min-height:calc(var(--topbar-height) + var(--safe-top))!important;
+    padding:var(--safe-top) 14px 0!important;
   }
-  .portrait-top-logo{
-    display:flex!important;position:fixed;z-index:35;
-    left:14px;top:calc(var(--safe-top) + 12px);
-    width:46px;height:46px;align-items:center;justify-content:center;
-  }
-  .menu-button.always-menu{flex:0 0 46px!important;width:46px!important;height:46px!important;grid-column:auto!important;grid-row:auto!important}
-  .flight-ident{flex:1 1 auto!important;min-width:0!important;grid-column:auto!important;grid-row:auto!important}
-  .flight-primary{gap:10px!important;white-space:nowrap}
-  .flight-primary span,.flight-primary strong{font-size:16px!important}
+  .menu-button.always-menu{grid-column:1!important;grid-row:1!important;width:48px!important;height:48px!important}
+  .flight-ident{grid-column:2!important;grid-row:1!important;min-width:0!important}
+  .flight-primary{gap:9px!important;white-space:nowrap!important}
+  .flight-primary span{font-size:18px!important}
+  .flight-primary strong{font-size:16px!important}
   .flight-aircraft{display:none!important}
-  .topbar-actions{
-    flex:0 0 auto!important;display:flex!important;align-items:center!important;
-    gap:7px!important;width:auto!important;grid-column:auto!important;grid-row:auto!important;
-  }
+  .topbar-actions{display:contents!important}
+  .vatsim-top{grid-column:3!important;grid-row:1!important}
+  .zulu-clock{grid-column:4!important;grid-row:1!important}
+  .top-import{grid-column:5!important;grid-row:1!important}
   .vatsim-top,.top-import{
-    width:auto!important;min-width:0!important;height:38px!important;
-    padding:0 11px!important;border-radius:9px!important;
-    justify-content:center!important;font-size:11px!important;box-shadow:none!important;
+    width:auto!important;
+    min-width:112px!important;
+    height:44px!important;
+    padding:0 14px!important;
+    border-radius:10px!important;
+    justify-content:center!important;
+    font-size:13px!important;
   }
-  .vatsim-top{background:var(--panel-2)!important;border:1px solid var(--border)!important}
-  .top-import{padding-inline:12px!important}
-  .vatsim-top span,.top-import span{display:inline!important;font-size:11px!important;font-weight:750}
   .zulu-clock{
-    display:flex!important;align-items:baseline!important;justify-content:center!important;gap:5px!important;
-    height:auto!important;min-width:86px!important;padding:0!important;border:0!important;border-radius:0!important;
-    background:transparent!important;box-shadow:none!important;
+    display:grid!important;
+    width:auto!important;
+    min-width:82px!important;
+    height:auto!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    text-align:center!important;
+    gap:1px!important;
   }
-  .zulu-clock span{font-size:9px!important;letter-spacing:.16em;color:var(--muted)}
-  .zulu-clock strong{font-size:14px!important;font-variant-numeric:tabular-nums;letter-spacing:.04em}
-  .page-content{padding-top:12px!important}
-  .ofp-scrollable-release .ofp-frame-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .zulu-clock span{font-size:9px!important;letter-spacing:.22em!important;color:var(--muted)!important}
+  .zulu-clock strong{font-size:15px!important;line-height:1.1!important;font-variant-numeric:tabular-nums!important}
+  .page-content{padding-top:14px!important}
+
+  /* In-app OFP: readable, compact cards rather than a PDF canvas. */
+  .ofp-release-frame{max-width:none!important;margin:0!important}
+  .ofp-release-header{position:relative!important;top:auto!important;padding:12px 14px!important}
+  .ofp-release-header>div{grid-template-columns:auto 1fr!important}
+  .ofp-frame-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
   .ofp-route-card{grid-column:1/-1!important}
   .ofp-frame-grid>.card:nth-child(n+2){grid-column:auto!important}
   .ofp-bottom-card{grid-column:1/-1!important}
+  .ofp-frame-grid .card header{min-height:44px!important;padding:10px 13px!important}
+  .ofp-frame-grid .card-body{padding:11px 13px!important}
+  .ofp-mini-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+  .ofp-mini-kpis>div{min-height:58px!important;padding:8px 10px!important}
+  .ofp-mini-kpis strong{font-size:17px!important}
+  .ofp-weather-compact{grid-template-columns:1fr!important}
 }
-@media(max-width:840px){
-  .topbar{gap:7px!important;padding-right:8px!important}
+
+@media (max-width:820px){
+  .topbar{grid-template-columns:46px minmax(185px,1fr) 96px 72px 118px!important;gap:7px!important;padding-right:8px!important}
+  .vatsim-top,.top-import{min-width:0!important;padding:0 9px!important;font-size:12px!important}
+  .flight-primary span{font-size:16px!important}
   .flight-primary strong{font-size:14px!important}
-  .vatsim-top,.top-import{padding-inline:9px!important}
-  .zulu-clock{min-width:78px!important}
 }
-@media(max-width:700px){
-  .top-import span,.vatsim-top span{display:none!important}
-  .top-import,.vatsim-top{width:38px!important;padding:0!important}
-  .zulu-clock{min-width:70px!important}
-  .ofp-scrollable-release .ofp-frame-grid{grid-template-columns:1fr!important}
+
+@media (max-width:680px){
+  .topbar{grid-template-columns:44px minmax(135px,1fr) 48px 64px 48px!important;gap:5px!important}
+  .vatsim-top,.top-import{width:44px!important;min-width:44px!important;padding:0!important;font-size:0!important}
+  .vatsim-top span{display:none!important}
+  .top-import svg,.vatsim-top svg{width:18px!important;height:18px!important}
+  .zulu-clock strong{font-size:13px!important}
+  .flight-primary strong{display:none!important}
+  .ofp-frame-grid{grid-template-columns:1fr!important}
   .ofp-frame-grid>.card,.ofp-route-card,.ofp-bottom-card{grid-column:1!important}
 }

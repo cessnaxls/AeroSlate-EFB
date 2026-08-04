@@ -1,3 +1,10 @@
+## 0.13.3
+- Restored the OFP as a clear in-app operational briefing instead of an embedded PDF viewer.
+- Rebalanced OFP cards for a concise two-column portrait layout.
+- Added the AeroSlate logo to the portrait navigation rail.
+- Moved VATSIM, Zulu time, and Import OFP into the same professional top row as flight identity.
+- Removed the box surrounding the Zulu clock.
+
 ## 0.13.2
 - Rebuilt OFP PDF output for concise operational presentation.
 - Removed XML paths, raw transport metadata, duplicate NOTAM fields, and coverage appendix from crew-facing documents.
