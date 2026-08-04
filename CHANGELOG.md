@@ -1,3 +1,7 @@
+## 0.12.5
+- Theme every remaining app surface, including trip calendar, utility panes, and the AeroSlate logo.
+- Removed residual hard-coded navy, black, and grey fills from light and dark themes.
+
 # 0.12.4
 
 - Replaced colorful themes with restrained light-blue, deep-blue, navy, midnight, black, graphite, slate-grey, and white/ice palettes.

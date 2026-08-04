@@ -1901,3 +1901,67 @@ hr,.divider,.group-divider{border-color:var(--border)!important}
 /* Light themes must not retain dark hard-coded tiles. */
 :root[data-theme="sky"] .card,:root[data-theme="sky"] .runway-result-card,:root[data-theme="sky"] .tlr-group,:root[data-theme="sky"] .metric,:root[data-theme="sky"] .flight-table-row,:root[data-theme="arctic"] .card,:root[data-theme="arctic"] .runway-result-card,:root[data-theme="arctic"] .tlr-group,:root[data-theme="arctic"] .metric,:root[data-theme="arctic"] .flight-table-row{box-shadow:none!important}
 :root[data-theme="sky"] .brand-copy h1,:root[data-theme="arctic"] .brand-copy h1{color:var(--text)!important}
+
+
+/* AeroSlate 0.12.5 — eliminate residual hard-coded colors and theme the logo/calendar completely */
+:root{
+  --logo-bg:var(--surface-deep);
+  --logo-foreground:var(--on-accent);
+  --calendar-cell:var(--surface-deep);
+  --calendar-blank:color-mix(in srgb,var(--surface-raised) 72%,var(--surface-soft) 28%);
+  --calendar-selected:color-mix(in srgb,var(--accent) 18%,var(--surface-deep));
+  --toolbar-surface:var(--surface-raised);
+}
+:root[data-theme="sky"],:root[data-theme="arctic"]{
+  --logo-bg:color-mix(in srgb,var(--accent) 10%,var(--surface-deep));
+  --logo-foreground:#fff;
+}
+
+/* Brand artwork and container now follow the active palette. */
+.brand-mark{
+  background:transparent!important;
+  border-color:var(--border)!important;
+  filter:drop-shadow(0 5px 18px rgba(var(--accent-rgb),.22))!important;
+}
+.brand-mark svg rect{fill:var(--logo-bg)!important;stroke:var(--accent)!important}
+.brand-mark svg path:last-of-type{fill:var(--logo-foreground)!important}
+.brand-mark svg circle{fill:var(--accent-2)!important}
+
+/* Trip planner and every calendar cell use theme variables instead of legacy navy/grey fills. */
+.planner-card,.planner-grid,.planner-day,.planner-day article,.day-planner-card,.day-timeline-scroll,.day-timeline,.day-tick,.day-events,
+.unscheduled-trips-card,.unscheduled-toolbar,.unscheduled-list,.unscheduled-list article,.empty-cell{
+  color:var(--text)!important;
+  border-color:var(--border)!important;
+}
+.planner-grid{background:var(--surface-soft)!important}
+.planner-day{background:var(--calendar-cell)!important}
+.planner-day.blank{background:var(--calendar-blank)!important}
+.planner-day.selected{background:var(--calendar-selected)!important;box-shadow:inset 0 0 0 2px var(--accent)!important}
+.planner-day article{background:color-mix(in srgb,var(--accent) 12%,var(--surface-raised))!important}
+.unscheduled-toolbar{background:var(--toolbar-surface)!important}
+.unscheduled-list,.unscheduled-list article,.empty-cell{background:var(--surface-soft)!important}
+.day-timeline-scroll,.day-timeline{background:var(--surface-deep)!important}
+.day-tick{border-color:var(--border)!important}
+.day-event{background:linear-gradient(135deg,var(--accent),var(--blue-2))!important;color:var(--on-accent)!important;border-color:var(--accent-2)!important}
+
+/* Catch remaining legacy dark tiles, table rows and utility panes. */
+.calendar-shell,.calendar-grid,.calendar-cell,.month-grid,.month-day,.planner-shell,.trip-builder-grid,.rig-builder,
+.quick-grid>*,.route-string,.block-text,.flightplan-text,.weather-block p,.wx-snapshot>div,.records-connect-grid>div,
+.tlr-distance-card,.tlr-value,.ofp-route-strip>div,.ofp-mini-kpis>div,.ofp-weather-compact>div,
+.navlog-toolbar,.chart-workspace,.chart-viewer,.chart-list,.chart-category,.binder-list,.map-shell,.map-controls,
+.notam-toolbar,.notam-summary,.notam-group,.notam-item,.weather-summary,.atis-card,.vatsim-card,
+.table-scroll,.data-table tbody tr,.flight-table tbody tr,.flight-table-row.selected,.finder-controls,.finder-toolbar{
+  background:var(--surface-soft)!important;
+  color:var(--text)!important;
+  border-color:var(--border)!important;
+}
+
+/* Remove fixed grey/black text and backgrounds left by older light-theme exceptions. */
+:root[data-theme="sky"] *, :root[data-theme="arctic"] *{border-color:var(--border)}
+:root[data-theme="sky"] .muted,:root[data-theme="sky"] small,:root[data-theme="arctic"] .muted,:root[data-theme="arctic"] small{color:var(--muted)!important}
+:root[data-theme="sky"] .sidebar-status,:root[data-theme="arctic"] .sidebar-status{background:transparent!important}
+
+/* Native controls and scrollbars also track the selected palette. */
+*{scrollbar-color:var(--accent) var(--surface-deep)}
+select option{background:var(--surface-deep);color:var(--text)}
+::selection{background:color-mix(in srgb,var(--accent) 45%,transparent);color:var(--text)}
