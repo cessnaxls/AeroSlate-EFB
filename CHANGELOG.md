@@ -1,3 +1,8 @@
+## 0.12.5
+- Audited and converted all native AeroSlate UI surfaces to semantic theme tokens.
+- Added themed controls, overlays, tables, scrollbars, sticky chrome, chart workspace chrome, operational state colors, and SVG logo surfaces.
+- Official/provider content remains provider-controlled by design.
+
 # 0.12.4
 
 - Replaced colorful themes with restrained light-blue, deep-blue, navy, midnight, black, graphite, slate-grey, and white/ice palettes.
