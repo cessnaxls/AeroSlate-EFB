@@ -1,3 +1,11 @@
+# 0.12.4
+
+- Replaced colorful themes with restrained light-blue, deep-blue, navy, midnight, black, graphite, slate-grey, and white/ice palettes.
+- Applied active theme variables to all major surfaces, controls, tables, cards, drawers, charts, runway analysis, records, and status elements.
+- Restored the flat professional sidebar navigation without boxed tabs.
+- Fixed settings-grid overlap and narrow-width input clipping.
+- Removed duplicated entry-default controls from Flight and Duty log pages; defaults remain centralized in Settings.
+
 # AeroSlate EFB 0.12.3
 
 - Removed the unused VATSIM CID setting.
