@@ -1965,3 +1965,131 @@ hr,.divider,.group-divider{border-color:var(--border)!important}
 *{scrollbar-color:var(--accent) var(--surface-deep)}
 select option{background:var(--surface-deep);color:var(--text)}
 ::selection{background:color-mix(in srgb,var(--accent) 45%,transparent);color:var(--text)}
+
+/* AeroSlate 0.12.6 — exhaustive native-shell theme pass and OFP card geometry */
+:root{
+  --surface-contrast:color-mix(in srgb,var(--surface-deep) 86%,var(--text) 14%);
+  --surface-selected:color-mix(in srgb,var(--accent) 16%,var(--surface-soft));
+  --surface-hover:color-mix(in srgb,var(--accent) 9%,var(--surface-raised));
+  --line:var(--border);
+  --mono-ink:var(--text);
+  --info-bg:color-mix(in srgb,var(--accent) 10%,var(--surface-soft));
+  --warning-bg:color-mix(in srgb,#d59b25 18%,var(--surface-soft));
+  --danger-bg:color-mix(in srgb,#d94a55 16%,var(--surface-soft));
+}
+
+/* All first-party page, panel, table, toolbar and metric surfaces use the palette. */
+:is(
+  .page-content,.page-panel,.dashboard-page,.records-page,.settings-page,.trips-page,.finder-page,.dispatch-page,
+  .ofp-page,.navlog-page,.weather-page,.fuel-page,.runway-tools-page,.live-page,.oooi-page,.gates-page,
+  .card,.card-body,.metric,.metric-card,.quick-grid>*,.notice,.hero-empty,.active-flight-banner,
+  .finder-layout,.finder-controls,.finder-toolbar,.airport-picker,.airport-results,.airport-result,.airport-list,
+  .available-flights,.flight-table,.flight-table-row,.flight-table tbody,.flight-table tbody tr,.table-scroll,
+  .trip-builder-card,.unscheduled-trips-card,.unscheduled-toolbar,.unscheduled-list,.unscheduled-list article,
+  .planner-card,.planner-grid,.planner-day,.day-planner-card,.day-timeline-scroll,.day-timeline,
+  .dispatch-workflow,.dispatch-summary,.dispatch-step,.dispatch-status,.provider-card,.provider-shell,.provider-strip,
+  .ofp-release-frame,.ofp-release-header,.ofp-frame-grid>.card,.ofp-route-strip>div,.ofp-mini-kpis>div,
+  .ofp-weather-compact>div,.ofp-bottom-card,.route-string,.block-text,.flightplan-text,
+  .navlog-shell,.navlog-toolbar,.active-navlog-row,.navlog-table td,.navlog-table th,
+  .weather-panel,.weather-block p,.wx-snapshot>div,.atis-card,.atis-station,.vatsim-card,
+  .foreflight-alert-center,.foreflight-alert-layout,.foreflight-stations,.foreflight-alert-detail,
+  .alert-category-group,.foreflight-notam-row,.notam-toolbar,.notam-summary,.notam-group,.notam-item,
+  .fuel-checkpoint,.fuel-plan-cell,.fuel-trend,.fuel-trend-card,.runway-result-card,.tlr-group,.tlr-value,
+  .tlr-distance-card,.sim-card,.oooi-card,.gate-card,.records-layout>section,.record-history,.record-editor,
+  .record-list article,.records-connect-grid>div,.cloud-stats>div,.workspace-row>div,.connection-cards>div,
+  fieldset,.modal,.modal-body,.drawer,.drawer-body
+){
+  background-color:var(--surface-soft)!important;
+  color:var(--text)!important;
+  border-color:var(--border)!important;
+}
+
+/* Header strips and controls keep hierarchy without reverting to legacy navy. */
+:is(
+  .card>header,.runway-result-card>header,.tlr-group>header,.section-head,.table-head,.flight-table thead,
+  .navlog-table th,.modal header,.drawer header,.provider-strip,.unscheduled-toolbar,
+  .foreflight-alert-center>header,.alert-category-group>summary,.chart-subbar,.dispatch-bar
+){
+  background:var(--surface-raised)!important;
+  color:var(--text)!important;
+  border-color:var(--border)!important;
+}
+
+:is(.metric,.quick-grid>*,.ofp-route-strip>div,.ofp-mini-kpis>div,.ofp-weather-compact>div,
+    .fuel-plan-cell,.fuel-trend-card,.tlr-value,.tlr-distance-card,.sim-card,.oooi-card,.gate-card,
+    .weather-block p,.wx-snapshot>div,.records-connect-grid>div,.cloud-stats>div){
+  background:var(--surface-deep)!important;
+}
+
+:is(.flight-table-row.selected,.airport-result.selected,.planner-day.selected,.chart-list>button.active,
+    .catalog-chip.active,.filter-chip.active,.segmented .active){
+  background:var(--surface-selected)!important;
+  border-color:var(--accent)!important;
+}
+
+:is(.flight-table-row:hover,.airport-result:hover,.planner-day:hover,.chart-list>button:hover,
+    .foreflight-stations button:hover){background:var(--surface-hover)!important}
+
+/* Native text colors: no black-on-dark or navy-on-light remnants. */
+:is(.brand-copy h1,.brand-copy p,.brand-copy small,.top-flight,.top-route,.ofp-release-header strong,
+    .ofp-release-header span,.route-display,.metric strong,.metric span,.quick-grid strong,.quick-grid span,
+    .fuel-plan-cell strong,.fuel-plan-cell small,.tlr-value strong,.tlr-value span,.foreflight-notam-row p,
+    .notam-title-line strong,.notam-title-line span,.provider-capabilities,.provider-browser-fallback h2,
+    .provider-browser-fallback p,.provider-limit,.copy-note,.record-source-strip){color:var(--text)!important}
+:is(.brand-copy p,.brand-copy small,.metric span,.quick-grid span,.fuel-plan-cell small,.tlr-value span,
+    .notam-title-line span,.provider-capabilities,.provider-browser-fallback p,.record-source-strip){color:var(--muted)!important}
+
+/* Logo and title lockup are rebuilt from theme tokens, including the left brand rail. */
+.brand{background:transparent!important;color:var(--text)!important;border-color:var(--border)!important}
+.brand-copy{opacity:1!important;filter:none!important}
+.brand-copy h1{opacity:1!important;text-shadow:none!important;font-weight:800!important}
+.brand-copy p,.brand-copy small{opacity:1!important}
+.brand-mark{background:var(--logo-bg)!important;border:1px solid var(--accent)!important;box-shadow:0 8px 22px rgba(var(--accent-rgb),.22)!important}
+.brand-mark svg{filter:none!important}
+.brand-mark svg rect{fill:var(--logo-bg)!important;stroke:var(--accent)!important}
+.brand-mark svg path{stroke:var(--logo-foreground)!important}
+.brand-mark svg path:last-of-type{fill:var(--logo-foreground)!important;stroke:var(--logo-foreground)!important}
+.brand-mark svg circle{fill:var(--accent-2)!important}
+
+/* Buttons, chips and inputs must never retain a prior theme's fill. */
+:is(button,.button-link,.upload-button,.top-import,.vatsim-top,.catalog-chip,.filter-chip,.pill,.segmented,
+    .provider-tabs button,.provider-strip-actions button,.chart-toolbar button,.page-controls button){
+  background:var(--surface-raised)!important;color:var(--text)!important;border-color:var(--border)!important;
+}
+:is(button.primary,.button-link.primary,.top-import,.theme-grid button.active,.foreflight-stations button.active){
+  background:linear-gradient(135deg,var(--accent),var(--blue-2))!important;
+  color:var(--on-accent)!important;border-color:var(--accent-2)!important;
+}
+:is(input,textarea,select,.zulu-input,[contenteditable="true"]){background:var(--surface-deep)!important;color:var(--text)!important;border-color:var(--border)!important}
+
+/* Preserve meaningful alert colors while blending them into every palette. */
+.foreflight-notam-banner{background:var(--surface-raised)!important;border-color:var(--border)!important}
+.foreflight-notam-row.priority-critical{background:linear-gradient(90deg,var(--danger-bg),transparent)!important}
+.foreflight-notam-row.priority-amendment{background:linear-gradient(90deg,var(--warning-bg),transparent)!important}
+.notam-banner-pills .danger{background:var(--danger-bg)!important}
+.notam-banner-pills .caution{background:var(--warning-bg)!important}
+
+/* OFP: consistent rounded cards, header corners and clean gutters at every breakpoint. */
+.ofp-scrollable-release .ofp-frame-grid{gap:14px!important;padding:1px!important;overflow:visible!important}
+.ofp-scrollable-release .ofp-frame-grid>.card{
+  border-radius:14px!important;overflow:hidden!important;isolation:isolate!important;
+  background:var(--surface-soft)!important;
+}
+.ofp-scrollable-release .ofp-frame-grid>.card>header{
+  border-radius:13px 13px 0 0!important;overflow:hidden!important;margin:0!important;
+  background:var(--surface-raised)!important;
+}
+.ofp-scrollable-release .ofp-frame-grid>.card>.card-body{
+  border-radius:0 0 13px 13px!important;background:var(--surface-soft)!important;
+}
+.ofp-release-header{border-radius:14px!important;background:var(--surface-raised)!important}
+.ofp-route-card,.ofp-bottom-card{border-radius:14px!important}
+
+/* Embedded providers remain provider-owned; only their first-party shell is themed. */
+.provider-webview,.navigraph-webview,.navigraph-iframe,.simbrief-frame{background:#fff!important;color-scheme:normal}
+
+/* Light themes require stronger readable contrast in legacy dark metric blocks. */
+:root[data-theme="sky"] :is(.metric,.quick-grid>*,.ofp-mini-kpis>div,.ofp-route-strip>div,.fuel-plan-cell,.tlr-value,.sim-card,.oooi-card,.gate-card),
+:root[data-theme="arctic"] :is(.metric,.quick-grid>*,.ofp-mini-kpis>div,.ofp-route-strip>div,.fuel-plan-cell,.tlr-value,.sim-card,.oooi-card,.gate-card){
+  background:var(--surface-deep)!important;color:var(--text)!important;
+}

@@ -1,4 +1,12 @@
-## 0.12.5
+# AeroSlate EFB 0.12.6
+
+- Replaced residual hard-coded native UI colors with full theme-token propagation across every first-party page, card, table, toolbar, metric, form control, NOTAM panel, fuel panel, runway panel, trip planner, and record workspace.
+- Made the complete AeroSlate logo and title lockup respond to the active theme with reliable contrast in both light and dark palettes.
+- Corrected OFP card geometry so every tile retains rounded outer and top header corners, clean gutters, and matching header/body surfaces.
+- Preserved provider-owned iframe/webview rendering while theming the surrounding AeroSlate shells.
+- Added stronger light-theme contrast and removed stale navy/black fills that survived theme changes.
+
+## 0.12.6
 - Theme every remaining app surface, including trip calendar, utility panes, and the AeroSlate logo.
 - Removed residual hard-coded navy, black, and grey fills from light and dark themes.
 
