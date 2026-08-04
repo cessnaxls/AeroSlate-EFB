@@ -20,7 +20,7 @@ export function OFPPage({ofp,flight,notify}:Props){
  const dispatcher=scalar(dig(ofp,'general.dx_name','general.dispatcher','params.dispatcher'),'—');
  const fin=leafText(dig(ofp,'aircraft.fin','aircraft.fleet_number','aircraft.tail_fin'),'—'); const selcal=getSelcal(ofp); const {sid,star}=getProcedures(ofp);
  const cruise=`${scalar(dig(ofp,'general.cruise_tas'))} KT / M${scalar(dig(ofp,'general.cruise_mach'))}`;
- return <div className="ofp-release-frame">
+ return <div className="ofp-release-frame ofp-scrollable-release">
   <section className="ofp-release-header"><div><span>{flight.airline}{flight.flightNumber}</span><strong>{flight.origin} → {flight.destination}</strong><small>{flight.aircraft} · {flight.registration} · REL {flight.release}</small></div><button onClick={copy}><Clipboard size={16}/>Copy ICAO FPL</button></section>
   <div className="ofp-frame-grid">
    <section className="card ofp-route-card"><header><div><Route size={17}/><h3>Route & airports</h3></div></header><div className="card-body"><div className="route-briefing-text">{flight.route}</div><div className="ofp-route-strip"><div><span>DEP</span><strong>{flight.origin} · {flight.departureRunway}</strong><small>{sid}</small></div><div><span>ARR</span><strong>{flight.destination} · {flight.arrivalRunway}</strong><small>{star}</small></div><div><span>ALT</span><strong>{alternates}</strong><small>{scalar(dig(ofp,'alternate.plan_rwy'),'—')}</small></div></div></div></section>
