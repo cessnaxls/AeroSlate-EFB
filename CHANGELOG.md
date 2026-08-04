@@ -1,39 +1,22 @@
-# 0.12.7
+# AeroSlate EFB 0.12.1
 
-- Replaced component-level fixed colors with semantic theme tokens across the native AeroSlate shell.
-- Added centralized surface, control, text, border, accent, success, warning, danger, and shadow variables.
-- Preserved provider-owned SimBrief/Navigraph webview colors.
+- Compact runway-analysis and trip-planner layouts.
+- Collapsible D-ATIS panel.
+- Top-bar VATSIM filing status and prefile shortcut populated from the active OFP.
+- Centralized account/API settings.
+- Ten persistent color themes.
+- New AeroSlate wing-and-route logo.
 
-# AeroSlate EFB 0.12.6
+# Changelog
 
-- Replaced residual hard-coded native UI colors with full theme-token propagation across every first-party page, card, table, toolbar, metric, form control, NOTAM panel, fuel panel, runway panel, trip planner, and record workspace.
-- Made the complete AeroSlate logo and title lockup respond to the active theme with reliable contrast in both light and dark palettes.
-- Corrected OFP card geometry so every tile retains rounded outer and top header corners, clean gutters, and matching header/body surfaces.
-- Preserved provider-owned iframe/webview rendering while theming the surrounding AeroSlate shells.
-- Added stronger light-theme contrast and removed stale navy/black fills that survived theme changes.
+## 0.12.0
 
-## 0.12.6
-- Theme every remaining app surface, including trip calendar, utility panes, and the AeroSlate logo.
-- Removed residual hard-coded navy, black, and grey fills from light and dark themes.
-
-# 0.12.4
-
-- Replaced colorful themes with restrained light-blue, deep-blue, navy, midnight, black, graphite, slate-grey, and white/ice palettes.
-- Applied active theme variables to all major surfaces, controls, tables, cards, drawers, charts, runway analysis, records, and status elements.
-- Restored the flat professional sidebar navigation without boxed tabs.
-- Fixed settings-grid overlap and narrow-width input clipping.
-- Removed duplicated entry-default controls from Flight and Duty log pages; defaults remain centralized in Settings.
-
-# AeroSlate EFB 0.12.3
-
-- Removed the unused VATSIM CID setting.
-- Expanded VATSIM prefile parameters to include required speed, fuel endurance, equipment, transponder and wake category fields.
-- Rebuilt the OFP as a readable scrollable pilot release.
-- Applied ten full application color palettes instead of logo-only accents.
-- Reflowed runway-analysis results for tablet and portrait readability.
-
-## 0.12.3
-- Propagated all ten themes through cards, controls, tables, status panels, OFP, records, NOTAMs, trips, and runway-analysis surfaces.
-- Enlarged OFP load-sheet figures and balanced release cards into a consistent two-column scrollable layout.
-- Added extensive logbook and duty defaults plus opening/carry-forward totals in Settings.
-- Improved VATSIM prefile mapping with raw ICAO FPL, legacy-compatible fields, PBN/NAV/DAT/SUR, registration, operator, performance, EET, SELCAL, equipment, wake, time, speed, and fuel endurance.
+- Rebuilt the OFP as a compact one-frame pilot release with route, procedures, schedule, aircraft, weather, fuel, weights, ICAO FPL and remarks.
+- Added robust SID/STAR extraction from SimBrief direct fields, navlog procedure legs and route tokens.
+- Added safe FIN/SELCAL leaf extraction so nested XML values never display as `[object Object]`.
+- Added ISA deviation calculation when SimBrief omits it: OAT minus ISA temperature at planned altitude.
+- Added public VATSIM flight-plan verification against both online pilots and prefiled plans.
+- Added a direct prompt to open VATSIM prefile when no matching plan is found.
+- Added VATSIM ATIS retrieval and public real-world D-ATIS retrieval for departure and destination.
+- Added richer NOTAM subject headings that identify the affected runway, taxiway, deicing area, approach equipment, procedure or navaid before the legal text is opened.
+- Removed the AeroSlate chart-notes pane and simplified Charts to a clean, persistent Navigraph-only workspace.

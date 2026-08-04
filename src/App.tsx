@@ -6,7 +6,7 @@ import {
 import { AeroSlateLogo } from './components/AeroSlateLogo';
 import { isNativeApp } from './components/ProviderPortal';
 import { demoOFP } from './lib/demoOFP';
-import { dig, getICAOFlightPlan, getRunwayAnalysis, getSelcal, getWeather, leafText, summary, weight, type AnyRecord } from './lib/ofp';
+import { dig, getRunwayAnalysis, getWeather, summary, weight, type AnyRecord } from './lib/ofp';
 import { loadLocal, saveLocal } from './lib/storage';
 import type { FlightCandidate } from './lib/dispatchlink';
 import { FlightFinderPage } from './pages/FlightFinderPage';
@@ -149,55 +149,8 @@ export default function App() {
   }, [flight.callsign, flight.airline, flight.flightNumber, flight.origin, flight.destination]);
   useEffect(() => { void verifyVatsimTopbar(); const timer = window.setInterval(() => void verifyVatsimTopbar(), 30000); return () => clearInterval(timer); }, [verifyVatsimTopbar]);
   const openVatsimPrefile = () => {
-    const digits4 = (value: unknown, fallback = '0000') => {
-      const raw = String(value || '').replace(/[^0-9]/g, '');
-      if (raw.length >= 4) return raw.slice(0, 4);
-      if (raw.length === 3) return `0${raw}`;
-      return fallback;
-    };
-    const atc = getICAOFlightPlan(ofp);
-    const compact = (value: unknown) => leafText(value, '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
-    const route = String(flight.route || '').replace(/\s+/g, ' ').trim();
-    const tas = Math.max(1, Number(dig(ofp, 'general.cruise_tas') || dig(ofp, 'general.avg_tas') || 450));
-    const rampFuel = Number(dig(ofp, 'fuel.plan_ramp') || 0);
-    const avgFlow = Number(dig(ofp, 'fuel.avg_fuel_flow') || dig(ofp, 'fuel.avg_fuel_flow_per_hr') || 0);
-    const enduranceMinutes = avgFlow > 0 ? Math.max(1, Math.round((rampFuel / avgFlow) * 60)) : Math.max(60, Number(String(flight.blockTime || '4:00').split(':')[0] || 4) * 60 + 90);
-    const fuelTime = `${String(Math.floor(enduranceMinutes / 60)).padStart(2, '0')}${String(enduranceMinutes % 60).padStart(2, '0')}`;
-    const equipment = compact(dig(ofp, 'aircraft.equip') || dig(ofp, 'aircraft.equipment') || dig(ofp, 'atc.equipment') || dig(ofp, 'aircraft.icao_equipment') || 'SDE3GILORVW');
-    const transponder = compact(dig(ofp, 'aircraft.transponder') || dig(ofp, 'atc.transponder') || 'S');
-    const type = compact(flight.aircraft);
-    const wake = type === 'A388' ? 'J' : /^(B74[48]|B77[7-9]|A35K|A34[056])$/.test(type) ? 'H' : /^(C172|C152|PA28|DA40|SR2[02])$/.test(type) ? 'L' : 'M';
-    const remarksSource = leafText(dig(ofp,'general.remarks','atc.remarks','general.dx_rmk'), 'TCAS');
-    const selcal = getSelcal(ofp).replace(/[^A-Z]/g, '');
-    const registration = compact(flight.registration);
-    const pbn = compact(dig(ofp,'atc.pbn','aircraft.pbn','general.pbn'));
-    const nav = compact(dig(ofp,'atc.nav','aircraft.nav'));
-    const dat = compact(dig(ofp,'atc.dat','aircraft.dat'));
-    const sur = compact(dig(ofp,'atc.sur','aircraft.sur'));
-    const code = compact(dig(ofp,'aircraft.hex','aircraft.code','atc.code'));
-    const operator = compact(dig(ofp,'general.icao_airline','general.airline_icao') || flight.airline);
-    const performance = compact(dig(ofp,'aircraft.per','atc.per') || 'C');
-    const eet = leafText(dig(ofp,'atc.eet','general.eet'), '');
-    const dof = String(flight.flightDate || '').replace(/[^0-9]/g,'').slice(-6);
-    const otherParts = [pbn&&`PBN/${pbn}`,nav&&`NAV/${nav}`,dat&&`DAT/${dat}`,sur&&`SUR/${sur}`,dof&&`DOF/${dof}`,registration&&`REG/${registration}`,selcal&&`SEL/${selcal}`,code&&`CODE/${code}`,operator&&`OPR/${operator}`,performance&&`PER/${performance}`,eet&&`EET/${eet}`,`RMK/${remarksSource}`].filter(Boolean);
-    const params = new URLSearchParams({
-      callsign: flight.callsign || `${flight.airline}${flight.flightNumber}`,
-      flight_rules: 'IFR', rules: 'IFR', departure: flight.origin, arrival: flight.destination,
-      alternate: flight.alternate || '', aircraft: type, aircraft_type: type, wake, wake_category: wake,
-      equipment, transponder, altitude: String(flight.cruiseAltitude || '').replace(/[^0-9]/g,''),
-      speed: String(Math.round(tas)), route,
-      remarks: remarksSource, deptime: digits4(flight.schedOut), offblock: digits4(flight.schedOut),
-      enroute: digits4(flight.ete, '0100'), fuel: fuelTime, fuel_time: fuelTime,
-      reg: registration, registration, sel: selcal, dof: String(flight.flightDate || ''),
-      pbn, nav, dat, sur, code, opr: operator, per: performance, eet,
-      other: otherParts.join(' '), raw: atc || ''
-    });
-    // Also send the legacy numeric fields still accepted by the current myVATSIM form.
-    params.set('1','I'); params.set('2',flight.callsign || `${flight.airline}${flight.flightNumber}`);
-    params.set('3',`${type}/${wake}-${equipment}/${transponder}`); params.set('4',String(Math.round(tas)));
-    params.set('5',flight.origin); params.set('6',digits4(flight.schedOut)); params.set('7',String(flight.cruiseAltitude || '').replace(/[^0-9]/g,''));
-    params.set('8',route); params.set('9',flight.destination); params.set('10a',digits4(flight.ete,'0100').slice(0,2)); params.set('10b',digits4(flight.ete,'0100').slice(2));
-    params.set('11',otherParts.join(' ')); params.set('12a',fuelTime.slice(0,2)); params.set('12b',fuelTime.slice(2)); params.set('13',flight.alternate || '');
+    const route = String(flight.route || '');
+    const params = new URLSearchParams({ callsign: flight.callsign || `${flight.airline}${flight.flightNumber}`, departure: flight.origin, arrival: flight.destination, alternate: flight.alternate || '', aircraft: flight.aircraft || '', altitude: String(flight.cruiseAltitude || '').replace(/[^0-9]/g,''), route, remarks: String(dig(ofp,'general.remarks') || dig(ofp,'atc.remarks') || ''), deptime: String(flight.schedOut || '').replace(/[^0-9]/g,'').slice(0,4), enroute: String(flight.ete || '').replace(/[^0-9]/g,'').slice(0,4) });
     window.open(`https://my.vatsim.net/pilots/flightplan?${params.toString()}`, 'aeroslate-vatsim-prefile');
   };
 
@@ -259,23 +212,17 @@ function Dashboard({ ofp, flight, setPage }: { ofp: AnyRecord | null; flight: Re
 
 function SettingsPage({ simbriefKey, setSimbriefKey, mode, setMode, loading, importOFP, loadDemo, runtime, refreshRuntime, notify, theme, setTheme }: { simbriefKey: string; setSimbriefKey: (value: string) => void; mode: 'username' | 'userid'; setMode: (value: 'username' | 'userid') => void; loading: boolean; importOFP: () => Promise<void>; loadDemo: () => void; runtime: RuntimeStatus; refreshRuntime: () => Promise<void>; notify: (message: string) => void; theme: string; setTheme: (value:string)=>void; }) {
   const native = isNativeApp(); const api = (window as any).aeroslateNative || (window as any).dispatchlinkNative;
+  const [vatsimCid,setVatsimCid]=useState(()=>loadLocal('aeroslate.vatsim.cid',''));
   const [gistId,setGistId]=useState(()=>loadLocal('aeroslate.records.gistId',''));
   const [gistToken,setGistToken]=useState(()=>loadLocal('aeroslate.records.gistToken',''));
   const [atisApi,setAtisApi]=useState(()=>loadLocal('aeroslate.atis.api',''));
-  const [recordDefaults,setRecordDefaults]=useState<any>(()=>({role:'SIC',operation:'Part 91',rules:'IFR',crossCountry:true,autoDutyTimes:true,reportLeadMinutes:60,postFlightMinutes:15,defaultNight:0,defaultInstrument:0,defaultSimulatedInstrument:0,defaultDayLandings:0,defaultNightLandings:0,defaultApproaches:'',defaultRemarks:'',defaultSigner:'',dutyRegulation:'FAA Part 117',dutyRole:'Flightcrew',restBefore:10,maxDuty:13,minRest:10,...loadLocal('aeroslate.records.presets',{})}));
-  const [startingTotals,setStartingTotals]=useState<any>(()=>({total:0,pic:0,sic:0,dual:0,instructor:0,night:0,instrument:0,simulatedInstrument:0,crossCountry:0,dayLandings:0,nightLandings:0,approaches:0,...loadLocal('aeroslate.records.startingTotals',{})}));
-  const themes=[['sky','Light Blue'],['ocean','Deep Blue'],['navy','Navy'],['midnight','Midnight'],['black','Black'],['graphite','Graphite'],['slate','Slate Grey'],['arctic','White / Ice']];
+  const themes=[['ocean','Ocean'],['midnight','Midnight'],['slate','Slate'],['emerald','Emerald'],['amber','Amber'],['violet','Violet'],['crimson','Crimson'],['arctic','Arctic'],['cobalt','Cobalt'],['graphite','Graphite']];
   const install = async () => { const prompt = (window as any).deferredPrompt; if (prompt) await prompt.prompt(); else notify('Use the browser menu and choose Add to Home Screen.'); };
   const changeBackend = async () => { if (!api?.setAppUrl) return; const current = await api.getAppUrl?.(); const next = window.prompt('Render service URL', current || 'https://your-aeroslate.onrender.com'); if (next) await api.setAppUrl(next); };
-  const saveConnections=()=>{ saveLocal('aeroslate.records.gistId',gistId.trim()); saveLocal('aeroslate.records.gistToken',gistToken.trim()); saveLocal('aeroslate.atis.api',atisApi.trim()); notify('Connection and API settings saved on this device.'); };
-  const saveRecordSettings=()=>{saveLocal('aeroslate.records.presets',recordDefaults);saveLocal('aeroslate.records.startingTotals',startingTotals);window.dispatchEvent(new CustomEvent('aeroslate-record-settings-updated'));notify('Logbook defaults and opening totals saved.');};
-  const updateDefault=(key:string,value:any)=>setRecordDefaults((current:any)=>({...current,[key]:value}));
-  const updateTotal=(key:string,value:any)=>setStartingTotals((current:any)=>({...current,[key]:Number(value)||0}));
+  const saveConnections=()=>{ saveLocal('aeroslate.vatsim.cid',vatsimCid.trim()); saveLocal('aeroslate.records.gistId',gistId.trim()); saveLocal('aeroslate.records.gistToken',gistToken.trim()); saveLocal('aeroslate.atis.api',atisApi.trim()); notify('Connection and API settings saved on this device.'); };
   return <div className="content-grid two settings-grid">
-    <Card title="Accounts & data sources" icon={Link2}><div className="settings-fields"><label><span>GitHub Gist ID</span><input value={gistId} onChange={e=>setGistId(e.target.value)} placeholder="Private sync vault"/></label><label><span>GitHub token</span><input type="password" value={gistToken} onChange={e=>setGistToken(e.target.value)} placeholder="Gist permission only"/></label><label><span>D-ATIS API base URL</span><input value={atisApi} onChange={e=>setAtisApi(e.target.value)} placeholder="Optional custom provider"/></label></div><button className="primary" onClick={saveConnections}>Save connections</button></Card>
-    <Card title="Appearance" icon={Settings}><p className="muted">Choose a restrained blue, black, white, or grey AeroSlate theme.</p><div className="theme-grid">{themes.map(([id,label])=><button key={id} className={theme===id?'active':''} onClick={()=>setTheme(id)}><i className={`theme-swatch ${id}`}/><span>{label}</span></button>)}</div></Card>
-    <Card title="Logbook entry defaults" icon={BookOpenCheck}><div className="settings-fields logbook-settings"><label><span>Crew role</span><select value={recordDefaults.role} onChange={e=>updateDefault('role',e.target.value)}><option>PIC</option><option>SIC</option><option>Dual</option><option>Instructor</option></select></label><label><span>Operation</span><select value={recordDefaults.operation} onChange={e=>updateDefault('operation',e.target.value)}>{['Part 91','Part 121','Part 135','EASA CAT','EASA NCC','EASA NCO','Training','Other'].map(v=><option key={v}>{v}</option>)}</select></label><label><span>Flight rules</span><select value={recordDefaults.rules} onChange={e=>updateDefault('rules',e.target.value)}><option>IFR</option><option>VFR</option></select></label><label><span>Duty scheme</span><select value={recordDefaults.dutyRegulation} onChange={e=>updateDefault('dutyRegulation',e.target.value)}>{['FAA Part 117','FAA Part 135','FAA Part 91 / company','EASA ORO.FTL.205','Company scheme','Other'].map(v=><option key={v}>{v}</option>)}</select></label><label><span>Duty role</span><select value={recordDefaults.dutyRole} onChange={e=>updateDefault('dutyRole',e.target.value)}>{['Flightcrew','PIC','SIC','Cabin crew','Other'].map(v=><option key={v}>{v}</option>)}</select></label><label><span>Report lead (min)</span><input type="number" value={recordDefaults.reportLeadMinutes} onChange={e=>updateDefault('reportLeadMinutes',Number(e.target.value))}/></label><label><span>Postflight (min)</span><input type="number" value={recordDefaults.postFlightMinutes} onChange={e=>updateDefault('postFlightMinutes',Number(e.target.value))}/></label><label><span>Rest before (hr)</span><input type="number" step="0.1" value={recordDefaults.restBefore} onChange={e=>updateDefault('restBefore',Number(e.target.value))}/></label><label><span>Max duty (hr)</span><input type="number" step="0.1" value={recordDefaults.maxDuty} onChange={e=>updateDefault('maxDuty',Number(e.target.value))}/></label><label><span>Min rest (hr)</span><input type="number" step="0.1" value={recordDefaults.minRest} onChange={e=>updateDefault('minRest',Number(e.target.value))}/></label><label><span>Default night (hr)</span><input type="number" step="0.1" value={recordDefaults.defaultNight} onChange={e=>updateDefault('defaultNight',Number(e.target.value))}/></label><label><span>Default actual IMC (hr)</span><input type="number" step="0.1" value={recordDefaults.defaultInstrument} onChange={e=>updateDefault('defaultInstrument',Number(e.target.value))}/></label><label><span>Default simulated IMC</span><input type="number" step="0.1" value={recordDefaults.defaultSimulatedInstrument} onChange={e=>updateDefault('defaultSimulatedInstrument',Number(e.target.value))}/></label><label><span>Day landings</span><input type="number" value={recordDefaults.defaultDayLandings} onChange={e=>updateDefault('defaultDayLandings',Number(e.target.value))}/></label><label><span>Night landings</span><input type="number" value={recordDefaults.defaultNightLandings} onChange={e=>updateDefault('defaultNightLandings',Number(e.target.value))}/></label><label><span>Default approaches</span><input value={recordDefaults.defaultApproaches} onChange={e=>updateDefault('defaultApproaches',e.target.value)}/></label><label className="wide"><span>Default remarks</span><input value={recordDefaults.defaultRemarks} onChange={e=>updateDefault('defaultRemarks',e.target.value)}/></label><label><span>Default signer</span><input value={recordDefaults.defaultSigner} onChange={e=>updateDefault('defaultSigner',e.target.value)}/></label></div><div className="settings-checks"><label><input type="checkbox" checked={recordDefaults.crossCountry} onChange={e=>updateDefault('crossCountry',e.target.checked)}/> Block time defaults to XC</label><label><input type="checkbox" checked={recordDefaults.autoDutyTimes} onChange={e=>updateDefault('autoDutyTimes',e.target.checked)}/> Auto-calculate duty times</label></div></Card>
-    <Card title="Logbook opening totals" icon={Gauge}><p className="muted">Use these once when migrating an existing paper or electronic logbook. They are added to AeroSlate’s saved-entry totals without creating fake flight records.</p><div className="settings-fields opening-totals">{[['total','Total time'],['pic','PIC'],['sic','SIC'],['dual','Dual'],['instructor','Instructor'],['night','Night'],['instrument','Actual instrument'],['simulatedInstrument','Simulated instrument'],['crossCountry','Cross-country'],['dayLandings','Day landings'],['nightLandings','Night landings'],['approaches','Approaches']].map(([key,label])=><label key={key}><span>{label}</span><input type="number" step={key.includes('Landings')||key==='approaches'?'1':'0.1'} value={startingTotals[key]} onChange={e=>updateTotal(key,e.target.value)}/></label>)}</div><button className="primary" onClick={saveRecordSettings}>Save logbook settings</button></Card>
+    <Card title="Accounts & data sources" icon={Link2}><div className="settings-fields"><label><span>VATSIM CID</span><input value={vatsimCid} onChange={e=>setVatsimCid(e.target.value)} placeholder="Optional"/></label><label><span>GitHub Gist ID</span><input value={gistId} onChange={e=>setGistId(e.target.value)} placeholder="Private sync vault"/></label><label><span>GitHub token</span><input type="password" value={gistToken} onChange={e=>setGistToken(e.target.value)} placeholder="Gist permission only"/></label><label><span>D-ATIS API base URL</span><input value={atisApi} onChange={e=>setAtisApi(e.target.value)} placeholder="Optional custom provider"/></label></div><button className="primary" onClick={saveConnections}>Save connections</button></Card>
+    <Card title="Appearance" icon={Settings}><p className="muted">Choose one of ten device-local AeroSlate themes.</p><div className="theme-grid">{themes.map(([id,label])=><button key={id} className={theme===id?'active':''} onClick={()=>setTheme(id)}><i className={`theme-swatch ${id}`}/><span>{label}</span></button>)}</div></Card>
     <Card title="SimBrief synchronization" icon={Plane}><p>The account identifier imports the latest generated OFP and makes it the source for route, fuel, weather and NOTAMs.</p><div className="segmented"><button className={mode === 'username' ? 'active' : ''} onClick={() => setMode('username')}>Username</button><button className={mode === 'userid' ? 'active' : ''} onClick={() => setMode('userid')}>Pilot ID</button></div><label className="stacked-input"><span>{mode === 'username' ? 'SimBrief username' : 'Numeric Pilot ID'}</span><input value={simbriefKey} onChange={event => setSimbriefKey(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void importOFP(); }} /></label><div className="button-row"><button className="primary" onClick={() => void importOFP()} disabled={loading}>{loading ? <RefreshCw className="spin" /> : <Import />} {loading ? 'Synchronizing…' : 'Import latest OFP'}</button><button onClick={loadDemo}>Load demo</button></div></Card>
     <Card title="Provider workspaces" icon={Map}><div className="connection-cards"><div className="ok"><Check /><span><strong>SimBrief</strong><small>In-app dispatch and tools</small></span></div><div className="ok"><Check /><span><strong>Navigraph Charts</strong><small>Persistent authenticated workspace</small></span></div><div className={runtime.simLinked ? 'ok' : 'blocked'}>{runtime.simLinked ? <Check /> : <X />}<span><strong>Simulator bridge</strong><small>{runtime.simLinked ? 'Connected' : 'Optional for flight data'}</small></span></div></div><button onClick={() => void refreshRuntime()}><RefreshCw size={15} /> Refresh status</button></Card>
     <Card title={native ? 'Native application' : 'Install AeroSlate'} icon={LayoutDashboard}>{native ? <button onClick={() => void changeBackend()}><Settings size={16} /> Change Render backend</button> : <button onClick={() => void install()}>Install / Add to Home Screen</button>}</Card>

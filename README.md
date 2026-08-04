@@ -1,4 +1,4 @@
-# AeroSlate EFB 0.12.4 0.11.6 — Navigraph Edition
+# AeroSlate EFB 0.11.6 — Navigraph Edition
 
 AeroSlate is a free Render/GitHub-hosted simulator EFB built around SimBrief planning, FR24 flight discovery, trip scheduling, OFP briefing, navlog, fuel monitoring, OOOI, records, and a persistent Navigraph Charts workspace.
 

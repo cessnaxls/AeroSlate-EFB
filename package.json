@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.12.7",
-  "description": "AeroSlate EFB with centralized semantic theme tokens and complete first-party color propagation.",
+  "version": "0.12.1",
+  "description": "AeroSlate EFB with concise OFP release, calculated ISA deviation, VATSIM filing verification, and real-world/VATSIM D-ATIS briefing.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
