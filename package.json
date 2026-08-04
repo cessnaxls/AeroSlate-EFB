@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.13.0",
-  "description": "AeroSlate EFB UI 2.0 with a completely redesigned cockpit-oriented interface.",
+  "version": "0.12.4",
+  "description": "AeroSlate EFB with restrained blue/black/white/grey themes, complete palette propagation, restored flat sidebar navigation, corrected settings layout, and centralized logbook defaults.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {

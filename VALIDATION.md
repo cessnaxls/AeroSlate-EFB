@@ -15,7 +15,3 @@
 - OFP fuel/load figures are enlarged and cards use consistent heights/spacing.
 - Logbook settings include entry defaults, duty defaults, and opening totals.
 - VATSIM prefile sends raw ICAO FPL plus named and legacy-compatible field parameters.
-
-
-### 0.12.5 theme audit
-All native AeroSlate UI selectors are covered by the final semantic theme layer. Official charts and external provider webviews are intentionally excluded because their colors are controlled by the source provider.
