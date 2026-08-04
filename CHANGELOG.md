@@ -1,3 +1,9 @@
+# 0.12.10
+
+- Removed flight and duty entry-default controls from the Flights and Duty tabs.
+- Flight and duty defaults and opening totals remain managed exclusively from Settings.
+- Runtime log-entry initialization still reads the saved Settings values.
+
 ## 0.12.9
 
 - Moved each active-navlog fuel variance directly below the planned remaining fuel value in the Fuel column.
