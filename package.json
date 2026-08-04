@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.13.6",
-  "description": "AeroSlate EFB with a quieter, balanced operational header and compact portrait timing controls.",
+  "version": "0.13.7",
+  "description": "AeroSlate EFB with an orientation-aware single-line operational header, stacked landscape timing, and compact portrait controls.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
