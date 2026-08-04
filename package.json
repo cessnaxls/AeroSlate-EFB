@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.12.4",
-  "description": "AeroSlate EFB with restrained blue/black/white/grey themes, complete palette propagation, restored flat sidebar navigation, corrected settings layout, and centralized logbook defaults.",
+  "version": "0.12.3",
+  "description": "AeroSlate EFB with complete app-wide themes, expanded logbook defaults/opening totals, balanced OFP load sheet, and improved VATSIM prefile mapping.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
