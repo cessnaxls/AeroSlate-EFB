@@ -1,3 +1,11 @@
+
+## 0.12.8
+- Removed the remaining Clear flights button surface so it is a true inline text action.
+- Reflowed Trip Builder into a compact portrait control deck.
+- Rebuilt the OFP release sheet with balanced cards, larger load figures, and a two-column tablet layout.
+- Restored a visible Zulu clock in portrait and matched the VATSIM and Import OFP controls.
+- Removed sidebar divider artifacts and kept the portrait icon rail clean.
+- Documented persistent authenticated provider sessions and kept all user-entered connection and logbook settings in Settings.
 # Changelog
 
 ## 0.12.6
