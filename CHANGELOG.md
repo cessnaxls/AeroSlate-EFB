@@ -1,3 +1,7 @@
+## 0.13.5
+- Show aircraft type and registration in the portrait information bar.
+- Stretch the OFP Route & Airports panel across the full available content width.
+
 ## 0.13.3
 - Restored the OFP as a clear in-app operational briefing instead of an embedded PDF viewer.
 - Rebalanced OFP cards for a concise two-column portrait layout.

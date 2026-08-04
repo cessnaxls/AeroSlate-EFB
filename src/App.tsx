@@ -61,6 +61,22 @@ function Metric({ label, value, sub, alert }: { label: string; value: React.Reac
 function Pill({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'good' | 'warn' | 'bad' | 'blue' }) { return <span className={`pill ${tone}`}>{children}</span>; }
 function formatWeight(value: number, units: string) { return value ? `${value.toLocaleString()} ${units}` : '—'; }
 function flightSuffix(flight: ReturnType<typeof summary>) { return `${flight.release}.${flight.origin}${flight.destination}`; }
+function departureCountdown(now: Date, flightDate: string, schedOut: string) {
+  const match = String(schedOut || '').match(/(\d{1,2}):(\d{2})/);
+  if (!match) return { std: 'STD —', label: 'DEP IN', value: '—' };
+  const dateMatch = String(flightDate || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+  const year = dateMatch ? Number(dateMatch[1]) : now.getUTCFullYear();
+  const month = dateMatch ? Number(dateMatch[2]) - 1 : now.getUTCMonth();
+  const day = dateMatch ? Number(dateMatch[3]) : now.getUTCDate();
+  const target = Date.UTC(year, month, day, Number(match[1]), Number(match[2]), 0);
+  const delta = target - now.getTime();
+  const abs = Math.abs(delta);
+  const hours = Math.floor(abs / 3_600_000);
+  const minutes = Math.floor((abs % 3_600_000) / 60_000);
+  const seconds = Math.floor((abs % 60_000) / 1_000);
+  const value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  return { std: `STD ${String(match[1]).padStart(2, '0')}:${match[2]}Z`, label: delta >= 0 ? 'DEP IN' : 'STD +', value };
+}
 function migrateFlightLocalData(previous: ReturnType<typeof summary>, next: ReturnType<typeof summary>) {
   const from = flightSuffix(previous); const to = flightSuffix(next); if (from === to || previous.source === 'none') return;
   const prefixes = ['aeroslate.times.', 'aeroslate.scratch.', 'aeroslate.fuel.', 'aeroslate.records.draft.', 'aeroslate.duty.draft.', 'aeroslate.active-navlog.', 'dispatchlink.times.', 'dispatchlink.scratch.', 'dispatchlink.fuel.'];
@@ -84,6 +100,7 @@ export default function App() {
   const [theme, setTheme] = useState(() => loadLocal('aeroslate.theme', 'ocean'));
   const [vatsimStatus, setVatsimStatus] = useState<{filed:boolean;routeMatch:boolean}|null>(null);
   const flight = useMemo(() => summary(ofp, dispatchFlight), [ofp, dispatchFlight]);
+  const departure = useMemo(() => departureCountdown(clock, flight.flightDate, flight.schedOut), [clock, flight.flightDate, flight.schedOut]);
   const notify = useCallback((text: string) => setMessage(text), []);
 
   useEffect(() => saveLocal('aeroslate.sidebar.collapsed', sidebarCollapsed), [sidebarCollapsed]);
@@ -215,7 +232,7 @@ export default function App() {
     </aside>
 
     <main>
-      <header className="topbar"><button className="menu-button always-menu" onClick={() => { const landscapeTablet = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; if (landscapeTablet || window.innerWidth > 1180) setSidebarCollapsed(value => !value); else setMenuOpen(true); }}><Menu /></button><div className="flight-ident"><div className="flight-primary"><span>{flight.airline}{flight.flightNumber || '—'}</span><strong>{flight.origin} <Plane size={16} /> {flight.destination}</strong></div><div className="flight-aircraft"><span><b>EQUIP</b>{flight.aircraft}</span><span><b>REG</b>{flight.registration}</span></div></div><div className="topbar-actions"><button className={`vatsim-top ${vatsimStatus?.filed && vatsimStatus.routeMatch ? 'filed' : ''}`} onClick={openVatsimPrefile} title="Open VATSIM prefile with current OFP data">{vatsimStatus?.filed && vatsimStatus.routeMatch ? <CheckCircle2 size={15}/> : <Activity size={15}/>}<span>{vatsimStatus?.filed && vatsimStatus.routeMatch ? 'Filed' : 'VATSIM'}</span></button><div className="zulu-clock"><span>ZULU</span><strong>{clock.toISOString().slice(11, 19)}</strong></div><button className="primary top-import" onClick={() => void importOFP()} disabled={loadingOFP}>{loadingOFP ? <RefreshCw className="spin" size={16} /> : <Import size={16} />} {loadingOFP ? 'Syncing' : 'Import OFP'}</button></div></header>
+      <header className="topbar"><button className="menu-button always-menu" onClick={() => { const landscapeTablet = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; if (landscapeTablet || window.innerWidth > 1180) setSidebarCollapsed(value => !value); else setMenuOpen(true); }}><Menu /></button><div className="flight-ident"><div className="flight-primary"><span>{flight.airline}{flight.flightNumber || '—'}</span><strong>{flight.origin} <Plane size={16} /> {flight.destination}</strong></div><div className="flight-aircraft"><span><b>EQUIP</b>{flight.aircraft}</span><span><b>REG</b>{flight.registration}</span></div></div><div className="topbar-actions"><button className={`vatsim-top ${vatsimStatus?.filed && vatsimStatus.routeMatch ? 'filed' : ''}`} onClick={openVatsimPrefile} title="Open VATSIM prefile with current OFP data">{vatsimStatus?.filed && vatsimStatus.routeMatch ? <CheckCircle2 size={15}/> : <Activity size={15}/>}<span>{vatsimStatus?.filed && vatsimStatus.routeMatch ? 'Filed' : 'VATSIM'}</span></button><div className="departure-clock" title="Time remaining until scheduled departure"><span>{departure.std}</span><strong><b>{departure.label}</b>{departure.value}</strong></div><div className="zulu-clock"><span>ZULU</span><strong>{clock.toISOString().slice(11, 19)}</strong></div><button className="primary top-import" onClick={() => void importOFP()} disabled={loadingOFP}>{loadingOFP ? <RefreshCw className="spin" size={16} /> : <Import size={16} />} {loadingOFP ? 'Syncing' : 'Import OFP'}</button></div></header>
       {message && <div className="toast toast-auto" role="status">{message}<span className="toast-progress" /></div>}
       <div className="page-content">
         {/* Provider and document workspaces stay mounted so authenticated sessions, OFP position, and tool state survive tab changes. */}
