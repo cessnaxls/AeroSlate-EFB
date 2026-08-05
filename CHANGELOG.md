@@ -1,3 +1,10 @@
+## 0.14.0
+
+- Removed the VATSIM profile action entirely.
+- Redesigned the sidebar with tighter navigation, quieter active states, and a cleaner collapsed portrait rail.
+- Redesigned the top flight bar into a compact flight strip with plain aircraft metadata, an unboxed Zulu/STD timing block, and a restrained Import OFP action.
+- Added additional iPad safe-area clearance without splitting the portrait header into multiple rows.
+
 ## 0.13.6
 - Simplified the top information bar, grouped departure and Zulu timing, and reduced visual weight around aircraft and provider controls.
 

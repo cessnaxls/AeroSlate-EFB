@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, BookOpenCheck, Calculator, CalendarDays, Check, ChevronRight, CloudSun, FileText, Fuel, Gauge, HelpCircle, Import,
-  LayoutDashboard, Link2, Map, MapPin, Menu, PanelLeftClose, PanelLeftOpen, Plane, RefreshCw, Route, Search, Settings, Timer, X, CheckCircle2
+  LayoutDashboard, Link2, Map, MapPin, Menu, PanelLeftClose, PanelLeftOpen, Plane, RefreshCw, Route, Search, Settings, Timer, X
 } from 'lucide-react';
 import { AeroSlateLogo } from './components/AeroSlateLogo';
 import { isNativeApp } from './components/ProviderPortal';
@@ -98,7 +98,6 @@ export default function App() {
   const [dispatchFlight, setDispatchFlight] = useState<FlightCandidate | null>(() => loadLocal('aeroslate.dispatch.flight', loadLocal<FlightCandidate | null>('dispatchlink.dispatch.flight', null)));
   const [dispatchStaticId, setDispatchStaticId] = useState(() => loadLocal('aeroslate.dispatch.staticId', loadLocal('dispatchlink.dispatch.staticId', '')));
   const [theme, setTheme] = useState(() => loadLocal('aeroslate.theme', 'ocean'));
-  const [vatsimStatus, setVatsimStatus] = useState<{filed:boolean;routeMatch:boolean}|null>(null);
   const flight = useMemo(() => summary(ofp, dispatchFlight), [ofp, dispatchFlight]);
   const departure = useMemo(() => departureCountdown(clock, flight.flightDate, flight.schedOut), [clock, flight.flightDate, flight.schedOut]);
   const notify = useCallback((text: string) => setMessage(text), []);
@@ -157,68 +156,6 @@ export default function App() {
     return true;
   },[notify]);
 
-  const verifyVatsimTopbar = useCallback(async () => {
-    if (!flight.origin || !flight.destination || flight.origin === '----') return;
-    try {
-      const q = new URLSearchParams({ callsign: flight.callsign || `${flight.airline}${flight.flightNumber}`, origin: flight.origin, destination: flight.destination });
-      const response = await fetch(`/api/vatsim/flightplan?${q}`, { cache: 'no-store' });
-      if (response.ok) setVatsimStatus(await response.json());
-    } catch { setVatsimStatus(null); }
-  }, [flight.callsign, flight.airline, flight.flightNumber, flight.origin, flight.destination]);
-  useEffect(() => { void verifyVatsimTopbar(); const timer = window.setInterval(() => void verifyVatsimTopbar(), 30000); return () => clearInterval(timer); }, [verifyVatsimTopbar]);
-  const openVatsimPrefile = () => {
-    const digits4 = (value: unknown, fallback = '0000') => {
-      const raw = String(value || '').replace(/[^0-9]/g, '');
-      if (raw.length >= 4) return raw.slice(0, 4);
-      if (raw.length === 3) return `0${raw}`;
-      return fallback;
-    };
-    const atc = getICAOFlightPlan(ofp);
-    const compact = (value: unknown) => leafText(value, '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
-    const route = String(flight.route || '').replace(/\s+/g, ' ').trim();
-    const tas = Math.max(1, Number(dig(ofp, 'general.cruise_tas') || dig(ofp, 'general.avg_tas') || 450));
-    const rampFuel = Number(dig(ofp, 'fuel.plan_ramp') || 0);
-    const avgFlow = Number(dig(ofp, 'fuel.avg_fuel_flow') || dig(ofp, 'fuel.avg_fuel_flow_per_hr') || 0);
-    const enduranceMinutes = avgFlow > 0 ? Math.max(1, Math.round((rampFuel / avgFlow) * 60)) : Math.max(60, Number(String(flight.blockTime || '4:00').split(':')[0] || 4) * 60 + 90);
-    const fuelTime = `${String(Math.floor(enduranceMinutes / 60)).padStart(2, '0')}${String(enduranceMinutes % 60).padStart(2, '0')}`;
-    const equipment = compact(dig(ofp, 'aircraft.equip') || dig(ofp, 'aircraft.equipment') || dig(ofp, 'atc.equipment') || dig(ofp, 'aircraft.icao_equipment') || 'SDE3GILORVW');
-    const transponder = compact(dig(ofp, 'aircraft.transponder') || dig(ofp, 'atc.transponder') || 'S');
-    const type = compact(flight.aircraft);
-    const wake = type === 'A388' ? 'J' : /^(B74[48]|B77[7-9]|A35K|A34[056])$/.test(type) ? 'H' : /^(C172|C152|PA28|DA40|SR2[02])$/.test(type) ? 'L' : 'M';
-    const remarksSource = leafText(dig(ofp,'general.remarks','atc.remarks','general.dx_rmk'), 'TCAS');
-    const selcal = getSelcal(ofp).replace(/[^A-Z]/g, '');
-    const registration = compact(flight.registration);
-    const pbn = compact(dig(ofp,'atc.pbn','aircraft.pbn','general.pbn'));
-    const nav = compact(dig(ofp,'atc.nav','aircraft.nav'));
-    const dat = compact(dig(ofp,'atc.dat','aircraft.dat'));
-    const sur = compact(dig(ofp,'atc.sur','aircraft.sur'));
-    const code = compact(dig(ofp,'aircraft.hex','aircraft.code','atc.code'));
-    const operator = compact(dig(ofp,'general.icao_airline','general.airline_icao') || flight.airline);
-    const performance = compact(dig(ofp,'aircraft.per','atc.per') || 'C');
-    const eet = leafText(dig(ofp,'atc.eet','general.eet'), '');
-    const dof = String(flight.flightDate || '').replace(/[^0-9]/g,'').slice(-6);
-    const otherParts = [pbn&&`PBN/${pbn}`,nav&&`NAV/${nav}`,dat&&`DAT/${dat}`,sur&&`SUR/${sur}`,dof&&`DOF/${dof}`,registration&&`REG/${registration}`,selcal&&`SEL/${selcal}`,code&&`CODE/${code}`,operator&&`OPR/${operator}`,performance&&`PER/${performance}`,eet&&`EET/${eet}`,`RMK/${remarksSource}`].filter(Boolean);
-    const params = new URLSearchParams({
-      callsign: flight.callsign || `${flight.airline}${flight.flightNumber}`,
-      flight_rules: 'IFR', rules: 'IFR', departure: flight.origin, arrival: flight.destination,
-      alternate: flight.alternate || '', aircraft: type, aircraft_type: type, wake, wake_category: wake,
-      equipment, transponder, altitude: String(flight.cruiseAltitude || '').replace(/[^0-9]/g,''),
-      speed: String(Math.round(tas)), route,
-      remarks: remarksSource, deptime: digits4(flight.schedOut), offblock: digits4(flight.schedOut),
-      enroute: digits4(flight.ete, '0100'), fuel: fuelTime, fuel_time: fuelTime,
-      reg: registration, registration, sel: selcal, dof: String(flight.flightDate || ''),
-      pbn, nav, dat, sur, code, opr: operator, per: performance, eet,
-      other: otherParts.join(' '), raw: atc || ''
-    });
-    // Also send the legacy numeric fields still accepted by the current myVATSIM form.
-    params.set('1','I'); params.set('2',flight.callsign || `${flight.airline}${flight.flightNumber}`);
-    params.set('3',`${type}/${wake}-${equipment}/${transponder}`); params.set('4',String(Math.round(tas)));
-    params.set('5',flight.origin); params.set('6',digits4(flight.schedOut)); params.set('7',String(flight.cruiseAltitude || '').replace(/[^0-9]/g,''));
-    params.set('8',route); params.set('9',flight.destination); params.set('10a',digits4(flight.ete,'0100').slice(0,2)); params.set('10b',digits4(flight.ete,'0100').slice(2));
-    params.set('11',otherParts.join(' ')); params.set('12a',fuelTime.slice(0,2)); params.set('12b',fuelTime.slice(2)); params.set('13',flight.alternate || '');
-    window.open(`https://my.vatsim.net/pilots/flightplan?${params.toString()}`, 'aeroslate-vatsim-prefile');
-  };
-
   const navigate = (next: Page) => { setPage(next); setMenuOpen(false); };
   const grouped = ['Plan', 'Brief', 'Fly', 'Record', 'System'] as const;
 
@@ -228,7 +165,7 @@ export default function App() {
     <aside className={`${menuOpen ? 'sidebar open' : 'sidebar'} ${effectiveCollapsed ? 'collapsed' : ''} ${portraitDrawer ? 'portrait-sidebar' : ''}`}>
       <div className="brand"><div className="brand-mark"><AeroSlateLogo size={40} /></div><div><strong>AeroSlate</strong><span>Electronic flight bag</span></div><button className="sidebar-collapse" title={effectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setSidebarCollapsed(value => !value)}>{effectiveCollapsed ? <PanelLeftOpen size={18}/> : <PanelLeftClose size={18}/>}</button><button className="mobile-close" onClick={() => setMenuOpen(false)}><X /></button></div>
       <nav>{grouped.map(group => <div className="nav-group" key={group}><span>{group}</span>{NAV_ITEMS.filter(item => item.group === group).map(item => <button key={item.id} className={page === item.id ? 'active' : ''} onClick={() => navigate(item.id)}><item.icon size={18} /><span>{item.label}</span>{page === item.id && <ChevronRight size={15} />}</button>)}</div>)}</nav>
-      <div className="sidebar-provider-actions"><button className={`sidebar-vatsim ${vatsimStatus?.filed && vatsimStatus.routeMatch ? 'filed' : ''}`} onClick={openVatsimPrefile} title="Open VATSIM profile and prefile">{vatsimStatus?.filed && vatsimStatus.routeMatch ? <CheckCircle2 size={18}/> : <Activity size={18}/>}<span>{vatsimStatus?.filed && vatsimStatus.routeMatch ? 'VATSIM filed' : 'VATSIM profile'}</span></button></div><div className="sidebar-status"><div><span className={`status-dot ${runtime.simLinked ? 'online' : ''}`} />{runtime.simLinked ? 'Simulator linked' : 'Simulator offline'}</div><div><span className="status-dot online" />Provider workspaces ready</div></div>
+      <div className="sidebar-status"><div><span className={`status-dot ${runtime.simLinked ? 'online' : ''}`} />{runtime.simLinked ? 'Simulator linked' : 'Simulator offline'}</div><div><span className="status-dot online" />Provider workspaces ready</div></div>
     </aside>
 
     <main>
