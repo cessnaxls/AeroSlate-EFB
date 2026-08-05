@@ -2910,3 +2910,53 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   .top-import{min-width:98px!important;width:98px!important;height:38px!important;min-height:38px!important;padding:0 9px!important;border-radius:9px!important}
   .top-import span{font-size:12px!important}
 }
+
+/* AeroSlate 0.13.9 — VATSIM in navigation and iPad status-bar clearance */
+.sidebar-provider-actions{
+  padding:8px 14px 6px;
+}
+.sidebar-vatsim{
+  width:100%;
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:0 12px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:color-mix(in srgb,var(--panel-2) 72%,transparent);
+  color:var(--text);
+  font:inherit;
+  font-size:13px;
+  cursor:pointer;
+}
+.sidebar-vatsim:hover{border-color:var(--accent);color:var(--accent)}
+.sidebar-vatsim.filed{border-color:var(--good);color:var(--good)}
+.sidebar.collapsed .sidebar-provider-actions{padding:7px 10px}
+.sidebar.collapsed .sidebar-vatsim{width:48px;height:44px;min-height:44px;padding:0;justify-content:center}
+.sidebar.collapsed .sidebar-vatsim span{display:none}
+
+@media (orientation:landscape) and (min-width:700px){
+  .topbar{
+    padding-top:calc(var(--safe-top) + 7px)!important;
+    min-height:calc(var(--topbar-height) + var(--safe-top) + 7px)!important;
+  }
+  .topbar-actions{gap:10px!important}
+  .flight-time-cluster{margin-left:0!important}
+}
+
+@media (orientation:portrait) and (min-width:700px) and (max-width:1180px){
+  :root{--topbar-height:82px}
+  .topbar{
+    height:calc(82px + var(--safe-top) + 8px)!important;
+    min-height:calc(82px + var(--safe-top) + 8px)!important;
+    padding:calc(var(--safe-top) + 8px) 12px 0!important;
+  }
+  .sidebar.portrait-sidebar.collapsed .brand{
+    min-height:calc(82px + var(--safe-top) + 8px)!important;
+    padding:calc(var(--safe-top) + 8px) 6px 6px!important;
+  }
+  .topbar-actions{gap:9px!important}
+  .flight-time-cluster{min-width:116px!important}
+  .top-import{min-width:108px!important;width:108px!important}
+}
