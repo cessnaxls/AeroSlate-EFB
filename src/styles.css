@@ -2836,3 +2836,77 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
     padding-inline:9px!important;
   }
 }
+
+/* AeroSlate 0.13.8 — simplified operational header */
+@media (orientation:landscape) and (min-width:700px){
+  .topbar{gap:12px!important}
+  .flight-ident{min-width:0!important;flex:1 1 auto!important}
+  .topbar-actions{margin-left:10px!important;gap:8px!important;flex:0 0 auto!important}
+  .vatsim-top{min-width:86px!important;height:38px!important;min-height:38px!important;padding:0 10px!important;border-radius:9px!important}
+  .flight-time-cluster{
+    display:grid!important;
+    grid-template-columns:auto!important;
+    grid-template-rows:auto auto!important;
+    row-gap:1px!important;
+    min-width:112px!important;
+    padding:0 10px!important;
+    border-left:1px solid color-mix(in srgb,var(--border) 75%,transparent)!important;
+    border-right:1px solid color-mix(in srgb,var(--border) 75%,transparent)!important;
+  }
+  .zulu-clock,.departure-clock{align-items:center!important;justify-self:center!important}
+  .zulu-clock{grid-row:1!important}.departure-clock{grid-row:2!important}
+  .zulu-clock>span,.departure-clock>span{font-size:6px!important;letter-spacing:.18em!important}
+  .zulu-clock strong{font-size:14px!important}
+  .departure-clock>strong{font-size:9px!important}
+  .top-import{min-width:116px!important;height:42px!important;min-height:42px!important;padding:0 12px!important;border-radius:10px!important}
+}
+
+@media (orientation:portrait) and (min-width:700px) and (max-width:1180px){
+  :root{--topbar-height:76px}
+  .topbar{
+    display:flex!important;
+    align-items:center!important;
+    gap:8px!important;
+    height:76px!important;
+    min-height:76px!important;
+    padding:0 12px!important;
+    overflow:hidden!important;
+  }
+  .menu-button{flex:0 0 48px!important;width:48px!important;height:48px!important}
+  .flight-ident{
+    display:flex!important;
+    align-items:center!important;
+    gap:7px!important;
+    flex:1 1 auto!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  .flight-primary{display:flex!important;align-items:center!important;gap:8px!important;min-width:0!important;flex:1 1 auto!important;white-space:nowrap!important}
+  .flight-primary span{font-size:17px!important;flex:0 0 auto!important}
+  .flight-primary strong{font-size:13px!important;gap:4px!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .flight-aircraft{display:flex!important;gap:4px!important;flex:0 0 auto!important}
+  .flight-aircraft span{padding:3px 6px!important;font-size:9px!important;border-radius:7px!important;background:color-mix(in srgb,var(--panel-2) 72%,transparent)!important}
+  .flight-aircraft b{display:none!important}
+  .topbar-actions{display:flex!important;align-items:center!important;gap:7px!important;flex:0 0 auto!important;margin-left:auto!important}
+  .vatsim-top{min-width:74px!important;width:74px!important;height:36px!important;min-height:36px!important;padding:0 8px!important;border-radius:9px!important}
+  .vatsim-top span{font-size:11px!important}
+  .flight-time-cluster{
+    display:grid!important;
+    grid-template-columns:auto!important;
+    grid-template-rows:auto auto!important;
+    row-gap:1px!important;
+    min-width:106px!important;
+    padding:0 8px!important;
+    border-left:1px solid color-mix(in srgb,var(--border) 72%,transparent)!important;
+    border-right:1px solid color-mix(in srgb,var(--border) 72%,transparent)!important;
+  }
+  .time-divider{display:none!important}
+  .zulu-clock,.departure-clock{display:flex!important;align-items:center!important;justify-self:center!important;min-width:0!important}
+  .zulu-clock{grid-row:1!important}.departure-clock{grid-row:2!important}
+  .zulu-clock>span,.departure-clock>span{font-size:6px!important;letter-spacing:.16em!important}
+  .zulu-clock strong{font-size:12px!important}
+  .departure-clock>strong{font-size:8px!important;gap:3px!important}
+  .departure-clock>strong b{font-size:6px!important}
+  .top-import{min-width:98px!important;width:98px!important;height:38px!important;min-height:38px!important;padding:0 9px!important;border-radius:9px!important}
+  .top-import span{font-size:12px!important}
+}
