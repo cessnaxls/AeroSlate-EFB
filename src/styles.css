@@ -3662,3 +3662,177 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
     padding-inline:9px!important;
   }
 }
+
+
+/* v0.14.4 — rebuilt professional flight information bar */
+:root{--topbar-height:68px}
+
+.topbar{
+  min-height:var(--topbar-height)!important;
+  height:auto!important;
+  display:grid!important;
+  grid-template-columns:44px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  column-gap:14px!important;
+  padding:calc(var(--safe-top) + 7px) 20px 9px!important;
+  background:var(--bg)!important;
+  border-bottom:1px solid var(--border)!important;
+  box-shadow:none!important;
+}
+
+.menu-button{
+  width:44px!important;height:44px!important;
+  min-width:44px!important;min-height:44px!important;
+  border-radius:11px!important;
+}
+
+.flight-ident{
+  display:flex!important;align-items:center!important;
+  min-width:0!important;gap:18px!important;overflow:hidden!important;
+}
+
+.flight-primary{
+  display:flex!important;align-items:center!important;
+  min-width:0!important;gap:11px!important;white-space:nowrap!important;
+}
+
+.flight-primary>span{
+  flex:0 0 auto!important;font-size:20px!important;
+  font-weight:800!important;line-height:1!important;letter-spacing:.025em!important;
+}
+
+.flight-primary strong{
+  display:flex!important;align-items:center!important;min-width:0!important;
+  gap:6px!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  color:var(--text)!important;font-size:14px!important;font-weight:720!important;
+  line-height:1!important;letter-spacing:.01em!important;
+}
+
+.flight-aircraft{
+  position:relative!important;display:flex!important;align-items:center!important;
+  flex:0 0 auto!important;gap:18px!important;min-width:max-content!important;
+  margin:0!important;padding:0 0 0 18px!important;border:0!important;
+}
+
+.flight-aircraft::before{
+  content:""!important;position:absolute!important;left:0!important;top:50%!important;
+  width:1px!important;height:24px!important;transform:translateY(-50%)!important;
+  background:var(--border)!important;
+}
+
+.flight-aircraft span{
+  position:relative!important;display:flex!important;align-items:baseline!important;
+  gap:7px!important;min-height:auto!important;padding:0!important;border:0!important;
+  border-radius:0!important;background:none!important;box-shadow:none!important;
+  color:var(--text)!important;font-size:12px!important;line-height:1!important;
+  white-space:nowrap!important;
+}
+
+.flight-aircraft span+span{padding-left:18px!important}
+
+.flight-aircraft span+span::before{
+  content:""!important;position:absolute!important;left:0!important;top:50%!important;
+  width:1px!important;height:16px!important;transform:translateY(-50%)!important;
+  background:color-mix(in srgb,var(--border) 72%,transparent)!important;
+}
+
+.flight-aircraft b{
+  display:inline!important;color:var(--muted)!important;font-size:8px!important;
+  font-weight:800!important;line-height:1!important;letter-spacing:.16em!important;
+}
+
+.topbar-actions{
+  display:flex!important;align-items:center!important;justify-content:flex-end!important;
+  min-width:0!important;margin:0!important;padding:0!important;
+}
+
+.flight-time-cluster{
+  position:relative!important;display:flex!important;align-items:center!important;
+  justify-content:flex-end!important;gap:18px!important;min-width:0!important;
+  margin:0!important;padding:0 0 0 20px!important;border:0!important;
+}
+
+.flight-time-cluster::before{
+  content:""!important;position:absolute!important;left:0!important;top:50%!important;
+  width:1px!important;height:34px!important;transform:translateY(-50%)!important;
+  background:var(--border)!important;
+}
+
+.flight-time-cluster::after{display:none!important}
+.time-divider{display:none!important}
+
+.departure-clock,.zulu-clock{
+  display:flex!important;flex-direction:column!important;justify-content:center!important;
+  min-width:0!important;padding:0!important;border:0!important;white-space:nowrap!important;
+  font-variant-numeric:tabular-nums!important;
+}
+
+.departure-clock,.zulu-clock{align-items:flex-end!important;text-align:right!important}
+
+.departure-clock>span,.zulu-clock>span{
+  display:block!important;margin:0 0 3px!important;color:var(--muted)!important;
+  font-size:8px!important;font-weight:800!important;line-height:1!important;
+  letter-spacing:.16em!important;text-transform:uppercase!important;
+}
+
+.departure-clock>strong{
+  display:flex!important;align-items:baseline!important;justify-content:flex-end!important;
+  gap:6px!important;margin:0!important;color:var(--text)!important;font-size:13px!important;
+  font-weight:750!important;line-height:1!important;
+}
+
+.departure-clock>strong b{
+  color:var(--accent)!important;font-size:8px!important;font-weight:850!important;
+  letter-spacing:.12em!important;
+}
+
+.zulu-clock strong{
+  margin:0!important;color:var(--text)!important;font-size:19px!important;
+  font-weight:780!important;line-height:1!important;letter-spacing:.03em!important;
+}
+
+@media (orientation:landscape) and (min-width:700px){
+  .topbar{padding-left:18px!important;padding-right:26px!important}
+  .flight-time-cluster{gap:22px!important;padding-left:24px!important}
+  .departure-clock{min-width:116px!important}
+  .zulu-clock{min-width:92px!important}
+}
+
+@media (orientation:portrait) and (min-width:700px) and (max-width:1180px){
+  :root{--topbar-height:64px}
+  .topbar{
+    grid-template-columns:42px minmax(0,1fr) auto!important;
+    column-gap:10px!important;padding:calc(var(--safe-top) + 6px) 11px 8px!important;
+  }
+  .menu-button{width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important}
+  .flight-ident{gap:10px!important}
+  .flight-primary{gap:7px!important}
+  .flight-primary>span{font-size:16px!important}
+  .flight-primary strong{gap:4px!important;font-size:11px!important}
+  .flight-aircraft{gap:10px!important;padding-left:10px!important}
+  .flight-aircraft::before{height:20px!important}
+  .flight-aircraft span{gap:4px!important;font-size:10px!important}
+  .flight-aircraft span+span{padding-left:10px!important}
+  .flight-aircraft b{font-size:7px!important}
+  .flight-time-cluster{gap:10px!important;padding-left:11px!important}
+  .flight-time-cluster::before{height:28px!important}
+  .departure-clock{min-width:82px!important}
+  .zulu-clock{min-width:68px!important}
+  .departure-clock>span,.zulu-clock>span{margin-bottom:2px!important;font-size:7px!important}
+  .departure-clock>strong{gap:4px!important;font-size:10px!important}
+  .departure-clock>strong b{font-size:7px!important}
+  .zulu-clock strong{font-size:15px!important}
+}
+
+@media (orientation:portrait) and (min-width:700px) and (max-width:900px){
+  .topbar{column-gap:7px!important;padding-left:8px!important;padding-right:8px!important}
+  .flight-ident{gap:7px!important}
+  .flight-primary>span{font-size:15px!important}
+  .flight-primary strong{font-size:10px!important}
+  .flight-aircraft{gap:7px!important;padding-left:7px!important}
+  .flight-aircraft span{font-size:9px!important}
+  .flight-aircraft span+span{padding-left:7px!important}
+  .flight-time-cluster{gap:7px!important;padding-left:8px!important}
+  .departure-clock{min-width:75px!important}
+  .zulu-clock{min-width:62px!important}
+}
