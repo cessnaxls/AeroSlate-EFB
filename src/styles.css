@@ -3304,3 +3304,74 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   .zulu-clock{min-width:66px!important}
   .top-import{min-width:104px!important;padding-inline:10px!important}
 }
+
+
+/* v0.14.2 — simplified top bar without Import OFP */
+.top-import{display:none!important}
+
+.topbar-actions{
+  margin-left:auto!important;
+  justify-content:flex-end!important;
+}
+
+.flight-time-cluster{margin-left:auto!important}
+
+@media (orientation:portrait) and (min-width:700px) and (max-width:1180px){
+  .topbar{
+    grid-template-columns:42px minmax(0,1fr) auto!important;
+  }
+
+  .topbar-actions{
+    min-width:214px!important;
+    padding-right:8px!important;
+  }
+
+  .flight-time-cluster{
+    min-width:214px!important;
+    justify-content:flex-end!important;
+    padding-left:14px!important;
+    padding-right:0!important;
+    border-right:0!important;
+  }
+
+  .departure-clock{min-width:104px!important}
+  .zulu-clock{min-width:78px!important}
+}
+
+@media (orientation:landscape) and (min-width:700px){
+  .topbar-actions{padding-right:18px!important}
+
+  .flight-time-cluster{
+    position:relative!important;
+    min-width:232px!important;
+    justify-content:flex-end!important;
+    padding:0 18px!important;
+    border-left:0!important;
+    border-right:0!important;
+  }
+
+  .flight-time-cluster::before,
+  .flight-time-cluster::after{
+    content:""!important;
+    position:absolute!important;
+    top:50%!important;
+    width:1px!important;
+    height:34px!important;
+    transform:translateY(-50%)!important;
+    background:linear-gradient(
+      to bottom,
+      transparent,
+      color-mix(in srgb,var(--accent) 72%,var(--border)),
+      transparent
+    )!important;
+    opacity:.9!important;
+  }
+
+  .flight-time-cluster::before{left:0!important}
+  .flight-time-cluster::after{right:0!important}
+
+  .time-divider{
+    background:color-mix(in srgb,var(--accent) 55%,var(--border))!important;
+    opacity:.75!important;
+  }
+}

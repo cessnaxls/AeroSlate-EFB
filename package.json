@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.14.1",
-  "description": "AeroSlate EFB v0.14.1 with a cleaner, balanced flight information header.",
+  "version": "0.14.2",
+  "description": "AeroSlate EFB v0.14.2 with a simplified header and landscape timing accents.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
