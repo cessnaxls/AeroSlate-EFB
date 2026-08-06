@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.14.4",
-  "description": "AeroSlate EFB v0.14.4 with a rebuilt minimal professional flight information bar.",
+  "version": "0.14.5",
+  "description": "AeroSlate EFB v0.14.5 with a balanced compact top information bar.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
