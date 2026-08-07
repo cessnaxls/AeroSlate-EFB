@@ -5369,7 +5369,8 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
 
 @media (max-width: 1080px) {
   .trip-builder-actions-v160 {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    /* Keep Schedule Date and Rig Length exactly the same fixed width on iPad/portrait layouts. */
+    grid-template-columns: 150px minmax(0, 1fr) !important;
     gap: 12px 14px !important;
   }
 }

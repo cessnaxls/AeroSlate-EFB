@@ -1,3 +1,6 @@
+## v0.16.2
+- Fixed Trip Builder responsive grid so Schedule Date and Rig Length use the same 150 px column on iPad/portrait layouts.
+
 # v0.16.1
 
 - Matched the Schedule date control width to the Rig length dropdown.
