@@ -5029,3 +5029,43 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   .trip-selected-copy>span:last-child{white-space:normal!important}
   .trip-add-controls,.rig-builder-controls{grid-template-columns:1fr!important}
 }
+
+/* v0.15.7 — Trip date sizing and authoritative landscape OFP width. */
+.trip-scheduler .trip-add-controls{
+  width:220px!important;
+  max-width:100%!important;
+  justify-self:end!important;
+}
+.trip-scheduler .trip-add-controls .trip-date-picker,
+.trip-scheduler .trip-add-controls .trip-add-button{
+  width:100%!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+}
+.trip-scheduler .trip-add-controls .trip-date-picker input{
+  width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+}
+
+@media (orientation: landscape) and (min-width:801px){
+  .ofp-release-frame.ofp-scrollable-release,
+  .ofp-release-frame.ofp-scrollable-release .ofp-frame-grid{
+    width:100%!important;
+    max-width:none!important;
+  }
+  .ofp-release-frame.ofp-scrollable-release .ofp-frame-grid > .ofp-route-card{
+    grid-column:1 / -1!important;
+    width:100%!important;
+    max-width:none!important;
+    justify-self:stretch!important;
+    box-sizing:border-box!important;
+  }
+}
+
+@media (max-width:700px){
+  .trip-scheduler .trip-add-controls{
+    width:100%!important;
+    justify-self:stretch!important;
+  }
+}
