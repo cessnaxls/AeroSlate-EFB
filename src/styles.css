@@ -5175,3 +5175,83 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   .trip-builder-clean .trip-flight-main>strong{font-size:18px!important}
   .trip-builder-clean .trip-flight-meta{white-space:normal!important}
 }
+
+/* v0.15.9 — Trip Builder layout repair: summary above controls, no overlap. */
+.trip-scheduler .trip-builder-shell.trip-builder-clean{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:14px!important;
+  align-items:start!important;
+  padding:16px 18px 18px!important;
+}
+.trip-builder-clean .trip-flight-summary{
+  width:100%!important;
+  min-width:0!important;
+  padding:0 2px!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:7px!important;
+  align-content:start!important;
+}
+.trip-builder-clean .trip-flight-main{
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:8px 14px!important;
+  min-width:0!important;
+}
+.trip-builder-clean .trip-flight-meta{
+  width:100%!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+.trip-builder-clean .trip-builder-control-grid{
+  width:100%!important;
+  min-width:0!important;
+  display:grid!important;
+  grid-template-columns:minmax(180px,1fr) minmax(220px,1.15fr) minmax(120px,.62fr) minmax(245px,1.35fr)!important;
+  gap:14px!important;
+  align-items:end!important;
+}
+.trip-builder-clean .trip-control{
+  min-width:0!important;
+  display:grid!important;
+  grid-template-rows:16px 48px!important;
+  gap:7px!important;
+}
+.trip-builder-clean .trip-control input,
+.trip-builder-clean .trip-control select,
+.trip-builder-clean .trip-control button{
+  height:48px!important;
+  min-height:48px!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+}
+.trip-builder-clean .trip-control button{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+  padding-inline:14px!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+@media (max-width:1050px){
+  .trip-builder-clean .trip-builder-control-grid{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:12px 14px!important;
+  }
+}
+@media (max-width:600px){
+  .trip-scheduler .trip-builder-shell.trip-builder-clean{
+    padding:13px!important;
+    gap:13px!important;
+  }
+  .trip-builder-clean .trip-builder-control-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+}

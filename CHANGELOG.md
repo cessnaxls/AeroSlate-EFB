@@ -1,3 +1,7 @@
+## 0.15.9
+- Rebuilt the Trip Builder frame so the selected-flight summary sits above a clean responsive control grid.
+- Prevented date, labels, buttons, and rig controls from overlapping or clipping in portrait and landscape.
+
 ## 0.15.8
 - Rebuilt Trip Builder controls into a clean aligned grid with consistent labels, heights, spacing, and responsive wrapping.
 
