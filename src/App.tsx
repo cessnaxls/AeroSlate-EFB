@@ -112,7 +112,22 @@ export default function App() {
   }, []);
   useEffect(() => { if (!message) return; const timer = window.setTimeout(() => setMessage(''), 4200); return () => window.clearTimeout(timer); }, [message]);
   const refreshRuntime = useCallback(async () => { try { const response = await fetch('/api/runtime', { cache: 'no-store' }); if (response.ok) setRuntime(await response.json()); } catch { /* offline status */ } }, []);
-  useEffect(() => { void refreshRuntime(); const runtimeTimer = window.setInterval(() => void refreshRuntime(), 5000); const clockTimer = window.setInterval(() => setClock(new Date()), 1000); if ('serviceWorker' in navigator) void navigator.serviceWorker.register('/sw.js'); return () => { clearInterval(runtimeTimer); clearInterval(clockTimer); }; }, [refreshRuntime]);
+  useEffect(() => {
+    void refreshRuntime();
+    const runtimeTimer = window.setInterval(() => void refreshRuntime(), 5000);
+    const clockTimer = window.setInterval(() => setClock(new Date()), 1000);
+
+    if ('serviceWorker' in navigator) {
+      void navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(registration => {
+        void registration.update();
+      });
+    }
+
+    return () => {
+      clearInterval(runtimeTimer);
+      clearInterval(clockTimer);
+    };
+  }, [refreshRuntime]);
 
   const importOFP = useCallback(async (staticId = '', options: { stayOnPage?: boolean; silent?: boolean } = {}): Promise<boolean> => {
     if (!simbriefKey.trim()) { if (!options.silent) notify('Enter your SimBrief username or Pilot ID in Connections.'); return false; }

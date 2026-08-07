@@ -1,3 +1,8 @@
+## 0.15.1
+- Bumped the service-worker cache to v8 and automatically removes all older AeroSlate caches during activation.
+- Forced immediate service-worker activation and disabled browser caching when checking for service-worker updates.
+- Added no-cache response headers for the app shell and service worker so new Render deployments appear promptly.
+
 ## 0.15.0
 - Rebuilt the top information bar with a live UTC clock, STD countdown, persistent Import OFP control, responsive sizing, and Apple safe-area spacing.
 

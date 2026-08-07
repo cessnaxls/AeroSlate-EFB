@@ -178,7 +178,25 @@ app.get('/api/document', async (req, res) => {
 
 
 
-app.use(express.static(path.join(rootDir, 'dist'), { maxAge: '1h', index: false }));
-app.use((req, res, next) => { if (req.method !== 'GET' || req.path.startsWith('/api/')) return next(); res.sendFile(path.join(rootDir, 'dist', 'index.html')); });
+app.get('/sw.js', (_req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.sendFile(path.join(rootDir, 'dist', 'sw.js'));
+});
+app.use(express.static(path.join(rootDir, 'dist'), {
+  maxAge: '1h',
+  index: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-store');
+  }
+}));
+app.use((req, res, next) => {
+  if (req.method !== 'GET' || req.path.startsWith('/api/')) return next();
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.sendFile(path.join(rootDir, 'dist', 'index.html'));
+});
 app.use((error, _req, res, _next) => { console.error(error); res.status(500).json({ error: 'Unexpected server error.' }); });
 app.listen(port, () => console.log(`AeroSlate EFB listening on ${port}`));
