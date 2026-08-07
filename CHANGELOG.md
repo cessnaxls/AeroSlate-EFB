@@ -1,3 +1,8 @@
+## 0.14.7
+- Restyled the flight information bar to match the supplied reference design.
+- Kept the Import OFP button visible in both portrait and landscape layouts.
+- Preserved flight number, route, equipment, registration, and Zulu time in one clean row.
+
 ## 0.14.0
 
 - Removed the VATSIM profile action entirely.
