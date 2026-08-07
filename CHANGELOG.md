@@ -1,14 +1,3 @@
-## 0.15.8
-
-- Made the Trip Builder schedule-date input and Add selected leg button share one explicit width.
-- Moved Route & airports outside the OFP detail grid so it always matches the full width of the other OFP frame rows in landscape.
-
-# Changelog
-
-## 0.15.7
-- Matched the Schedule date control width to the Add selected leg button.
-- Forced the OFP Route & airports frame to span the exact full content width in landscape.
-
 ## v0.15.6
 - Rebuilt the Trips > Trip Builder frame into a compact two-workflow layout with a clearer selected-flight summary, consolidated date/add controls, and a space-efficient random-rig panel.
 - Improved portrait and narrow-screen responsiveness.
