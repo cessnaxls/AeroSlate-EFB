@@ -4517,3 +4517,280 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   .top-import { width: 43px; padding: 8px; }
   .topbar-actions { margin-left: 0; }
 }
+
+/* AeroSlate 0.15.2 — authoritative responsive flight information bar.
+   This block intentionally overrides every legacy top-bar patch above. */
+.app-shell > main > header.topbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 40 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: calc(72px + env(safe-area-inset-top, 0px)) !important;
+  height: auto !important;
+  padding: calc(env(safe-area-inset-top, 0px) + 5px) max(14px, env(safe-area-inset-right, 0px)) 5px max(14px, env(safe-area-inset-left, 0px)) !important;
+  display: grid !important;
+  grid-template-columns: 46px minmax(180px, 1fr) auto !important;
+  grid-template-rows: minmax(58px, auto) !important;
+  align-items: center !important;
+  gap: 12px !important;
+  overflow: visible !important;
+  background: color-mix(in srgb, var(--bg) 94%, transparent) !important;
+  border-bottom: 1px solid var(--border) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+.app-shell > main > header.topbar > .menu-button.always-menu {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  align-self: center !important;
+}
+
+.app-shell > main > header.topbar > .flight-ident {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  min-width: 0 !important;
+  width: auto !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px !important;
+  overflow: hidden !important;
+}
+
+.app-shell > main > header.topbar .flight-primary {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 11px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+.app-shell > main > header.topbar .flight-primary > span {
+  display: inline !important;
+  flex: 0 0 auto !important;
+  color: var(--accent) !important;
+  font-size: clamp(15px, 1.45vw, 21px) !important;
+  font-weight: 900 !important;
+  letter-spacing: .035em !important;
+  line-height: 1 !important;
+}
+
+.app-shell > main > header.topbar .flight-primary > strong {
+  min-width: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  color: var(--text) !important;
+  font-size: clamp(15px, 1.35vw, 20px) !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.app-shell > main > header.topbar .flight-primary svg {
+  flex: 0 0 auto !important;
+  color: var(--muted) !important;
+  transform: rotate(-12deg) !important;
+}
+
+/* Equipment and registration are intentionally removed from the bar so the
+   four requested operational elements always fit with either sidebar state. */
+.app-shell > main > header.topbar .flight-aircraft {
+  display: none !important;
+}
+
+.app-shell > main > header.topbar > .topbar-actions {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  overflow: visible !important;
+}
+
+.app-shell > main > header.topbar .top-import {
+  order: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: auto !important;
+  min-width: 126px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 14px !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.app-shell > main > header.topbar .top-import span {
+  display: inline !important;
+  font-size: inherit !important;
+}
+
+.app-shell > main > header.topbar .departure-clock,
+.app-shell > main > header.topbar .zulu-clock {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  min-height: 46px !important;
+  margin: 0 !important;
+  padding: 0 0 0 11px !important;
+  border: 0 !important;
+  border-left: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.app-shell > main > header.topbar .departure-clock {
+  order: 2 !important;
+  min-width: 106px !important;
+}
+
+.app-shell > main > header.topbar .zulu-clock {
+  order: 3 !important;
+  min-width: 100px !important;
+}
+
+.app-shell > main > header.topbar .departure-clock > span,
+.app-shell > main > header.topbar .zulu-clock > span {
+  display: block !important;
+  margin: 0 !important;
+  color: var(--muted) !important;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  letter-spacing: .18em !important;
+  line-height: 1 !important;
+}
+
+.app-shell > main > header.topbar .departure-clock > strong,
+.app-shell > main > header.topbar .zulu-clock > strong {
+  display: block !important;
+  margin: 5px 0 0 !important;
+  font-family: "SFMono-Regular", Consolas, monospace !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: .025em !important;
+  line-height: 1 !important;
+}
+
+.app-shell > main > header.topbar .departure-clock > strong {
+  color: var(--accent) !important;
+}
+
+.app-shell > main > header.topbar .departure-clock > small {
+  display: block !important;
+  margin: 4px 0 0 !important;
+  color: var(--text) !important;
+  font-family: "SFMono-Regular", Consolas, monospace !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+.app-shell > main > header.topbar .departure-clock.late > strong {
+  color: var(--yellow) !important;
+}
+
+/* Landscape tablets, including an expanded sidebar. */
+@media (orientation: landscape) and (max-width: 1180px) {
+  .app-shell > main > header.topbar {
+    grid-template-columns: 44px minmax(150px, 1fr) auto !important;
+    gap: 8px !important;
+    padding-left: max(10px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(10px, env(safe-area-inset-right, 0px)) !important;
+  }
+  .app-shell > main > header.topbar > .menu-button.always-menu {
+    width: 44px !important; height: 44px !important; min-width: 44px !important; min-height: 44px !important;
+  }
+  .app-shell > main > header.topbar .flight-primary { gap: 7px !important; }
+  .app-shell > main > header.topbar .flight-primary > span { font-size: 15px !important; }
+  .app-shell > main > header.topbar .flight-primary > strong { font-size: 15px !important; gap: 5px !important; }
+  .app-shell > main > header.topbar > .topbar-actions { gap: 7px !important; }
+  .app-shell > main > header.topbar .top-import { min-width: 112px !important; height: 40px !important; min-height: 40px !important; padding: 0 10px !important; font-size: 12px !important; }
+  .app-shell > main > header.topbar .departure-clock { min-width: 94px !important; }
+  .app-shell > main > header.topbar .zulu-clock { min-width: 86px !important; }
+  .app-shell > main > header.topbar .departure-clock > strong,
+  .app-shell > main > header.topbar .zulu-clock > strong { font-size: 13px !important; }
+}
+
+/* Portrait iPad: one compact row with all requested elements. */
+@media (orientation: portrait) and (min-width: 600px) {
+  .app-shell > main > header.topbar {
+    min-height: calc(70px + env(safe-area-inset-top, 0px)) !important;
+    grid-template-columns: 44px minmax(145px, 1fr) auto !important;
+    grid-template-rows: minmax(56px, auto) !important;
+    gap: 7px !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 5px) max(8px, env(safe-area-inset-right, 0px)) 5px max(8px, env(safe-area-inset-left, 0px)) !important;
+  }
+  .app-shell > main > header.topbar > .menu-button.always-menu {
+    width: 44px !important; height: 44px !important; min-width: 44px !important; min-height: 44px !important;
+  }
+  .app-shell > main > header.topbar .flight-primary { gap: 6px !important; }
+  .app-shell > main > header.topbar .flight-primary > span { font-size: 13px !important; }
+  .app-shell > main > header.topbar .flight-primary > strong { font-size: 14px !important; gap: 4px !important; }
+  .app-shell > main > header.topbar .flight-primary svg { width: 14px !important; height: 14px !important; }
+  .app-shell > main > header.topbar > .topbar-actions { gap: 6px !important; }
+  .app-shell > main > header.topbar .top-import { min-width: 104px !important; height: 40px !important; min-height: 40px !important; padding: 0 9px !important; font-size: 12px !important; gap: 6px !important; }
+  .app-shell > main > header.topbar .top-import svg { width: 15px !important; height: 15px !important; }
+  .app-shell > main > header.topbar .departure-clock,
+  .app-shell > main > header.topbar .zulu-clock { min-height: 42px !important; padding-left: 7px !important; }
+  .app-shell > main > header.topbar .departure-clock { min-width: 82px !important; }
+  .app-shell > main > header.topbar .zulu-clock { min-width: 75px !important; }
+  .app-shell > main > header.topbar .departure-clock > span,
+  .app-shell > main > header.topbar .zulu-clock > span { font-size: 7px !important; }
+  .app-shell > main > header.topbar .departure-clock > strong,
+  .app-shell > main > header.topbar .zulu-clock > strong { margin-top: 4px !important; font-size: 12px !important; }
+  .app-shell > main > header.topbar .departure-clock > small { margin-top: 3px !important; font-size: 8px !important; }
+}
+
+/* Very narrow phones: preserve all information by using a clean second row. */
+@media (max-width: 599px) {
+  .app-shell > main > header.topbar {
+    min-height: calc(112px + env(safe-area-inset-top, 0px)) !important;
+    grid-template-columns: 44px minmax(0, 1fr) !important;
+    grid-template-rows: 48px 48px !important;
+    gap: 5px 8px !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 5px) max(8px, env(safe-area-inset-right, 0px)) 6px max(8px, env(safe-area-inset-left, 0px)) !important;
+  }
+  .app-shell > main > header.topbar > .menu-button.always-menu { grid-column: 1 !important; grid-row: 1 !important; width: 44px !important; height: 44px !important; min-width: 44px !important; min-height: 44px !important; }
+  .app-shell > main > header.topbar > .flight-ident { grid-column: 2 !important; grid-row: 1 !important; }
+  .app-shell > main > header.topbar .flight-primary > span { font-size: 13px !important; }
+  .app-shell > main > header.topbar .flight-primary > strong { font-size: 13px !important; }
+  .app-shell > main > header.topbar > .topbar-actions { grid-column: 1 / -1 !important; grid-row: 2 !important; width: 100% !important; justify-content: stretch !important; gap: 6px !important; }
+  .app-shell > main > header.topbar .top-import { flex: 1 1 auto !important; min-width: 96px !important; height: 40px !important; min-height: 40px !important; padding: 0 9px !important; font-size: 12px !important; }
+  .app-shell > main > header.topbar .departure-clock,
+  .app-shell > main > header.topbar .zulu-clock { flex: 0 0 auto !important; min-height: 40px !important; }
+  .app-shell > main > header.topbar .departure-clock { min-width: 88px !important; }
+  .app-shell > main > header.topbar .zulu-clock { min-width: 78px !important; }
+  .app-shell > main > header.topbar .departure-clock > strong,
+  .app-shell > main > header.topbar .zulu-clock > strong { font-size: 12px !important; }
+}

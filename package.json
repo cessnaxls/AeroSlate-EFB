@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.15.1",
-  "description": "AeroSlate EFB v0.14.7 with the reference-style information bar and Import OFP in portrait and landscape.",
+  "version": "0.15.2",
+  "description": "AeroSlate EFB with a clean responsive flight information bar, live STD countdown, UTC clock, and Apple safe-area support.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {

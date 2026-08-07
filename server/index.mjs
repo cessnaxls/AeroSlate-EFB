@@ -1,11 +1,13 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import helmet from 'helmet';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
+const packageVersion = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8')).version;
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const simLinkToken = process.env.SIM_LINK_TOKEN || 'development-sim-link';
@@ -22,7 +24,7 @@ function secureEqual(supplied, expected) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'aeroslate-efb', version: '0.12.0', time: new Date().toISOString() }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'aeroslate-efb', version: packageVersion, time: new Date().toISOString() }));
 app.get('/api/runtime', (_req, res) => res.json({
   simLinked: simLinked(),
   mode: simLinked() ? 'sim-linked' : 'standalone',

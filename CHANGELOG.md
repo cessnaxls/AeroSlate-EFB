@@ -1,3 +1,11 @@
+# AeroSlate EFB 0.15.2
+
+- Replaced the accumulated top-bar overrides with one authoritative responsive layout.
+- Keeps flight number, route, Import OFP, STD countdown, scheduled STD, and UTC visible on iPad portrait and landscape.
+- Added Apple safe-area spacing and compact sizing for expanded/collapsed sidebars.
+- Health endpoint now reports the deployed package version.
+- Bumped the service-worker cache to v9.
+
 ## 0.15.1
 - Bumped the service-worker cache to v8 and automatically removes all older AeroSlate caches during activation.
 - Forced immediate service-worker activation and disabled browser caching when checking for service-worker updates.
