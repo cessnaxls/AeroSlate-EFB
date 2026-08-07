@@ -4891,3 +4891,23 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
     font-size: 8px !important;
   }
 }
+
+
+/* v0.15.4 — keep A/C and REG tiles tucked directly beside DEST in portrait */
+@media (orientation: portrait) and (min-width: 600px) {
+  .app-shell > main > header.topbar > .flight-ident {
+    justify-content: flex-start !important;
+    gap: 4px !important;
+  }
+
+  .app-shell > main > header.topbar .flight-primary {
+    flex: 0 1 auto !important;
+    width: auto !important;
+    max-width: max-content !important;
+  }
+
+  .app-shell > main > header.topbar .flight-aircraft {
+    flex: 0 0 auto !important;
+    margin-left: 0 !important;
+  }
+}

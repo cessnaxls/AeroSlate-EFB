@@ -1,3 +1,6 @@
+## 0.15.4
+- Moved the A/C and REG tiles closer to the arrival airport in portrait mode.
+
 # AeroSlate EFB v0.15.3
 
 - Added compact grey aircraft type and registration tiles to the top information bar.
