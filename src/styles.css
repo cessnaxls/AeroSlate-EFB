@@ -4414,3 +4414,41 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   }
   .top-import svg{width:15px!important;height:15px!important}
 }
+
+/* v0.14.9 — restore the original AeroSlate info-bar geometry; OFP is the only addition */
+.topbar-actions{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:16px!important;
+  margin-left:auto!important;
+  width:auto!important;
+}
+.topbar-actions .zulu-clock{order:1!important;grid-column:auto!important;grid-row:auto!important}
+.topbar-actions .top-import{order:2!important;grid-column:auto!important;grid-row:auto!important}
+.top-import{display:inline-flex!important}
+
+@media (orientation:landscape) and (min-width:700px){
+  .topbar{
+    grid-template-columns:44px minmax(0,1fr) auto!important;
+    column-gap:14px!important;
+    padding-left:22px!important;
+    padding-right:18px!important;
+  }
+  .topbar-actions{gap:18px!important}
+  .zulu-clock{min-width:92px!important}
+  .top-import{min-width:132px!important;height:42px!important}
+}
+
+@media (orientation:portrait) and (min-width:700px) and (max-width:1180px){
+  .topbar{
+    grid-template-columns:42px minmax(0,1fr) auto!important;
+    column-gap:10px!important;
+    padding-left:10px!important;
+    padding-right:10px!important;
+  }
+  .topbar-actions{gap:9px!important}
+  .zulu-clock{min-width:76px!important}
+  .top-import{min-width:112px!important;height:40px!important;padding-inline:10px!important;font-size:12px!important}
+}

@@ -1,3 +1,7 @@
+## 0.14.9
+- Restored the original AeroSlate top info-bar layout in portrait and landscape.
+- Added Import OFP after the Zulu clock in both layouts without redesigning the header.
+
 ## 0.14.7
 - Restyled the flight information bar to match the supplied reference design.
 - Kept the Import OFP button visible in both portrait and landscape layouts.

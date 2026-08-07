@@ -2,7 +2,7 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.14.8",
+  "version": "0.14.9",
   "description": "AeroSlate EFB v0.14.7 with the reference-style information bar and Import OFP in portrait and landscape.",
   "main": "electron/main.cjs",
   "type": "module",
