@@ -1,3 +1,8 @@
+# AeroSlate EFB v0.15.3
+
+- Added compact grey aircraft type and registration tiles to the top information bar.
+- Preserved the responsive Import OFP, STD countdown, UTC clock, sidebar, and Apple safe-area layout.
+
 # AeroSlate EFB 0.15.2
 
 - Replaced the accumulated top-bar overrides with one authoritative responsive layout.

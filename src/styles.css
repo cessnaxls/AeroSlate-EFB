@@ -4794,3 +4794,100 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   .app-shell > main > header.topbar .departure-clock > strong,
   .app-shell > main > header.topbar .zulu-clock > strong { font-size: 12px !important; }
 }
+
+
+/* v0.15.3 — compact aircraft and registration tiles in the authoritative top bar */
+.app-shell > main > header.topbar .flight-aircraft {
+  display: inline-flex !important;
+  align-items: center !important;
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  gap: 7px !important;
+  overflow: hidden !important;
+}
+
+.app-shell > main > header.topbar .flight-aircraft > span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  padding: 0 9px !important;
+  border: 1px solid color-mix(in srgb, var(--muted) 28%, transparent) !important;
+  border-radius: 7px !important;
+  background: color-mix(in srgb, var(--panel) 78%, var(--bg)) !important;
+  color: color-mix(in srgb, var(--text) 72%, var(--muted)) !important;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 4%, transparent) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: .035em !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.app-shell > main > header.topbar .flight-aircraft > span > b {
+  flex: 0 0 auto !important;
+  color: var(--muted) !important;
+  font-size: 8px !important;
+  font-weight: 900 !important;
+  letter-spacing: .16em !important;
+}
+
+@media (orientation: landscape) and (max-width: 1180px) {
+  .app-shell > main > header.topbar > .flight-ident { gap: 8px !important; }
+  .app-shell > main > header.topbar .flight-aircraft { gap: 5px !important; }
+  .app-shell > main > header.topbar .flight-aircraft > span {
+    height: 25px !important;
+    padding: 0 7px !important;
+    gap: 4px !important;
+    font-size: 9px !important;
+  }
+  .app-shell > main > header.topbar .flight-aircraft > span > b { font-size: 7px !important; }
+}
+
+@media (orientation: portrait) and (min-width: 600px) {
+  .app-shell > main > header.topbar > .flight-ident { gap: 7px !important; }
+  .app-shell > main > header.topbar .flight-aircraft { gap: 4px !important; }
+  .app-shell > main > header.topbar .flight-aircraft > span {
+    height: 24px !important;
+    padding: 0 6px !important;
+    gap: 4px !important;
+    font-size: 9px !important;
+  }
+  .app-shell > main > header.topbar .flight-aircraft > span > b {
+    font-size: 7px !important;
+    letter-spacing: .12em !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell > main > header.topbar .flight-aircraft > span {
+    padding: 0 5px !important;
+  }
+  .app-shell > main > header.topbar .flight-aircraft > span > b {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 599px) {
+  .app-shell > main > header.topbar > .flight-ident {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 6px !important;
+  }
+  .app-shell > main > header.topbar .flight-aircraft { gap: 3px !important; }
+  .app-shell > main > header.topbar .flight-aircraft > span {
+    height: 23px !important;
+    max-width: 58px !important;
+    padding: 0 5px !important;
+    font-size: 8px !important;
+  }
+}

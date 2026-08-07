@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.15.2",
-  "description": "AeroSlate EFB with a clean responsive flight information bar, live STD countdown, UTC clock, and Apple safe-area support.",
+  "version": "0.15.3",
+  "description": "AeroSlate EFB with responsive flight information bar, aircraft and registration tiles, STD countdown, UTC clock, and Apple safe-area support.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
