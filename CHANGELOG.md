@@ -1,3 +1,6 @@
+## 0.15.0
+- Rebuilt the top information bar with a live UTC clock, STD countdown, persistent Import OFP control, responsive sizing, and Apple safe-area spacing.
+
 ## 0.14.9
 - Restored the original AeroSlate top info-bar layout in portrait and landscape.
 - Added Import OFP after the Zulu clock in both layouts without redesigning the header.

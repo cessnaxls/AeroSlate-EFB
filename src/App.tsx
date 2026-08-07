@@ -169,7 +169,18 @@ export default function App() {
     </aside>
 
     <main>
-      <header className="topbar"><button className="menu-button always-menu" onClick={() => { const landscapeTablet = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; if (landscapeTablet || window.innerWidth > 1180) setSidebarCollapsed(value => !value); else setMenuOpen(true); }}><Menu /></button><div className="flight-ident"><div className="flight-primary"><span>{flight.airline}{flight.flightNumber || '—'}</span><strong>{flight.origin} <Plane size={16} /> {flight.destination}</strong></div><div className="flight-aircraft"><span><b>EQUIP</b>{flight.aircraft}</span><span><b>REG</b>{flight.registration}</span></div></div><div className="topbar-actions"><div className="zulu-clock"><span>ZULU</span><strong>{clock.toISOString().slice(11, 19)}</strong></div><button className="primary top-import" onClick={() => void importOFP()} disabled={loadingOFP}>{loadingOFP ? <RefreshCw className="spin" size={16} /> : <Import size={16} />} {loadingOFP ? 'Syncing' : 'Import OFP'}</button></div></header>
+      <header className="topbar">
+        <button className="menu-button always-menu" aria-label="Toggle navigation" onClick={() => { const landscapeTablet = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; if (landscapeTablet || window.innerWidth > 1180) setSidebarCollapsed(value => !value); else setMenuOpen(true); }}><Menu /></button>
+        <div className="flight-ident">
+          <div className="flight-primary"><span>{flight.airline}{flight.flightNumber || '—'}</span><strong>{flight.origin} <Plane size={16} /> {flight.destination}</strong></div>
+          <div className="flight-aircraft"><span><b>EQUIP</b>{flight.aircraft}</span><span><b>REG</b>{flight.registration}</span></div>
+        </div>
+        <div className="topbar-actions">
+          <button className="primary top-import" onClick={() => void importOFP()} disabled={loadingOFP}>{loadingOFP ? <RefreshCw className="spin" size={16} /> : <Import size={16} />}<span>{loadingOFP ? 'Syncing' : 'Import OFP'}</span></button>
+          <div className={`departure-clock ${departure.label === 'STD +' ? 'late' : ''}`}><span>{departure.label}</span><strong>{departure.value}</strong><small>{departure.std}</small></div>
+          <div className="zulu-clock"><span>UTC</span><strong>{clock.toISOString().slice(11, 19)}z</strong></div>
+        </div>
+      </header>
       {message && <div className="toast toast-auto" role="status">{message}<span className="toast-progress" /></div>}
       <div className="page-content">
         {/* Provider and document workspaces stay mounted so authenticated sessions, OFP position, and tool state survive tab changes. */}
