@@ -44,3 +44,7 @@
 - Adds `PAGE X OF Y` footers.
 - Adds ISA deviation to the telex navlog when supplied.
 - Keeps the randomized professional telex layout stable for each release.
+
+## 0.14.8
+- Restored the app's original compact top information bar in landscape and portrait.
+- Added the Import OFP button beside the Zulu clock in both layouts without redesigning the header.
