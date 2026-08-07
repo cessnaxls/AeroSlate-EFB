@@ -4913,76 +4913,265 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
 }
 
 
-/* v0.15.6 — final requested layout refinements */
+/* v0.15.5 — requested top-bar, OFP, overview, and weather spacing refinements */
+
+/* Portrait: add 5px between DEST group and the A/C tile; REG follows as one tile group. */
 @media (orientation: portrait) and (min-width: 600px) {
-  /* Add a deliberate 5 px of breathing room between DEST and the A/C tile,
-     while keeping REG synchronized with A/C as one compact tile group. */
   .app-shell > main > header.topbar > .flight-ident {
     gap: 9px !important;
   }
+}
 
-  /* Flight Overview: distribute all four operational metrics evenly across
-     the available portrait width rather than leaving an unused right edge. */
-  .dashboard-metrics {
+/* Landscape OFP: the Route & airports frame uses the full content width. */
+@media (orientation: landscape) and (min-width: 801px) {
+  .ofp-scrollable-release .ofp-frame-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .ofp-scrollable-release .ofp-route-card {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+/* Portrait Flight Overview: four equal tiles span the entire available width. */
+@media (orientation: portrait) and (min-width: 600px) {
+  .dashboard-page .dashboard-metrics {
     display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     width: 100% !important;
-    max-width: none !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
     margin-right: 0 !important;
     padding-right: 0 !important;
     overflow: visible !important;
-    gap: 10px !important;
   }
-  .dashboard-metrics > .metric,
-  .dashboard-metrics .metric {
-    width: auto !important;
+
+  .dashboard-page .dashboard-metrics > .metric {
     min-width: 0 !important;
-    max-width: none !important;
+    width: auto !important;
   }
 }
 
-@media (orientation: landscape) {
-  /* OFP: Route & airports occupies the complete frame width, matching the
-     right edge used by the rest of the OFP workspace. */
-  .ofp-scrollable-release .ofp-frame-grid > .ofp-route-card,
-  .ofp-release-frame .ofp-frame-grid > .ofp-route-card,
-  .ofp-frame-grid > .ofp-route-card {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    max-width: none !important;
-  }
-}
-
-/* v0.15.7 — Trip Builder date and action controls use matching widths. */
-.trip-scheduler .trip-builder-grid > div:first-child {
-  grid-template-columns: repeat(2, minmax(190px, 220px)) !important;
-  justify-content: start !important;
-}
-
-.trip-scheduler .trip-builder-grid .trip-date-picker,
-.trip-scheduler .trip-builder-grid > div:first-child > .primary {
+/* Weather card action: balanced inset, centered label, and clearer button treatment. */
+.dashboard-page .weather-notams-button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   width: 100% !important;
-  min-width: 0 !important;
-  max-width: 220px !important;
+  min-height: 38px !important;
+  margin: 14px 0 0 !important;
+  padding: 9px 12px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  background: color-mix(in srgb, var(--panel-2) 72%, transparent) !important;
+  text-align: center !important;
+  gap: 6px !important;
 }
 
-@media (max-width: 900px) {
-  .trip-scheduler .trip-builder-grid > div:first-child {
-    grid-template-columns: repeat(2, minmax(0, 220px)) !important;
-    justify-content: start !important;
+/* v0.15.6 — Trip Builder: compact, efficient two-workflow layout. */
+.trip-scheduler .trip-builder-header{min-height:50px!important}
+.trip-scheduler .trip-builder-header>.compact{min-height:34px!important;padding:7px 11px!important}
+.trip-builder-shell{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.65fr) minmax(285px,.85fr)!important;
+  gap:12px!important;
+  align-items:stretch!important;
+  padding:12px 14px 14px!important;
+}
+.trip-selected-leg,.rig-builder-panel{
+  min-width:0!important;
+  border:1px solid var(--border)!important;
+  border-radius:12px!important;
+  background:color-mix(in srgb,var(--panel-2) 82%,transparent)!important;
+}
+.trip-selected-leg{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(190px,230px)!important;
+  gap:14px!important;
+  align-items:center!important;
+  padding:13px 14px!important;
+}
+.trip-selected-leg.empty{opacity:.82}
+.trip-selected-copy{display:grid!important;grid-template-columns:auto auto 1fr!important;align-items:center!important;gap:5px 12px!important;min-width:0!important}
+.trip-builder-eyebrow{grid-column:1/-1!important;font-size:10px!important;line-height:1!important;letter-spacing:.09em!important;text-transform:uppercase!important;color:var(--muted)!important;font-weight:800!important}
+.trip-selected-copy>strong{font-size:18px!important;line-height:1.1!important;white-space:nowrap!important}
+.trip-selected-route{display:inline-flex!important;align-items:center!important;gap:7px!important;color:var(--text)!important;white-space:nowrap!important}
+.trip-selected-route b{font-size:16px!important}
+.trip-selected-route svg{color:var(--accent-2)!important;transform:rotate(90deg)}
+.trip-selected-copy>span:last-child{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;color:var(--muted)!important;font-size:13px!important}
+.trip-add-controls{display:grid!important;gap:8px!important;align-content:center!important}
+.trip-add-controls .trip-date-picker{display:grid!important;grid-template-columns:1fr!important;gap:5px!important;margin:0!important;min-width:0!important}
+.trip-add-controls .trip-date-picker span,.rig-builder-controls label>span{font-size:10px!important;text-transform:uppercase!important;letter-spacing:.07em!important;color:var(--muted)!important;font-weight:800!important}
+.trip-add-controls input,.rig-builder-controls select{width:100%!important;min-height:40px!important}
+.trip-add-button{width:100%!important;min-height:42px!important;justify-content:center!important}
+.rig-builder-panel{display:grid!important;grid-template-rows:1fr auto!important;gap:12px!important;padding:13px 14px!important}
+.rig-builder-copy{display:grid!important;align-content:start!important;gap:5px!important}
+.rig-builder-copy>strong{font-size:16px!important}
+.rig-builder-copy>span:last-child{font-size:12px!important;line-height:1.35!important;color:var(--muted)!important}
+.rig-builder-controls{display:grid!important;grid-template-columns:minmax(92px,.55fr) minmax(145px,1fr)!important;gap:8px!important;align-items:end!important}
+.rig-builder-controls label{display:grid!important;gap:5px!important;margin:0!important;min-width:0!important}
+.rig-builder-controls button{min-height:42px!important;justify-content:center!important;white-space:nowrap!important}
+
+@media (max-width:1050px){
+  .trip-builder-shell{grid-template-columns:1fr!important}
+  .rig-builder-panel{grid-template-columns:minmax(0,1fr) minmax(290px,.8fr)!important;grid-template-rows:auto!important;align-items:center!important}
+}
+@media (max-width:700px){
+  .trip-builder-shell{padding:10px!important;gap:10px!important}
+  .trip-selected-leg{grid-template-columns:1fr!important;gap:11px!important;padding:12px!important}
+  .trip-selected-copy{grid-template-columns:auto auto minmax(0,1fr)!important}
+  .trip-add-controls{grid-template-columns:minmax(0,1fr) minmax(150px,.8fr)!important;align-items:end!important}
+  .rig-builder-panel{grid-template-columns:1fr!important;gap:10px!important;padding:12px!important}
+  .rig-builder-controls{grid-template-columns:minmax(105px,.55fr) minmax(0,1fr)!important}
+}
+@media (max-width:470px){
+  .trip-selected-copy{grid-template-columns:1fr!important;gap:6px!important}
+  .trip-selected-route{grid-column:1!important}
+  .trip-selected-copy>span:last-child{white-space:normal!important}
+  .trip-add-controls,.rig-builder-controls{grid-template-columns:1fr!important}
+}
+
+/* v0.15.7 — Trip date sizing and authoritative landscape OFP width. */
+.trip-scheduler .trip-add-controls{
+  width:220px!important;
+  max-width:100%!important;
+  justify-self:end!important;
+}
+.trip-scheduler .trip-add-controls .trip-date-picker,
+.trip-scheduler .trip-add-controls .trip-add-button{
+  width:100%!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+}
+.trip-scheduler .trip-add-controls .trip-date-picker input{
+  width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+}
+
+@media (orientation: landscape) and (min-width:801px){
+  .ofp-release-frame.ofp-scrollable-release,
+  .ofp-release-frame.ofp-scrollable-release .ofp-frame-grid{
+    width:100%!important;
+    max-width:none!important;
+  }
+  .ofp-release-frame.ofp-scrollable-release .ofp-frame-grid > .ofp-route-card{
+    grid-column:1 / -1!important;
+    width:100%!important;
+    max-width:none!important;
+    justify-self:stretch!important;
+    box-sizing:border-box!important;
   }
 }
 
-@media (max-width: 520px) {
-  .trip-scheduler .trip-builder-grid > div:first-child {
-    grid-template-columns: 1fr !important;
+@media (max-width:700px){
+  .trip-scheduler .trip-add-controls{
+    width:100%!important;
+    justify-self:stretch!important;
   }
-  .trip-scheduler .trip-builder-grid .trip-date-picker,
-  .trip-scheduler .trip-builder-grid > div:first-child > .primary {
-    grid-column: 1 !important;
-    width: 100% !important;
-    max-width: none !important;
+}
+
+/* v0.15.8 — authoritative Trip Builder alignment and spacing. */
+.trip-scheduler .trip-builder-shell.trip-builder-clean{
+  display:grid!important;
+  grid-template-columns:minmax(250px,.72fr) minmax(0,1.75fr)!important;
+  gap:16px!important;
+  align-items:end!important;
+  padding:16px!important;
+}
+.trip-builder-clean .trip-flight-summary{
+  min-width:0!important;
+  display:grid!important;
+  align-content:center!important;
+  gap:7px!important;
+  padding:0 4px!important;
+  border:0!important;
+  background:transparent!important;
+}
+.trip-builder-clean .trip-flight-summary.empty{opacity:.75!important}
+.trip-builder-clean .trip-flight-main{
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:8px 12px!important;
+  min-width:0!important;
+}
+.trip-builder-clean .trip-flight-main>strong{
+  font-size:20px!important;
+  line-height:1.1!important;
+  white-space:nowrap!important;
+}
+.trip-builder-clean .trip-selected-route{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  white-space:nowrap!important;
+}
+.trip-builder-clean .trip-flight-meta{
+  color:var(--muted)!important;
+  font-size:13px!important;
+  line-height:1.25!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.trip-builder-clean .trip-builder-control-grid{
+  min-width:0!important;
+  display:grid!important;
+  grid-template-columns:minmax(175px,.9fr) minmax(205px,1.08fr) minmax(105px,.5fr) minmax(235px,1.25fr)!important;
+  gap:12px!important;
+  align-items:end!important;
+}
+.trip-builder-clean .trip-control{
+  min-width:0!important;
+  display:grid!important;
+  grid-template-rows:16px 46px!important;
+  gap:6px!important;
+  margin:0!important;
+}
+.trip-builder-clean .trip-control>span{
+  display:flex!important;
+  align-items:flex-end!important;
+  min-height:16px!important;
+  font-size:10px!important;
+  line-height:1!important;
+  letter-spacing:.075em!important;
+  text-transform:uppercase!important;
+  color:var(--muted)!important;
+  font-weight:800!important;
+  white-space:nowrap!important;
+}
+.trip-builder-clean .trip-control input,
+.trip-builder-clean .trip-control select,
+.trip-builder-clean .trip-control button{
+  width:100%!important;
+  min-width:0!important;
+  height:46px!important;
+  min-height:46px!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+  justify-content:center!important;
+  white-space:nowrap!important;
+}
+.trip-builder-clean .trip-generate-control button{overflow:hidden!important;text-overflow:ellipsis!important}
+
+@media (max-width:1180px){
+  .trip-scheduler .trip-builder-shell.trip-builder-clean{
+    grid-template-columns:1fr!important;
+    align-items:start!important;
   }
-  .trip-scheduler .trip-builder-grid .trip-date-picker { grid-row: 3 !important; }
-  .trip-scheduler .trip-builder-grid > div:first-child > .primary { grid-row: 4 !important; }
+  .trip-builder-clean .trip-builder-control-grid{
+    grid-template-columns:minmax(170px,.9fr) minmax(210px,1fr) minmax(105px,.52fr) minmax(225px,1.18fr)!important;
+  }
+}
+@media (max-width:850px){
+  .trip-builder-clean .trip-builder-control-grid{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:11px 12px!important;
+  }
+}
+@media (max-width:520px){
+  .trip-scheduler .trip-builder-shell.trip-builder-clean{padding:12px!important;gap:13px!important}
+  .trip-builder-clean .trip-builder-control-grid{grid-template-columns:1fr!important}
+  .trip-builder-clean .trip-flight-main>strong{font-size:18px!important}
+  .trip-builder-clean .trip-flight-meta{white-space:normal!important}
 }

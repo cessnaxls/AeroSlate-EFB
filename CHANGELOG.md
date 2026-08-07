@@ -1,12 +1,24 @@
+## 0.15.8
+- Rebuilt Trip Builder controls into a clean aligned grid with consistent labels, heights, spacing, and responsive wrapping.
+
+# Changelog
+
 ## 0.15.7
+- Matched the Schedule date control width to the Add selected leg button.
+- Forced the OFP Route & airports frame to span the exact full content width in landscape.
 
-- Matched the Trip Builder schedule-date field width to the Add selected leg button.
+## v0.15.6
+- Rebuilt the Trips > Trip Builder frame into a compact two-workflow layout with a clearer selected-flight summary, consolidated date/add controls, and a space-efficient random-rig panel.
+- Improved portrait and narrow-screen responsiveness.
 
-## 0.15.6
-- Added 5px more portrait spacing between DEST and the A/C/REG tile group.
+# Changelog
+
+## 0.15.5
+- Added 5px more portrait spacing between the arrival airport group and the A/C/REG tile group.
 - Renamed Deck to Flight Overview.
-- Made the OFP Route & airports pane full width in landscape.
-- Expanded the four Flight Overview metrics evenly across portrait width.
+- Expanded Route & airports across the full OFP width in landscape.
+- Made the four Flight Overview metric tiles equal-width across portrait screens.
+- Centered and balanced the Weather and all NOTAMs button.
 
 ## 0.15.4
 - Moved the A/C and REG tiles closer to the arrival airport in portrait mode.

@@ -2,8 +2,8 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.15.7",
-  "description": "AeroSlate EFB with matched Trip Builder schedule-date and add-leg control widths.",
+  "version": "0.15.8",
+  "description": "AeroSlate EFB with responsive flight information bar, aircraft and registration tiles, STD countdown, UTC clock, and Apple safe-area support.",
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
