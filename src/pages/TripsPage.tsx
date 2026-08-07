@@ -180,40 +180,7 @@ export function TripsPage({ candidate, onDispatch, notify }: Props) {
   const dispatch = (trip: PlannedTrip) => { saveLocal('aeroslate.lastDispatchLoad', { flightNumber: trip.flightNumber, pax: trip.pax, bags: trip.bags, bagWeight: trip.bagWeight, freight: trip.freight, payload: trip.pax * 190 + trip.bagWeight }); const f = flightFromTrip(trip), p = buildSimbriefDispatch(f, { pax: trip.pax, bags: trip.bags, bagWeight: trip.bagWeight, payload: trip.pax * 190 + trip.bagWeight, freight: trip.freight, remarks: `AeroSlate scheduled load: ${trip.pax} pax; ${trip.bags} bags; payload ${(trip.pax * 190 + trip.bagWeight).toLocaleString()} lb; freight ${trip.freight.toLocaleString()} lb.` }); onDispatch(p.url, f, p.staticId); };
 
   return <div className="trips-page">
-    <section className="card trip-scheduler">
-      <header className="trip-builder-header">
-        <div><CalendarDays size={18} /><h3>Trip builder</h3></div>
-        <button className="compact" onClick={() => void sync()} disabled={busy}><CloudUpload size={16} />{busy ? 'Syncing…' : 'Sync Gist'}</button>
-      </header>
-      <div className="card-body trip-builder-shell">
-        <div className={`trip-selected-leg ${candidate ? '' : 'empty'}`}>
-          <div className="trip-selected-copy">
-            <span className="trip-builder-eyebrow">Selected flight</span>
-            <strong>{candidate ? candidate.flightNumber : 'No flight selected'}</strong>
-            <div className="trip-selected-route">
-              <b>{candidate ? candidate.departure : 'DEP'}</b>
-              <Plane size={16} />
-              <b>{candidate ? candidate.arrival : 'DEST'}</b>
-            </div>
-            <span>{candidate ? `${candidate.std}–${candidate.sta} · ${candidate.aircraft || 'Aircraft not set'}` : 'Choose a flight in Flight Finder or build a random trip rig.'}</span>
-          </div>
-          <div className="trip-add-controls">
-            <label className="trip-date-picker"><span>Schedule date</span><input type="date" value={selectedDate} onChange={e => { setSelectedDate(e.target.value); const d = parseDate(e.target.value); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }} /></label>
-            <button className="primary trip-add-button" onClick={addTrip} disabled={!candidate}><Save size={16} /> Add selected leg</button>
-          </div>
-        </div>
-        <div className="rig-builder-panel">
-          <div className="rig-builder-copy">
-            <span className="trip-builder-eyebrow">Quick pairing</span>
-            <strong>Generate a random rig</strong>
-            <span>Create a connected multi-leg trip, then review it before adding.</span>
-          </div>
-          <div className="rig-builder-controls">
-            <label><span>Rig length</span><select value={legs} onChange={e => setLegs(Number(e.target.value))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} leg{n === 1 ? '' : 's'}</option>)}</select></label>
-            <button onClick={regenerateRig}><Shuffle size={16} /> Generate rig</button>
-          </div>
-        </div>
-      </div>
+    <section className="card trip-scheduler"><header><div><CalendarDays size={18} /><h3>Trip builder</h3></div><button onClick={() => void sync()} disabled={busy}><CloudUpload size={16} />{busy ? 'Syncing…' : 'Sync Gist'}</button></header><div className="card-body trip-builder-grid"><div><strong>{candidate ? `${candidate.flightNumber} · ${candidate.departure}–${candidate.arrival}` : 'No selected flight'}</strong><span>{candidate ? `${formatTripDate(selectedDate)} · ${candidate.std}–${candidate.sta}` : 'Select a flight in Flight Finder, or generate a random rig.'}</span><label className="trip-date-picker"><span>Schedule date</span><input type="date" value={selectedDate} onChange={e => { setSelectedDate(e.target.value); const d = parseDate(e.target.value); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }} /></label><button className="primary" onClick={addTrip} disabled={!candidate}><Save size={16} /> Add selected leg</button></div><div className="rig-builder"><label><span>Random rig length</span><select value={legs} onChange={e => setLegs(Number(e.target.value))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} leg{n === 1 ? '' : 's'}</option>)}</select></label><button onClick={regenerateRig}><Shuffle size={16} /> Generate random rig</button></div></div>
       {rigPreview.length > 0 && <div className="rig-preview"><div className="rig-preview-heading"><div><strong>Proposed trip rig</strong><span>Independent random selection · review before adding</span></div><div><button onClick={regenerateRig}><RefreshCw size={15}/> Regenerate</button><button className="primary" onClick={acceptRig}><Check size={15}/> Accept rig</button></div></div><div className="rig-preview-legs">{rigPreview.map((trip, index) => <article key={trip.id}><b>{index + 1}</b><div><strong>{trip.flightNumber} · {trip.departure} → {trip.arrival}</strong><span>{formatTripDate(trip.date)} · {trip.std}–{trip.sta} · {trip.aircraft}</span></div><div><strong>{trip.pax} pax</strong><span>{trip.bags} bags · {trip.freight.toLocaleString()} lb freight</span></div></article>)}</div></div>}
     </section>
     <section className="card unscheduled-trips-card"><header><div><Plane size={18}/><h3>Unscheduled trips</h3></div><span className="pill neutral">{unscheduledTrips.length}</span></header><div className="unscheduled-toolbar"><span>Place pairings without overlaps:</span><button onClick={()=>randomSchedule(7)}>Next week</button><button onClick={()=>randomSchedule(14)}>2 weeks</button><button onClick={()=>randomSchedule(30)}>30 days</button></div><div className="unscheduled-list">{unscheduledTrips.map(t=><article key={t.id}><div><strong>{t.flightNumber} · {t.departure} → {t.arrival}</strong><span>{t.std}–{t.sta} · {t.aircraft} {t.registration}</span></div><label><span>Schedule</span><input type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)}/></label><button className="primary compact" onClick={()=>scheduleStoredTrip(t.id)}>Assign day</button><button className="compact danger-button" onClick={()=>removeTrip(t.id)}>Remove</button></article>)}{!unscheduledTrips.length&&<div className="empty-cell">Trips added from Flight Finder will wait here until you schedule them.</div>}</div></section>
