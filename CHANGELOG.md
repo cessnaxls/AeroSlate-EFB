@@ -1,3 +1,12 @@
+# Changelog
+
+## 0.15.5
+- Added 5px more portrait spacing between the arrival airport group and the A/C/REG tile group.
+- Renamed Deck to Flight Overview.
+- Expanded Route & airports across the full OFP width in landscape.
+- Made the four Flight Overview metric tiles equal-width across portrait screens.
+- Centered and balanced the Weather and all NOTAMs button.
+
 ## 0.15.4
 - Moved the A/C and REG tiles closer to the arrival airport in portrait mode.
 

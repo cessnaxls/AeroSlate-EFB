@@ -4911,3 +4911,58 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
     margin-left: 0 !important;
   }
 }
+
+
+/* v0.15.5 — requested top-bar, OFP, overview, and weather spacing refinements */
+
+/* Portrait: add 5px between DEST group and the A/C tile; REG follows as one tile group. */
+@media (orientation: portrait) and (min-width: 600px) {
+  .app-shell > main > header.topbar > .flight-ident {
+    gap: 9px !important;
+  }
+}
+
+/* Landscape OFP: the Route & airports frame uses the full content width. */
+@media (orientation: landscape) and (min-width: 801px) {
+  .ofp-scrollable-release .ofp-frame-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .ofp-scrollable-release .ofp-route-card {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+/* Portrait Flight Overview: four equal tiles span the entire available width. */
+@media (orientation: portrait) and (min-width: 600px) {
+  .dashboard-page .dashboard-metrics {
+    display: grid !important;
+    width: 100% !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-page .dashboard-metrics > .metric {
+    min-width: 0 !important;
+    width: auto !important;
+  }
+}
+
+/* Weather card action: balanced inset, centered label, and clearer button treatment. */
+.dashboard-page .weather-notams-button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  min-height: 38px !important;
+  margin: 14px 0 0 !important;
+  padding: 9px 12px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  background: color-mix(in srgb, var(--panel-2) 72%, transparent) !important;
+  text-align: center !important;
+  gap: 6px !important;
+}
