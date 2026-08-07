@@ -5369,7 +5369,8 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
 
 @media (max-width: 1080px) {
   .trip-builder-actions-v160 {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    /* Keep Schedule Date and Rig Length exactly the same fixed width on iPad/portrait layouts. */
+    grid-template-columns: 150px minmax(0, 1fr) !important;
     gap: 12px 14px !important;
   }
 }
@@ -5386,61 +5387,36 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   .trip-builder-route-v160 > strong { font-size: 18px !important; }
 }
 
-/* v0.16.2 — Trip Builder left controls share one exact track width.
-   Schedule Date and Rig Length always use the same column; action buttons
-   take the remaining room so they stay comfortably sized. */
+
+/* v0.16.3 — Trip Builder width polish: make Rig Length match Schedule Date and let right-side buttons flex neatly. */
 .trip-builder-actions-v160 {
-  --trip-builder-left-control: clamp(320px, 46%, 470px);
-  grid-template-columns: var(--trip-builder-left-control) minmax(320px, 1fr) !important;
-  grid-template-areas:
-    "date add"
-    "rig generate" !important;
-  column-gap: 14px !important;
-  row-gap: 12px !important;
+  grid-template-columns: minmax(300px, 430px) minmax(360px, 1fr) !important;
+  gap: 12px 16px !important;
 }
-.trip-builder-date-v160 { grid-area: date !important; }
-.trip-builder-add-v160 { grid-area: add !important; }
-.trip-builder-rig-v160 { grid-area: rig !important; }
-.trip-builder-generate-v160 { grid-area: generate !important; }
 .trip-builder-date-v160,
-.trip-builder-rig-v160 {
-  width: var(--trip-builder-left-control) !important;
-  max-width: var(--trip-builder-left-control) !important;
-}
+.trip-builder-rig-v160 { grid-column: 1 !important; }
 .trip-builder-add-v160,
-.trip-builder-generate-v160 {
+.trip-builder-generate-v160 { grid-column: 2 !important; }
+.trip-builder-date-v160 input,
+.trip-builder-rig-v160 select {
   width: 100% !important;
   min-width: 0 !important;
 }
-
-/* iPad portrait / reduced content width: preserve identical left-control widths
-   while giving the right-side buttons a little more breathing room. */
-@media (max-width: 1080px) {
+.trip-builder-add-v160 button,
+.trip-builder-generate-v160 button {
+  width: 100% !important;
+}
+@media (max-width: 1180px) {
   .trip-builder-actions-v160 {
-    --trip-builder-left-control: clamp(300px, 46%, 440px);
-    grid-template-columns: var(--trip-builder-left-control) minmax(280px, 1fr) !important;
-    grid-template-areas:
-      "date add"
-      "rig generate" !important;
+    grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.12fr) !important;
   }
 }
-
-/* Phones: stack cleanly rather than squeezing either control. */
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .trip-builder-actions-v160 {
-    --trip-builder-left-control: 100%;
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-areas:
-      "date"
-      "add"
-      "rig"
-      "generate" !important;
+    grid-template-columns: 1fr !important;
   }
   .trip-builder-date-v160,
   .trip-builder-rig-v160,
   .trip-builder-add-v160,
-  .trip-builder-generate-v160 {
-    width: 100% !important;
-    max-width: none !important;
-  }
+  .trip-builder-generate-v160 { grid-column: auto !important; }
 }

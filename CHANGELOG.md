@@ -1,5 +1,10 @@
-## 0.16.2
-- Matched Rig Length width exactly to Schedule Date and rebalanced Trip Builder action buttons.
+## v0.16.3
+- Made Trip Builder Rig Length dropdown match the Schedule Date field width.
+- Kept the right-side Add selected leg and Generate random rig buttons flexible so the row stays balanced.
+- Bumped service-worker cache to refresh the frontend after deployment.
+
+## v0.16.2
+- Fixed Trip Builder responsive grid so Schedule Date and Rig Length use the same 150 px column on iPad/portrait layouts.
 
 # v0.16.1
 
