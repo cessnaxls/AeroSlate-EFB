@@ -1,3 +1,8 @@
+# v0.16.1
+
+- Matched the Schedule date control width to the Rig length dropdown.
+- Rotated the route airplane icons to point horizontally right in the top information bar and Trip Builder selected-flight panel.
+
 ## 0.16.0
 
 - Rebuilt Trips > Trip Builder with isolated markup and CSS so legacy layout rules cannot overlap or clip the controls.

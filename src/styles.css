@@ -4604,7 +4604,7 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
 .app-shell > main > header.topbar .flight-primary svg {
   flex: 0 0 auto !important;
   color: var(--muted) !important;
-  transform: rotate(-12deg) !important;
+  transform: rotate(45deg) !important;
 }
 
 /* Equipment and registration are intentionally removed from the bar so the
@@ -5313,7 +5313,7 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   white-space: nowrap !important;
 }
 .trip-builder-airports-v160 b { font-size: 17px !important; }
-.trip-builder-airports-v160 svg { color: var(--accent-2) !important; transform: rotate(90deg) !important; }
+.trip-builder-airports-v160 svg { color: var(--accent-2) !important; transform: rotate(45deg) !important; }
 .trip-builder-meta-v160 {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(92px, auto)) !important;
@@ -5331,7 +5331,7 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
 .trip-builder-meta-v160 b { font-size: 14px !important; white-space: nowrap !important; }
 .trip-builder-actions-v160 {
   display: grid !important;
-  grid-template-columns: minmax(175px, .9fr) minmax(220px, 1.15fr) minmax(115px, .58fr) minmax(240px, 1.28fr) !important;
+  grid-template-columns: 150px minmax(220px, 1fr) 150px minmax(240px, 1.15fr) !important;
   gap: 12px !important;
   align-items: end !important;
   min-width: 0 !important;
