@@ -1,9 +1,3 @@
-# v0.16.2
-
-- Verified and corrected the Trip Builder Schedule date and Rig length controls so both are exactly 150 px wide at tablet and desktop widths.
-- Preserved full-width stacking on narrow phone layouts.
-- Bumped the service-worker cache to v15.
-
 # v0.16.1
 
 - Matched the Schedule date control width to the Rig length dropdown.

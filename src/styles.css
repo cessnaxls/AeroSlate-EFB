@@ -5385,28 +5385,3 @@ input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:.8
   .trip-builder-actions-v160 { grid-template-columns: minmax(0, 1fr) !important; }
   .trip-builder-route-v160 > strong { font-size: 18px !important; }
 }
-
-/* v0.16.2 — authoritative Trip Builder control-width correction.
-   Keep Schedule date and Rig length exactly identical at tablet/desktop widths. */
-.trip-builder-date-v160,
-.trip-builder-rig-v160 {
-  width: 150px !important;
-  min-width: 150px !important;
-  max-width: 150px !important;
-  justify-self: start !important;
-}
-
-@media (max-width: 1080px) and (min-width: 521px) {
-  .trip-builder-actions-v160 {
-    grid-template-columns: 150px minmax(0, 1fr) !important;
-  }
-}
-
-@media (max-width: 520px) {
-  .trip-builder-date-v160,
-  .trip-builder-rig-v160 {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-  }
-}
