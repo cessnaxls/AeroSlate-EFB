@@ -1,3 +1,8 @@
+## 0.15.8
+
+- Made the Trip Builder schedule-date input and Add selected leg button share one explicit width.
+- Moved Route & airports outside the OFP detail grid so it always matches the full width of the other OFP frame rows in landscape.
+
 # Changelog
 
 ## 0.15.7
