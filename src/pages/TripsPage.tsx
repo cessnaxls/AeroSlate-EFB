@@ -185,34 +185,39 @@ export function TripsPage({ candidate, onDispatch, notify }: Props) {
         <div><CalendarDays size={18} /><h3>Trip builder</h3></div>
         <button className="compact" onClick={() => void sync()} disabled={busy}><CloudUpload size={16} />{busy ? 'Syncing…' : 'Sync Gist'}</button>
       </header>
-      <div className="card-body trip-builder-shell trip-builder-clean">
-        <div className={`trip-flight-summary ${candidate ? '' : 'empty'}`}>
-          <span className="trip-builder-eyebrow">Selected flight</span>
-          <div className="trip-flight-main">
-            <strong>{candidate ? candidate.flightNumber : 'No flight selected'}</strong>
-            <div className="trip-selected-route">
-              <b>{candidate ? candidate.departure : 'DEP'}</b>
-              <Plane size={16} />
-              <b>{candidate ? candidate.arrival : 'DEST'}</b>
+      <div className="card-body trip-builder-v160">
+        <div className={`trip-builder-summary-v160 ${candidate ? '' : 'empty'}`}>
+          <div className="trip-builder-summary-copy-v160">
+            <span className="trip-builder-kicker-v160">Selected flight</span>
+            <div className="trip-builder-route-v160">
+              <strong>{candidate ? candidate.flightNumber : 'No flight selected'}</strong>
+              <span className="trip-builder-airports-v160">
+                <b>{candidate ? candidate.departure : 'DEP'}</b>
+                <Plane size={16} />
+                <b>{candidate ? candidate.arrival : 'DEST'}</b>
+              </span>
             </div>
           </div>
-          <span className="trip-flight-meta">{candidate ? `${candidate.std}–${candidate.sta} · ${candidate.aircraft || 'Aircraft not set'}` : 'Choose a flight in Flight Finder or generate a random trip rig.'}</span>
+          <div className="trip-builder-meta-v160">
+            <span><small>Schedule</small><b>{candidate ? `${candidate.std}–${candidate.sta}` : '—'}</b></span>
+            <span><small>Aircraft</small><b>{candidate ? (candidate.aircraft || 'Not set') : '—'}</b></span>
+          </div>
         </div>
 
-        <div className="trip-builder-control-grid">
-          <label className="trip-control trip-date-picker">
+        <div className="trip-builder-actions-v160">
+          <label className="trip-builder-field-v160 trip-builder-date-v160">
             <span>Schedule date</span>
             <input type="date" value={selectedDate} onChange={e => { setSelectedDate(e.target.value); const d = parseDate(e.target.value); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }} />
           </label>
-          <div className="trip-control trip-button-control">
+          <div className="trip-builder-field-v160 trip-builder-add-v160">
             <span>Add flight</span>
-            <button className="primary trip-add-button" onClick={addTrip} disabled={!candidate}><Save size={16} /> Add selected leg</button>
+            <button className="primary" onClick={addTrip} disabled={!candidate}><Save size={16} /> Add selected leg</button>
           </div>
-          <label className="trip-control trip-rig-length">
+          <label className="trip-builder-field-v160 trip-builder-rig-v160">
             <span>Rig length</span>
             <select value={legs} onChange={e => setLegs(Number(e.target.value))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} leg{n === 1 ? '' : 's'}</option>)}</select>
           </label>
-          <div className="trip-control trip-button-control trip-generate-control">
+          <div className="trip-builder-field-v160 trip-builder-generate-v160">
             <span>Quick pairing</span>
             <button onClick={regenerateRig}><Shuffle size={16} /> Generate random rig</button>
           </div>

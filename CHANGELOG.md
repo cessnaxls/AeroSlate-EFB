@@ -1,3 +1,9 @@
+## 0.16.0
+
+- Rebuilt Trips > Trip Builder with isolated markup and CSS so legacy layout rules cannot overlap or clip the controls.
+- Added a dedicated selected-flight summary card and a separate responsive action grid.
+- Standardized field labels, control heights, spacing, and responsive wrapping for portrait and landscape.
+
 ## 0.15.9
 - Rebuilt the Trip Builder frame so the selected-flight summary sits above a clean responsive control grid.
 - Prevented date, labels, buttons, and rig controls from overlapping or clipping in portrait and landscape.
