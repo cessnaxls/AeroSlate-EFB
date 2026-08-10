@@ -17,7 +17,7 @@ import { NavlogPage } from './pages/NavlogPage';
 import { WeatherPage } from './pages/WeatherPage';
 import { FuelPage } from './pages/FuelPage';
 import { RunwayAnalysisPage } from './pages/RunwayAnalysisPage';
-import { SimPage } from './pages/SimPage';
+import { SimPage, useSimTelemetry } from './pages/SimPage';
 import { OOOIPage } from './pages/OOOIPage';
 import { RecordsPage } from './pages/RecordsPage';
 import { GatePage } from './pages/GatePage';
@@ -93,6 +93,7 @@ export default function App() {
   const [loadingOFP, setLoadingOFP] = useState(false); const [message, setMessage] = useState('');
   const [runtime, setRuntime] = useState<RuntimeStatus>({ simLinked: false, mode: 'standalone', providerMode: 'official-web-session' });
   const [clock, setClock] = useState(new Date());
+  const { telemetry: headerTelemetry, linked: headerSimLinked } = useSimTelemetry();
   const [dispatchUrl, setDispatchUrl] = useState(() => loadLocal('aeroslate.dispatch.url', loadLocal('dispatchlink.dispatch.url', '')));
   const [selectedCandidate, setSelectedCandidate] = useState<FlightCandidate | null>(() => loadLocal<FlightCandidate | null>('aeroslate.finder.flight', null));
   const [dispatchFlight, setDispatchFlight] = useState<FlightCandidate | null>(() => loadLocal('aeroslate.dispatch.flight', loadLocal<FlightCandidate | null>('dispatchlink.dispatch.flight', null)));
@@ -100,6 +101,21 @@ export default function App() {
   const [theme, setTheme] = useState(() => loadLocal('aeroslate.theme', 'ocean'));
   const flight = useMemo(() => summary(ofp, dispatchFlight), [ofp, dispatchFlight]);
   const departure = useMemo(() => departureCountdown(clock, flight.flightDate, flight.schedOut), [clock, flight.flightDate, flight.schedOut]);
+  const zuluClockText = useMemo(() => {
+    if (headerSimLinked && typeof headerTelemetry?.simZuluSeconds === 'number' && Number.isFinite(headerTelemetry.simZuluSeconds)) {
+      const total = Math.floor(headerTelemetry.simZuluSeconds) % 86400;
+      const safe = total < 0 ? total + 86400 : total;
+      const hh = String(Math.floor(safe / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((safe % 3600) / 60)).padStart(2, '0');
+      const ss = String(safe % 60).padStart(2, '0');
+      return `${hh}:${mm}:${ss}z`;
+    }
+    if (headerSimLinked && headerTelemetry?.simZulu) {
+      const match = String(headerTelemetry.simZulu).match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?[zZ]?$/);
+      if (match) return `${String(Number(match[1])).padStart(2, '0')}:${match[2]}:${match[3] || '00'}z`;
+    }
+    return `${clock.toISOString().slice(11, 19)}z`;
+  }, [clock, headerSimLinked, headerTelemetry?.simZulu, headerTelemetry?.simZuluSeconds]);
   const notify = useCallback((text: string) => setMessage(text), []);
 
   useEffect(() => saveLocal('aeroslate.sidebar.collapsed', sidebarCollapsed), [sidebarCollapsed]);
@@ -193,7 +209,7 @@ export default function App() {
         <div className="topbar-actions">
           <button className="primary top-import" onClick={() => void importOFP()} disabled={loadingOFP}>{loadingOFP ? <RefreshCw className="spin" size={16} /> : <Import size={16} />}<span>{loadingOFP ? 'Syncing' : 'Import OFP'}</span></button>
           <div className={`departure-clock ${departure.label === 'STD +' ? 'late' : ''}`}><span>{departure.label}</span><strong>{departure.value}</strong><small>{departure.std}</small></div>
-          <div className="zulu-clock"><span>UTC</span><strong>{clock.toISOString().slice(11, 19)}z</strong></div>
+          <div className="zulu-clock"><span>UTC</span><strong>{zuluClockText}</strong></div>
         </div>
       </header>
       {message && <div className="toast toast-auto" role="status">{message}<span className="toast-progress" /></div>}

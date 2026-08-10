@@ -84,6 +84,7 @@ class MsfsReader:
         return {
             "simulator": self.name,
             "simZulu": hhmmz(self.get("ZULU_TIME")),
+            "simZuluSeconds": int(finite(self.get("ZULU_TIME"))) % 86400,
             "latitude": lat,
             "longitude": lon,
             "headingTrue": math.degrees(finite(self.get("PLANE_HEADING_DEGREES_TRUE"))) % 360,
@@ -179,6 +180,7 @@ class XPlaneReader:
         return {
             "simulator": self.name,
             "simZulu": hhmmz(self.values.get(9)),
+            "simZuluSeconds": int(finite(self.values.get(9))) % 86400,
             "latitude": lat,
             "longitude": lon,
             "headingTrue": finite(self.values.get(3)) % 360,

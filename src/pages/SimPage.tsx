@@ -3,7 +3,7 @@ import { Activity, Gauge, Settings2, Wifi, WifiOff } from 'lucide-react';
 import { loadLocal, saveLocal } from '../lib/storage';
 
 export interface SimTelemetry {
-  receivedAt?: string; simulator?: string; simZulu?: string; latitude?: number; longitude?: number; headingTrue?: number;
+  receivedAt?: string; simulator?: string; simZulu?: string; simZuluSeconds?: number; latitude?: number; longitude?: number; headingTrue?: number;
   altitudeMslFt?: number; altitudeAglFt?: number; groundAltitudeM?: number; groundSpeedKt?: number; indicatedAirspeedKt?: number;
   verticalSpeedFpm?: number; onGround?: boolean; parkingBrake?: boolean; enginesRunning?: boolean; surfaceType?: string;
   surfaceCondition?: string; tcalcDirectory?: string; tcalcFile?: string; aircraftTitle?: string; registration?: string;

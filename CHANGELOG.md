@@ -1,3 +1,8 @@
+## v0.16.4
+- Top-bar UTC clock now uses live simulator Zulu time while the simulator is linked.
+- When the simulator is offline, the top-bar clock automatically falls back to real device/browser UTC.
+- Added second-precision simulator Zulu telemetry while preserving existing HH:MM OOOI compatibility.
+
 ## v0.16.3
 - Made Trip Builder Rig Length dropdown match the Schedule Date field width.
 - Kept the right-side Add selected leg and Generate random rig buttons flexible so the row stays balanced.
