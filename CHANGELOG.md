@@ -1,3 +1,10 @@
+# v0.18.0
+- Rebuilt Aircraft Fuel Profiles around performance tables rather than a single cruise-flow estimate.
+- Added cruise performance points by altitude, weight, ISA deviation, TAS and fuel flow.
+- Added climb/descent cumulative performance points by altitude, weight, ISA deviation, time, fuel and distance.
+- Added default planning weight and per-flight planned takeoff weight; SimBrief imports takeoff weight when available.
+- Flight planning now interpolates the nearest performance points for forecast temperature/ISA deviation, altitude and planned weight, with legacy simple values retained only as fallback.
+
 ## v0.17.5
 - Moved simulator fuel-profile learning to the server so bridge telemetry continues to be recorded while the browser/PWA is backgrounded, suspended, on another tab, or closed.
 - Added server learning start/status/stop APIs and reconnectable session status.

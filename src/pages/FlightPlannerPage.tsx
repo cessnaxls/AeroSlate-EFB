@@ -3,14 +3,14 @@ import { Activity, ChevronDown, CloudSun, FileText, Fuel, Import, Plane, Plus, R
 import airportCatalog from '../data/airports.catalog.json';
 import type { Airport } from '../lib/dispatchlink';
 import { airportMap, normalizeAirportCode } from '../lib/dispatchlink';
-import { buildCustomOFP, type FuelProfile, type PlannerWeatherPayload } from '../lib/customPlanner';
+import { buildCustomOFP, type FuelProfile, type PlannerWeatherPayload, type CruisePerformancePoint, type PhasePerformancePoint } from '../lib/customPlanner';
 import { dig, type AnyRecord } from '../lib/ofp';
 import { loadLocal, saveLocal } from '../lib/storage';
 import { useSimTelemetry } from './SimPage';
 
 const AIRPORTS = airportCatalog as Airport[];
 const AIRPORT_MAP = airportMap(AIRPORTS);
-const BLANK_PROFILE: FuelProfile = { id:'default', name:'', aircraft:'', registration:'', units:'LBS', cruiseTasKt:0, taxiFuel:0, climbFuel:0, climbMinutes:0, cruiseFlow:0, descentFuel:0, descentMinutes:0, holdingFlow:0, reserveMinutes:0, contingencyPct:0, usableFuel:0 };
+const BLANK_PROFILE: FuelProfile = { id:'default', name:'', aircraft:'', registration:'', units:'LBS', cruiseTasKt:0, taxiFuel:0, climbFuel:0, climbMinutes:0, cruiseFlow:0, descentFuel:0, descentMinutes:0, holdingFlow:0, reserveMinutes:0, contingencyPct:0, usableFuel:0, defaultWeight:0, cruisePoints:[], climbPoints:[], descentPoints:[] };
 type FlightRules = '' | 'IFR' | 'VFR';
 type Direction = '' | 'EAST' | 'WEST';
 
@@ -48,6 +48,17 @@ function AltitudePicker({label,value,onChange,rules,onRulesChange,direction,onDi
   </details><small>{rules&&direction?`${rules} · ${direction==='EAST'?'Eastbound':'Westbound'}`:'Choose rules + direction inside the altitude menu'}</small></label>;
 }
 
+
+function PerformanceTable({title,kind,rows,units,onChange}:{title:string;kind:'cruise'|'phase';rows:(CruisePerformancePoint|PhasePerformancePoint)[];units:'LBS'|'KGS';onChange:(rows:any[])=>void}){
+  const add=()=>onChange([...rows,kind==='cruise'?{altitudeFt:0,weight:0,isaDevC:0,tasKt:0,fuelFlow:0}:{altitudeFt:0,weight:0,isaDevC:0,minutes:0,fuel:0,distanceNm:0}]);
+  const set=(i:number,key:string,value:string)=>onChange(rows.map((r,j)=>j===i?{...r,[key]:numeric(value)}:r));
+  const remove=(i:number)=>onChange(rows.filter((_,j)=>j!==i));
+  return <div className="performance-table"><div className="performance-table-head"><div><strong>{title}</strong><small>{kind==='cruise'?'Enter POH/AFM cruise points. AeroSlate interpolates altitude, weight and ISA deviation.':'Enter cumulative values from departure/destination to the selected altitude.'}</small></div><button type="button" onClick={add}><Plus size={14}/>Add point</button></div>
+    <div className={`performance-grid ${kind}`}><div className="performance-grid-labels"><span>Altitude ft</span><span>Weight {units}</span><span>ISA dev °C</span>{kind==='cruise'?<><span>TAS kt</span><span>Fuel/hr</span></>:<><span>Minutes</span><span>Fuel {units}</span><span>Distance NM</span></>}<span/></div>
+    {rows.length===0?<div className="performance-empty">No points yet — add values directly from the aircraft POH/AFM or a trusted performance source.</div>:rows.map((row:any,i)=><div className="performance-grid-row" key={i}><input type="number" placeholder="e.g. 25000" value={row.altitudeFt||''} onChange={e=>set(i,'altitudeFt',e.target.value)}/><input type="number" placeholder="e.g. 24000" value={row.weight||''} onChange={e=>set(i,'weight',e.target.value)}/><input type="number" placeholder="e.g. 10" value={row.isaDevC||''} onChange={e=>set(i,'isaDevC',e.target.value)}/>{kind==='cruise'?<><input type="number" placeholder="e.g. 310" value={row.tasKt||''} onChange={e=>set(i,'tasKt',e.target.value)}/><input type="number" placeholder="e.g. 700" value={row.fuelFlow||''} onChange={e=>set(i,'fuelFlow',e.target.value)}/></>:<><input type="number" placeholder="e.g. 18" value={row.minutes||''} onChange={e=>set(i,'minutes',e.target.value)}/><input type="number" placeholder="e.g. 250" value={row.fuel||''} onChange={e=>set(i,'fuel',e.target.value)}/><input type="number" placeholder="e.g. 65" value={row.distanceNm||''} onChange={e=>set(i,'distanceNm',e.target.value)}/></>}<button className="icon-button" type="button" aria-label="Remove point" onClick={()=>remove(i)}><Trash2 size={14}/></button></div>)}</div>
+  </div>;
+}
+
 export function FlightPlannerPage({ onLoadOFP, onFetchSimBriefOFP, notify }:{onLoadOFP:(ofp:AnyRecord)=>void;onFetchSimBriefOFP:()=>Promise<AnyRecord|null>;notify:(message:string)=>void}){
   const [profiles,setProfiles]=useState<FuelProfile[]>(()=>loadLocal('aeroslate.planner.profiles',[BLANK_PROFILE]));
   const [profileId,setProfileId]=useState(()=>loadLocal('aeroslate.planner.profileId','default'));
@@ -71,9 +82,10 @@ export function FlightPlannerPage({ onLoadOFP, onFetchSimBriefOFP, notify }:{onL
   const [route,setRoute]=useState(()=>loadLocal('aeroslate.planner.v2.route',''));
   const [flightNumber,setFlightNumber]=useState(()=>loadLocal('aeroslate.planner.v2.flightNumber',''));
   const [schedOut,setSchedOut]=useState(()=>loadLocal('aeroslate.planner.v2.schedOut',''));
+  const [plannedWeight,setPlannedWeight]=useState(()=>loadLocal('aeroslate.planner.v3.weight',''));
   const [busy,setBusy]=useState(false); const [weather,setWeather]=useState<PlannerWeatherPayload|null>(null);
-  useEffect(()=>{saveLocal('aeroslate.planner.v2.dep',departure);saveLocal('aeroslate.planner.v2.dest',destination);saveLocal('aeroslate.planner.v2.alt',alternate);saveLocal('aeroslate.planner.v2.rules',flightRules);saveLocal('aeroslate.planner.v2.direction',direction);saveLocal('aeroslate.planner.v2.cruise',cruiseAltitude);saveLocal('aeroslate.planner.v2.altCruise',alternateAltitude);saveLocal('aeroslate.planner.v2.altRules',alternateFlightRules);saveLocal('aeroslate.planner.v2.altDirection',alternateDirection);saveLocal('aeroslate.planner.v2.route',route);saveLocal('aeroslate.planner.v2.flightNumber',flightNumber);saveLocal('aeroslate.planner.v2.schedOut',schedOut);},[departure,destination,alternate,flightRules,direction,cruiseAltitude,alternateAltitude,alternateFlightRules,alternateDirection,route,flightNumber,schedOut]);
-  const clearPlan=()=>{setDeparture('');setDestination('');setAlternate('');setFlightRules('');setDirection('');setCruiseAltitude('');setAlternateAltitude('');setAlternateFlightRules('');setAlternateDirection('');setRoute('');setFlightNumber('');setSchedOut('');setWeather(null)};
+  useEffect(()=>{saveLocal('aeroslate.planner.v2.dep',departure);saveLocal('aeroslate.planner.v2.dest',destination);saveLocal('aeroslate.planner.v2.alt',alternate);saveLocal('aeroslate.planner.v2.rules',flightRules);saveLocal('aeroslate.planner.v2.direction',direction);saveLocal('aeroslate.planner.v2.cruise',cruiseAltitude);saveLocal('aeroslate.planner.v2.altCruise',alternateAltitude);saveLocal('aeroslate.planner.v2.altRules',alternateFlightRules);saveLocal('aeroslate.planner.v2.altDirection',alternateDirection);saveLocal('aeroslate.planner.v2.route',route);saveLocal('aeroslate.planner.v2.flightNumber',flightNumber);saveLocal('aeroslate.planner.v2.schedOut',schedOut);saveLocal('aeroslate.planner.v3.weight',plannedWeight);},[departure,destination,alternate,flightRules,direction,cruiseAltitude,alternateAltitude,alternateFlightRules,alternateDirection,route,flightNumber,schedOut,plannedWeight]);
+  const clearPlan=()=>{setDeparture('');setDestination('');setAlternate('');setFlightRules('');setDirection('');setCruiseAltitude('');setAlternateAltitude('');setAlternateFlightRules('');setAlternateDirection('');setRoute('');setFlightNumber('');setSchedOut('');setPlannedWeight('');setWeather(null)};
   const [importingSimBrief,setImportingSimBrief]=useState(false);
   const applySimBriefPlan=(data:AnyRecord)=>{
     const dep=String(dig(data,'origin.icao_code','params.orig')||'').toUpperCase();
@@ -88,6 +100,7 @@ export function FlightPlannerPage({ onLoadOFP, onFetchSimBriefOFP, notify }:{onL
     if(importedCruise>0)setCruiseAltitude(String(importedCruise));
     const importedAltCruise=numeric(String(dig(data,'alternate.cruise_altitude')||''));
     if(importedAltCruise>0)setAlternateAltitude(String(importedAltCruise));
+    const importedTow=numeric(String(dig(data,'weights.est_takeoff_weight','weights.est_tow','weights.takeoff')||'')); if(importedTow>0)setPlannedWeight(String(importedTow));
     const rawStd=dig<any>(data,'times.sched_out','times.sched_out_time');
     if(rawStd!==undefined&&rawStd!==null){
       const text=String(rawStd);
@@ -114,7 +127,7 @@ export function FlightPlannerPage({ onLoadOFP, onFetchSimBriefOFP, notify }:{onL
 
   const createProfile=()=>{const id=`profile-${Date.now()}`;const next={...BLANK_PROFILE,id};setProfiles(current=>[...current,next]);setProfileId(id);setProfileOpen(true)};
   const removeProfile=()=>{if(profiles.length<=1)return notify('Keep at least one fuel profile.');const next=profiles.filter(p=>p.id!==profile.id);setProfiles(next);setProfileId(next[0].id)};
-  const valid=useMemo(()=>Boolean(airportFor(departure)&&airportFor(destination)&&numeric(cruiseAltitude)>0&&profile.cruiseTasKt>0&&profile.cruiseFlow>0),[departure,destination,cruiseAltitude,profile]);
+  const valid=useMemo(()=>Boolean(airportFor(departure)&&airportFor(destination)&&numeric(cruiseAltitude)>0&&((profile.cruisePoints?.some(p=>p.tasKt>0&&p.fuelFlow>0))||(profile.cruiseTasKt>0&&profile.cruiseFlow>0))),[departure,destination,cruiseAltitude,profile]);
 
   const generate=async()=>{
     const dep=airportFor(departure),dest=airportFor(destination),alt=alternate.trim()?airportFor(alternate):null;
@@ -122,22 +135,35 @@ export function FlightPlannerPage({ onLoadOFP, onFetchSimBriefOFP, notify }:{onL
     setBusy(true); try{
       const ids=[dep.icao,dest.icao,...(alt?[alt.icao]:[])]; const windStations=[dep.iata||dep.icao.slice(-3),dest.iata||dest.icao.slice(-3),...(alt?[alt.iata||alt.icao.slice(-3)]:[])];
       const q=new URLSearchParams({ids:ids.join(','),windStations:windStations.join(','),altitudes:[cruiseAltitude,alternateAltitude||'6000'].join(',')}); const response=await fetch(`/api/planner/weather?${q}`,{cache:'no-store'}); const data=await response.json(); if(!response.ok)throw new Error(data.error||'Weather retrieval failed.'); setWeather(data);
-      const ofp=buildCustomOFP({departure:dep,destination:dest,alternate:alt,cruiseAltitudeFt:numeric(cruiseAltitude),alternateAltitudeFt:numeric(alternateAltitude,6000),route:route.trim()||'DCT',flightNumber:flightNumber.trim()||profile.registration||'CUSTOM',schedOut:schedOut.trim()||`${String(new Date().getUTCHours()).padStart(2,'0')}:${String(new Date().getUTCMinutes()).padStart(2,'0')}`,flightDate:new Date().toISOString().slice(0,10)},profile,data); onLoadOFP(ofp); notify(`Generated ${dep.icao}–${dest.icao} with the ${profile.name||profile.aircraft||'selected'} fuel profile and loaded it across AeroSlate.`);
+      const ofp=buildCustomOFP({departure:dep,destination:dest,alternate:alt,cruiseAltitudeFt:numeric(cruiseAltitude),alternateAltitudeFt:numeric(alternateAltitude,6000),route:route.trim()||'DCT',flightNumber:flightNumber.trim()||profile.registration||'CUSTOM',schedOut:schedOut.trim()||`${String(new Date().getUTCHours()).padStart(2,'0')}:${String(new Date().getUTCMinutes()).padStart(2,'0')}`,flightDate:new Date().toISOString().slice(0,10),plannedTakeoffWeight:numeric(plannedWeight,profile.defaultWeight||0)},profile,data); onLoadOFP(ofp); notify(`Generated ${dep.icao}–${dest.icao} with the ${profile.name||profile.aircraft||'selected'} fuel profile and loaded it across AeroSlate.`);
     }catch(error){notify(error instanceof Error?error.message:'Unable to generate custom OFP.')}finally{setBusy(false)}
   };
 
   return <div className="custom-planner-page">
     <section className={`card planner-profile-card ${profileOpen?'':'collapsed'}`}><header><div><Fuel size={18}/><h3>Aircraft fuel profiles</h3></div><div className="header-actions"><button onClick={createProfile}><Plus size={15}/>New</button><button onClick={removeProfile}><Trash2 size={15}/>Delete</button><button className="profile-collapse-button" aria-expanded={profileOpen} onClick={()=>setProfileOpen(value=>!value)}><ChevronDown size={16}/>{profileOpen?'Collapse':'Expand'}</button></div></header>{profileOpen&&<div className="card-body custom-profile-layout">
       <div className="profile-selector"><label><span>Profile</span><select value={profile.id} onChange={e=>setProfileId(e.target.value)}>{profiles.map(p=><option key={p.id} value={p.id}>{p.name||p.aircraft||'Untitled profile'}</option>)}</select></label><label><span>Profile name</span><input value={profile.name} onChange={e=>updateProfile({name:e.target.value})} placeholder="e.g. C172 economy"/></label><label><span>Aircraft</span><input value={profile.aircraft} onChange={e=>updateProfile({aircraft:e.target.value.toUpperCase()})} placeholder="e.g. C172"/></label><label><span>Registration</span><input value={profile.registration} onChange={e=>updateProfile({registration:e.target.value.toUpperCase()})} placeholder="e.g. N123AB"/></label><label><span>Units</span><select value={profile.units} onChange={e=>updateProfile({units:e.target.value as 'LBS'|'KGS'})}><option>LBS</option><option>KGS</option></select></label></div>
-      <div className="fuel-profile-grid">{[
-        ['Cruise TAS', 'cruiseTasKt','kt','e.g. 120'],['Taxi fuel','taxiFuel',profile.units,'e.g. 25'],['Climb fuel','climbFuel',profile.units,'e.g. 80'],['Climb time','climbMinutes','min','e.g. 12'],['Cruise flow','cruiseFlow',`${profile.units}/hr`,'e.g. 55'],['Descent fuel','descentFuel',profile.units,'e.g. 25'],['Descent time','descentMinutes','min','e.g. 10'],['Holding flow','holdingFlow',`${profile.units}/hr`,'e.g. 45'],['Final reserve','reserveMinutes','min','e.g. 45'],['Contingency','contingencyPct','%','e.g. 5'],['Usable fuel','usableFuel',profile.units,'e.g. 300']
-      ].map(([label,key,suffix,prompt])=><label key={key}><span>{label}</span><div><input type="number" step="any" value={profileNumber(profile,key as keyof FuelProfile)} placeholder={prompt} onChange={e=>updateProfile({[key]:numeric(e.target.value)} as any)}/><small>{suffix}</small></div></label>)}</div>
+      <div className="profile-essentials">
+        <label><span>Default planning weight</span><div><input type="number" step="any" value={profileNumber(profile,'defaultWeight')} placeholder={`e.g. ${profile.units==='LBS'?'24000':'11000'}`} onChange={e=>updateProfile({defaultWeight:numeric(e.target.value)})}/><small>{profile.units}</small></div></label>
+        <label><span>Taxi fuel</span><div><input type="number" step="any" value={profileNumber(profile,'taxiFuel')} placeholder="e.g. 25" onChange={e=>updateProfile({taxiFuel:numeric(e.target.value)})}/><small>{profile.units}</small></div></label>
+        <label><span>Holding flow</span><div><input type="number" step="any" value={profileNumber(profile,'holdingFlow')} placeholder="e.g. 45" onChange={e=>updateProfile({holdingFlow:numeric(e.target.value)})}/><small>{profile.units}/hr</small></div></label>
+        <label><span>Final reserve</span><div><input type="number" step="any" value={profileNumber(profile,'reserveMinutes')} placeholder="e.g. 45" onChange={e=>updateProfile({reserveMinutes:numeric(e.target.value)})}/><small>min</small></div></label>
+        <label><span>Contingency</span><div><input type="number" step="any" value={profileNumber(profile,'contingencyPct')} placeholder="e.g. 5" onChange={e=>updateProfile({contingencyPct:numeric(e.target.value)})}/><small>%</small></div></label>
+        <label><span>Usable fuel</span><div><input type="number" step="any" value={profileNumber(profile,'usableFuel')} placeholder="e.g. 300" onChange={e=>updateProfile({usableFuel:numeric(e.target.value)})}/><small>{profile.units}</small></div></label>
+      </div>
+      <div className="performance-help"><strong>Performance model</strong><span>Add several points from the POH/AFM across the altitudes, weights and temperatures you actually use. More coverage gives AeroSlate a better interpolation instead of relying on one generic fuel-flow number.</span></div>
+      <PerformanceTable title="Cruise performance" kind="cruise" units={profile.units} rows={profile.cruisePoints||[]} onChange={rows=>updateProfile({cruisePoints:rows})}/>
+      <PerformanceTable title="Climb performance" kind="phase" units={profile.units} rows={profile.climbPoints||[]} onChange={rows=>updateProfile({climbPoints:rows})}/>
+      <PerformanceTable title="Descent performance" kind="phase" units={profile.units} rows={profile.descentPoints||[]} onChange={rows=>updateProfile({descentPoints:rows})}/>
+      <details className="legacy-performance"><summary>Simple fallback values</summary><div className="fuel-profile-grid">{[
+        ['Cruise TAS', 'cruiseTasKt','kt','e.g. 120'],['Climb fuel','climbFuel',profile.units,'e.g. 80'],['Climb time','climbMinutes','min','e.g. 12'],['Cruise flow','cruiseFlow',`${profile.units}/hr`,'e.g. 55'],['Descent fuel','descentFuel',profile.units,'e.g. 25'],['Descent time','descentMinutes','min','e.g. 10']
+      ].map(([label,key,suffix,prompt])=><label key={key}><span>{label}</span><div><input type="number" step="any" value={profileNumber(profile,key as keyof FuelProfile)} placeholder={prompt} onChange={e=>updateProfile({[key]:numeric(e.target.value)} as any)}/><small>{suffix}</small></div></label>)}</div></details>
       <div className={`learning-panel ${learning?'active':''}`}><div><Activity size={18}/><span><strong>Learn from simulator</strong><small>{learning?`${learningStatus.samples} server samples · ${learningStatus.hours.toFixed(1)} hr this session · continues in background`:profile.learned?.samples?`${profile.learned.samples} samples · ${profile.learned.flights} session${profile.learned.flights===1?'':'s'} · ${profile.learned.hours.toFixed(1)} hr observed`:'No learned data yet. Manual values remain authoritative until observations are collected.'}</small></span></div><button className={learning?'danger-button':'primary'} disabled={!linked&&!learning} onClick={()=>{if(learning)void stopLearning();else void startLearning()}}>{learning?'Stop & update profile':linked?'Start learning':'Simulator offline'}</button></div>
     </div>}</section>
 
     <section className="card custom-plan-card"><header><div><Plane size={18}/><h3>AeroSlate flight planner</h3></div><div className="header-actions"><button onClick={()=>void importSimBriefPlan()} disabled={importingSimBrief}>{importingSimBrief?<Activity className="spin" size={15}/>:<Import size={15}/>} {importingSimBrief?'Importing…':'Import SimBrief plan'}</button><button onClick={clearPlan}><RotateCcw size={15}/>New plan</button><span className="pill blue">CUSTOM OFP</span></div></header><div className="card-body">
       <div className="custom-plan-grid">
         <label className="planner-field planner-profile-select"><span>Aircraft profile</span><select value={profile.id} onChange={e=>setProfileId(e.target.value)}><option value="" disabled>Select aircraft profile</option>{profiles.map(p=><option key={p.id} value={p.id}>{p.name||p.aircraft||'Untitled profile'}</option>)}</select><small>{profile.aircraft||profile.registration?`${profile.aircraft||'Aircraft'}${profile.registration?` · ${profile.registration}`:''}`:'Fuel and performance source'}</small></label>
+        <label className="planner-field"><span>Planned takeoff weight</span><input type="number" value={plannedWeight} onChange={e=>setPlannedWeight(e.target.value)} placeholder={profile.defaultWeight?`Default ${profile.defaultWeight} ${profile.units}`:`e.g. ${profile.units==='LBS'?'24000':'11000'}`}/><small>{profile.units} · used to interpolate performance</small></label>
         <AirportInput label="Departure" value={departure} onChange={setDeparture} placeholder="e.g. KIND"/>
         <AirportInput label="Destination" value={destination} onChange={setDestination} placeholder="e.g. KORD"/>
         <AirportInput label="Alternate (optional)" value={alternate} onChange={setAlternate} placeholder="e.g. KSBN"/>

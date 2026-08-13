@@ -1,6 +1,9 @@
 import type { Airport } from './dispatchlink';
 import type { AnyRecord } from './ofp';
 
+export interface CruisePerformancePoint { altitudeFt:number; weight:number; isaDevC:number; tasKt:number; fuelFlow:number; }
+export interface PhasePerformancePoint { altitudeFt:number; weight:number; isaDevC:number; minutes:number; fuel:number; distanceNm:number; }
+
 export interface FuelProfile {
   id: string;
   name: string;
@@ -18,6 +21,10 @@ export interface FuelProfile {
   reserveMinutes: number;
   contingencyPct: number;
   usableFuel: number;
+  defaultWeight?: number;
+  cruisePoints?: CruisePerformancePoint[];
+  climbPoints?: PhasePerformancePoint[];
+  descentPoints?: PhasePerformancePoint[];
   learned?: {
     samples: number;
     flights: number;
@@ -57,6 +64,7 @@ export interface PlanInput {
   flightNumber: string;
   schedOut: string;
   flightDate: string;
+  plannedTakeoffWeight?: number;
 }
 
 const R = 3440.065;
@@ -98,20 +106,41 @@ function durationString(minutes: number) { return `${String(Math.floor(minutes /
 function point(a: Airport, b: Airport, fraction: number) { return { latitude: a.latitude + (b.latitude - a.latitude) * fraction, longitude: a.longitude + (b.longitude - a.longitude) * fraction }; }
 function windText(wind: { direction: number | null; speedKt: number }) { return wind.direction === null ? '—' : `${String(Math.round(wind.direction)).padStart(3,'0')}/${String(Math.round(wind.speedKt)).padStart(2,'0')}`; }
 
+function isaTempC(altitudeFt:number){ return altitudeFt <= 36089 ? 15 - 1.9812 * (altitudeFt/1000) : -56.5; }
+function interpolatePerformance<T extends {altitudeFt:number;weight:number;isaDevC:number}>(rows:T[]|undefined, altitudeFt:number, weight:number, isaDevC:number):T|null{
+  if(!rows?.length)return null;
+  const usable=rows.filter(r=>Number.isFinite(r.altitudeFt)&&Number.isFinite(r.weight)&&Number.isFinite(r.isaDevC));
+  if(!usable.length)return null;
+  const scored=usable.map(row=>{const da=Math.abs(row.altitudeFt-altitudeFt)/10000;const dw=weight>0&&row.weight>0?Math.abs(row.weight-weight)/Math.max(weight,row.weight):0;const dt=Math.abs(row.isaDevC-isaDevC)/20;return {row,score:da*da+dw*dw+dt*dt};}).sort((a,b)=>a.score-b.score).slice(0,Math.min(4,usable.length));
+  if(scored.length===1)return scored[0].row;
+  const weights=scored.map(x=>1/Math.max(.0001,x.score)); const total=weights.reduce((a,b)=>a+b,0);
+  const out:any={}; const keys=Object.keys(scored[0].row) as (keyof T)[];
+  for(const key of keys){const vals=scored.map(x=>Number(x.row[key]));if(vals.every(Number.isFinite))out[key]=vals.reduce((sum,v,i)=>sum+v*weights[i],0)/total;else out[key]=(scored[0].row as any)[key];}
+  return out as T;
+}
 export function buildCustomOFP(input: PlanInput, profile: FuelProfile, weather: PlannerWeatherPayload): AnyRecord {
   const distance = gcDistanceNm(input.departure, input.destination);
   const course = initialCourse(input.departure, input.destination);
   const depWind = nearestWind(weather.winds[input.departure.iata || input.departure.icao.slice(-3)], input.cruiseAltitudeFt);
   const destWind = nearestWind(weather.winds[input.destination.iata || input.destination.icao.slice(-3)], input.cruiseAltitudeFt);
   const wind = averageWind(depWind, destWind);
-  const gs = groundSpeed(profile.cruiseTasKt, course, wind);
-  const climbDistance = Math.min(distance * .32, profile.cruiseTasKt * profile.climbMinutes / 60 * .72);
-  const descentDistance = Math.min(distance * .28, profile.cruiseTasKt * profile.descentMinutes / 60 * .82);
+  const planWeight = input.plannedTakeoffWeight || profile.defaultWeight || 0;
+  const forecastTemp = wind.tempC; const isaDev = forecastTemp===null ? 0 : forecastTemp-isaTempC(input.cruiseAltitudeFt);
+  const cruisePerf=interpolatePerformance(profile.cruisePoints,input.cruiseAltitudeFt,planWeight,isaDev);
+  const climbPerf=interpolatePerformance(profile.climbPoints,input.cruiseAltitudeFt,planWeight,isaDev);
+  const descentWeight=Math.max(0,planWeight-(climbPerf?.fuel||profile.climbFuel));
+  const descentPerf=interpolatePerformance(profile.descentPoints,input.cruiseAltitudeFt,descentWeight,isaDev);
+  const cruiseTas=cruisePerf?.tasKt||profile.cruiseTasKt; const cruiseFlow=cruisePerf?.fuelFlow||profile.cruiseFlow;
+  const climbMinutes=climbPerf?.minutes||profile.climbMinutes; const climbFuel=climbPerf?.fuel||profile.climbFuel;
+  const descentMinutes=descentPerf?.minutes||profile.descentMinutes; const descentFuel=descentPerf?.fuel||profile.descentFuel;
+  const gs = groundSpeed(cruiseTas, course, wind);
+  const climbDistance = Math.min(distance * .40, climbPerf?.distanceNm || cruiseTas * climbMinutes / 60 * .72);
+  const descentDistance = Math.min(distance * .35, descentPerf?.distanceNm || cruiseTas * descentMinutes / 60 * .82);
   const cruiseDistance = Math.max(0, distance - climbDistance - descentDistance);
   const cruiseMinutes = cruiseDistance / Math.max(1, gs) * 60;
-  const airborneMinutes = Math.max(1, profile.climbMinutes + cruiseMinutes + profile.descentMinutes);
-  const cruiseFuel = profile.cruiseFlow * cruiseMinutes / 60;
-  const tripFuel = profile.climbFuel + cruiseFuel + profile.descentFuel;
+  const airborneMinutes = Math.max(1, climbMinutes + cruiseMinutes + descentMinutes);
+  const cruiseFuel = cruiseFlow * cruiseMinutes / 60;
+  const tripFuel = climbFuel + cruiseFuel + descentFuel;
 
   let alternateFuel = 0; let alternateDistance = 0; let alternateMinutes = 0;
   if (input.alternate) {
@@ -119,9 +148,9 @@ export function buildCustomOFP(input: PlanInput, profile: FuelProfile, weather: 
     const altCourse = initialCourse(input.destination, input.alternate);
     const altDestWind = nearestWind(weather.winds[input.alternate.iata || input.alternate.icao.slice(-3)], input.alternateAltitudeFt);
     const altWind = averageWind(destWind, altDestWind);
-    const altGs = groundSpeed(profile.cruiseTasKt, altCourse, altWind);
+    const altGs = groundSpeed(cruiseTas, altCourse, altWind);
     alternateMinutes = alternateDistance / Math.max(1, altGs) * 60;
-    alternateFuel = Math.max(profile.descentFuel * .5, profile.cruiseFlow * alternateMinutes / 60);
+    alternateFuel = Math.max(descentFuel * .5, cruiseFlow * alternateMinutes / 60);
   }
   const contingency = tripFuel * profile.contingencyPct / 100;
   const reserve = profile.holdingFlow * profile.reserveMinutes / 60;
@@ -135,14 +164,14 @@ export function buildCustomOFP(input: PlanInput, profile: FuelProfile, weather: 
   const tocFrac = distance > 0 ? clamp(climbDistance / distance, .08, .42) : .25;
   const todFrac = distance > 0 ? clamp(1 - descentDistance / distance, .58, .92) : .75;
   const toc = point(input.departure, input.destination, tocFrac); const tod = point(input.departure, input.destination, todFrac);
-  const elapsedToc = profile.climbMinutes; const elapsedTod = profile.climbMinutes + cruiseMinutes;
-  const remAtToc = Math.max(0, takeoff - profile.climbFuel);
+  const elapsedToc = climbMinutes; const elapsedTod = climbMinutes + cruiseMinutes;
+  const remAtToc = Math.max(0, takeoff - climbFuel);
   const remAtTod = Math.max(0, remAtToc - cruiseFuel);
   const navlog = [
     { ident: input.departure.icao, name: input.departure.name, via_airway:'DCT', course:Math.round(course), distance:0, distance_total:Math.round(distance), altitude_feet:input.departure.elevationFt, tas:0, groundspeed:0, wind_dir:'', wind_spd:'', oat:'', isa_dev:'', time_leg:0, fuel_leg:0, fuel_total:takeoff, pos_lat:input.departure.latitude, pos_long:input.departure.longitude },
-    { ident:'TOC', name:'Top of climb', via_airway: input.route || 'DCT', course:Math.round(course), distance:Math.round(climbDistance), distance_total:Math.round(distance-climbDistance), altitude_feet:input.cruiseAltitudeFt, tas:profile.cruiseTasKt, groundspeed:Math.round(gs), wind_dir:wind.direction === null?'':Math.round(wind.direction), wind_spd:Math.round(wind.speedKt), oat:wind.tempC === null?'':Math.round(wind.tempC), isa_dev:'', time_leg:profile.climbMinutes/60, fuel_leg:profile.climbFuel, fuel_total:remAtToc, pos_lat:toc.latitude, pos_long:toc.longitude },
-    { ident:'TOD', name:'Top of descent', via_airway: input.route || 'DCT', course:Math.round(course), distance:Math.round(cruiseDistance), distance_total:Math.round(descentDistance), altitude_feet:input.cruiseAltitudeFt, tas:profile.cruiseTasKt, groundspeed:Math.round(gs), wind_dir:wind.direction === null?'':Math.round(wind.direction), wind_spd:Math.round(wind.speedKt), oat:wind.tempC === null?'':Math.round(wind.tempC), isa_dev:'', time_leg:cruiseMinutes/60, fuel_leg:cruiseFuel, fuel_total:remAtTod, pos_lat:tod.latitude, pos_long:tod.longitude },
-    { ident:input.destination.icao, name:input.destination.name, via_airway:'DCT', course:Math.round(course), distance:Math.round(descentDistance), distance_total:0, altitude_feet:input.destination.elevationFt, tas:0, groundspeed:0, wind_dir:'', wind_spd:'', oat:'', isa_dev:'', time_leg:profile.descentMinutes/60, fuel_leg:profile.descentFuel, fuel_total:landing, pos_lat:input.destination.latitude, pos_long:input.destination.longitude }
+    { ident:'TOC', name:'Top of climb', via_airway: input.route || 'DCT', course:Math.round(course), distance:Math.round(climbDistance), distance_total:Math.round(distance-climbDistance), altitude_feet:input.cruiseAltitudeFt, tas:cruiseTas, groundspeed:Math.round(gs), wind_dir:wind.direction === null?'':Math.round(wind.direction), wind_spd:Math.round(wind.speedKt), oat:wind.tempC === null?'':Math.round(wind.tempC), isa_dev:'', time_leg:climbMinutes/60, fuel_leg:climbFuel, fuel_total:remAtToc, pos_lat:toc.latitude, pos_long:toc.longitude },
+    { ident:'TOD', name:'Top of descent', via_airway: input.route || 'DCT', course:Math.round(course), distance:Math.round(cruiseDistance), distance_total:Math.round(descentDistance), altitude_feet:input.cruiseAltitudeFt, tas:cruiseTas, groundspeed:Math.round(gs), wind_dir:wind.direction === null?'':Math.round(wind.direction), wind_spd:Math.round(wind.speedKt), oat:wind.tempC === null?'':Math.round(wind.tempC), isa_dev:'', time_leg:cruiseMinutes/60, fuel_leg:cruiseFuel, fuel_total:remAtTod, pos_lat:tod.latitude, pos_long:tod.longitude },
+    { ident:input.destination.icao, name:input.destination.name, via_airway:'DCT', course:Math.round(course), distance:Math.round(descentDistance), distance_total:0, altitude_feet:input.destination.elevationFt, tas:0, groundspeed:0, wind_dir:'', wind_spd:'', oat:'', isa_dev:'', time_leg:descentMinutes/60, fuel_leg:descentFuel, fuel_total:landing, pos_lat:input.destination.latitude, pos_long:input.destination.longitude }
   ];
 
   const metar = (icao: string) => weather.stations[icao]?.metar || 'No current METAR returned by AviationWeather.gov.';
@@ -151,12 +180,12 @@ export function buildCustomOFP(input: PlanInput, profile: FuelProfile, weather: 
   const route = input.route.trim() || 'DCT';
   const flightNo = input.flightNumber.trim() || 'AS001';
   const aircraft = profile.aircraft.trim() || 'ZZZZ';
-  const fpl = `(FPL-${flightNo.replace(/[^A-Z0-9]/gi,'').toUpperCase()}-IG\n-${aircraft}/L-SDFGIRWY/S\n-${input.departure.icao}${input.schedOut.replace(':','')}\n-N${String(Math.round(profile.cruiseTasKt)).padStart(4,'0')}F${String(Math.round(input.cruiseAltitudeFt/100)).padStart(3,'0')} ${route}\n-${input.destination.icao}${durationString(airborneMinutes).replace(':','')}${alternate ? ` ${alternate}` : ''}\n-RMK/AEROSLATE CUSTOM PLAN WEATHER ${weather.source})`;
+  const fpl = `(FPL-${flightNo.replace(/[^A-Z0-9]/gi,'').toUpperCase()}-IG\n-${aircraft}/L-SDFGIRWY/S\n-${input.departure.icao}${input.schedOut.replace(':','')}\n-N${String(Math.round(cruiseTas)).padStart(4,'0')}F${String(Math.round(input.cruiseAltitudeFt/100)).padStart(3,'0')} ${route}\n-${input.destination.icao}${durationString(airborneMinutes).replace(':','')}${alternate ? ` ${alternate}` : ''}\n-RMK/AEROSLATE CUSTOM PLAN WEATHER ${weather.source})`;
 
   return {
     fetch: { status:'Success', time:new Date().toISOString(), source:'AeroSlate Planner' },
     params: { units:profile.units, orig:input.departure.icao, dest:input.destination.icao, altn:alternate, type:aircraft, reg:profile.registration, route, date:input.flightDate },
-    general: { release, icao_airline:'', flight_number:flightNo, callsign:flightNo, route, initial_altitude:String(input.cruiseAltitudeFt), route_distance:Math.round(distance), gc_distance:Math.round(distance), cruise_tas:Math.round(profile.cruiseTasKt), date:input.flightDate, costindex:'CUSTOM', planner_source:'AeroSlate custom fuel profile', weather_source:weather.source, weather_fetched_at:weather.fetchedAt, wind_summary:windText(wind) },
+    general: { release, icao_airline:'', flight_number:flightNo, callsign:flightNo, route, initial_altitude:String(input.cruiseAltitudeFt), route_distance:Math.round(distance), gc_distance:Math.round(distance), cruise_tas:Math.round(cruiseTas), date:input.flightDate, costindex:'CUSTOM', planner_source:'AeroSlate custom fuel profile', weather_source:weather.source, weather_fetched_at:weather.fetchedAt, wind_summary:windText(wind) },
     aircraft: { icao_code:aircraft, type:aircraft, reg:profile.registration, profile_name:profile.name, profile_learning:profile.learned || null },
     origin: { icao_code:input.departure.icao, iata_code:input.departure.iata, name:input.departure.name, pos_lat:input.departure.latitude, pos_long:input.departure.longitude, elevation:input.departure.elevationFt, metar:metar(input.departure.icao), taf:taf(input.departure.icao) },
     destination: { icao_code:input.destination.icao, iata_code:input.destination.iata, name:input.destination.name, pos_lat:input.destination.latitude, pos_long:input.destination.longitude, elevation:input.destination.elevationFt, metar:metar(input.destination.icao), taf:taf(input.destination.icao) },
@@ -165,7 +194,7 @@ export function buildCustomOFP(input: PlanInput, profile: FuelProfile, weather: 
     times: { sched_out_time:input.schedOut, sched_in_time:schedIn, est_time_enroute:Math.round(airborneMinutes*60), block_time:Math.round((airborneMinutes+8)*60) },
     fuel: { taxi:profile.taxiFuel, enroute_burn:tripFuel, contingency, alternate_burn:alternateFuel, reserve, etops:0, extra:0, plan_ramp:ramp, plan_takeoff:takeoff, plan_landing:landing, min_takeoff:tripFuel+alternateFuel+reserve, max_tanks:profile.usableFuel, avg_fuel_flow:tripFuel/(airborneMinutes/60) },
     navlog:{ fix:navlog },
-    text:{ atc:fpl, planner:`AEROSLATE CUSTOM FLIGHT PLAN\n${input.departure.icao}-${input.destination.icao} ${route}\nCRZ ${input.cruiseAltitudeFt} FT  TAS ${profile.cruiseTasKt} KT\nFORECAST WIND ${windText(wind)}${wind.tempC===null?'':` / ${Math.round(wind.tempC)}C`}\nDIST ${Math.round(distance)} NM  ETE ${durationString(airborneMinutes)}\nTRIP ${Math.round(tripFuel)} ${profile.units}  RAMP ${Math.round(ramp)} ${profile.units}\nWEATHER ${weather.source} ${weather.fetchedAt}` },
-    custom_planner:{ profile_id:profile.id, profile_name:profile.name, alternate_distance_nm:Math.round(alternateDistance), alternate_time_minutes:Math.round(alternateMinutes), generated_at:new Date().toISOString(), warnings:[...(weather.warnings || []), ...(profile.usableFuel > 0 && ramp > profile.usableFuel ? [`Planned ramp fuel ${Math.round(ramp)} ${profile.units} exceeds profile usable fuel ${Math.round(profile.usableFuel)} ${profile.units}.`] : [])] }
+    text:{ atc:fpl, planner:`AEROSLATE CUSTOM FLIGHT PLAN\n${input.departure.icao}-${input.destination.icao} ${route}\nCRZ ${input.cruiseAltitudeFt} FT  TAS ${cruiseTas} KT\nFORECAST WIND ${windText(wind)}${wind.tempC===null?'':` / ${Math.round(wind.tempC)}C`}\nDIST ${Math.round(distance)} NM  ETE ${durationString(airborneMinutes)}\nTRIP ${Math.round(tripFuel)} ${profile.units}  RAMP ${Math.round(ramp)} ${profile.units}\nWEATHER ${weather.source} ${weather.fetchedAt}` },
+    custom_planner:{ profile_id:profile.id, profile_name:profile.name, alternate_distance_nm:Math.round(alternateDistance), alternate_time_minutes:Math.round(alternateMinutes), generated_at:new Date().toISOString(), performance_model:{mode:(profile.cruisePoints?.length||profile.climbPoints?.length||profile.descentPoints?.length)?'table-interpolated':'legacy-single-point',planned_weight:planWeight,isa_deviation_c:isaDev,cruise_tas:cruiseTas,cruise_flow:cruiseFlow,cruise_points:profile.cruisePoints?.length||0,climb_points:profile.climbPoints?.length||0,descent_points:profile.descentPoints?.length||0}, warnings:[...(weather.warnings || []), ...(profile.usableFuel > 0 && ramp > profile.usableFuel ? [`Planned ramp fuel ${Math.round(ramp)} ${profile.units} exceeds profile usable fuel ${Math.round(profile.usableFuel)} ${profile.units}.`] : [])] }
   };
 }
