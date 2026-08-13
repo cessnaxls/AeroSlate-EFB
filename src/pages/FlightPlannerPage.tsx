@@ -37,6 +37,18 @@ function altitudeOptions(rules:FlightRules,direction:Direction){
   return values;
 }
 
+function AltitudePicker({label,value,onChange,rules,onRulesChange,direction,onDirectionChange,optional=false}:{label:string;value:string;onChange:(v:string)=>void;rules:FlightRules;onRulesChange:(v:FlightRules)=>void;direction:Direction;onDirectionChange:(v:Direction)=>void;optional?:boolean}){
+  const options=useMemo(()=>altitudeOptions(rules,direction),[rules,direction]);
+  return <label className="planner-field altitude-picker-field"><span>{label}</span><details className="altitude-picker">
+    <summary className={!value?'placeholder-select':''}>{value?altitudeLabel(Number(value)):(optional?'Select alternate altitude':'Select cruise altitude')}</summary>
+    <div className="altitude-picker-menu">
+      <div className="altitude-filter-row"><span>Rules</span><div className="segmented altitude-segmented"><button type="button" className={rules==='IFR'?'active':''} onClick={e=>{e.preventDefault();onRulesChange('IFR');onChange('')}}>IFR</button><button type="button" className={rules==='VFR'?'active':''} onClick={e=>{e.preventDefault();onRulesChange('VFR');onChange('')}}>VFR</button></div></div>
+      <div className="altitude-filter-row"><span>Direction</span><div className="segmented altitude-segmented"><button type="button" className={direction==='EAST'?'active':''} onClick={e=>{e.preventDefault();onDirectionChange('EAST');onChange('')}}>Eastbound</button><button type="button" className={direction==='WEST'?'active':''} onClick={e=>{e.preventDefault();onDirectionChange('WEST');onChange('')}}>Westbound</button></div></div>
+      <div className="altitude-option-list">{!rules||!direction?<small>Choose flight rules and direction to show valid altitudes.</small>:options.map(altitude=><button type="button" key={altitude} className={String(altitude)===value?'selected':''} onClick={e=>{onChange(String(altitude)); const details=(e.currentTarget.closest('details') as HTMLDetailsElement|null); if(details)details.open=false;}}>{altitudeLabel(altitude)}</button>)}</div>
+    </div>
+  </details><small>{rules&&direction?`${rules} · ${direction==='EAST'?'Eastbound':'Westbound'}`:'Choose rules + direction inside the altitude menu'}</small></label>;
+}
+
 export function FlightPlannerPage({ onLoadOFP, notify }:{onLoadOFP:(ofp:AnyRecord)=>void;notify:(message:string)=>void}){
   const [profiles,setProfiles]=useState<FuelProfile[]>(()=>loadLocal('aeroslate.planner.profiles',[BLANK_PROFILE]));
   const [profileId,setProfileId]=useState(()=>loadLocal('aeroslate.planner.profileId','default'));
@@ -55,12 +67,14 @@ export function FlightPlannerPage({ onLoadOFP, notify }:{onLoadOFP:(ofp:AnyRecor
   const [direction,setDirection]=useState<Direction>(()=>loadLocal('aeroslate.planner.v2.direction',''));
   const [cruiseAltitude,setCruiseAltitude]=useState(()=>loadLocal('aeroslate.planner.v2.cruise',''));
   const [alternateAltitude,setAlternateAltitude]=useState(()=>loadLocal('aeroslate.planner.v2.altCruise',''));
+  const [alternateFlightRules,setAlternateFlightRules]=useState<FlightRules>(()=>loadLocal('aeroslate.planner.v2.altRules',''));
+  const [alternateDirection,setAlternateDirection]=useState<Direction>(()=>loadLocal('aeroslate.planner.v2.altDirection',''));
   const [route,setRoute]=useState(()=>loadLocal('aeroslate.planner.v2.route',''));
   const [flightNumber,setFlightNumber]=useState(()=>loadLocal('aeroslate.planner.v2.flightNumber',''));
   const [schedOut,setSchedOut]=useState(()=>loadLocal('aeroslate.planner.v2.schedOut',''));
   const [busy,setBusy]=useState(false); const [weather,setWeather]=useState<PlannerWeatherPayload|null>(null);
-  useEffect(()=>{saveLocal('aeroslate.planner.v2.dep',departure);saveLocal('aeroslate.planner.v2.dest',destination);saveLocal('aeroslate.planner.v2.alt',alternate);saveLocal('aeroslate.planner.v2.rules',flightRules);saveLocal('aeroslate.planner.v2.direction',direction);saveLocal('aeroslate.planner.v2.cruise',cruiseAltitude);saveLocal('aeroslate.planner.v2.altCruise',alternateAltitude);saveLocal('aeroslate.planner.v2.route',route);saveLocal('aeroslate.planner.v2.flightNumber',flightNumber);saveLocal('aeroslate.planner.v2.schedOut',schedOut);},[departure,destination,alternate,flightRules,direction,cruiseAltitude,alternateAltitude,route,flightNumber,schedOut]);
-  const clearPlan=()=>{setDeparture('');setDestination('');setAlternate('');setFlightRules('');setDirection('');setCruiseAltitude('');setAlternateAltitude('');setRoute('');setFlightNumber('');setSchedOut('');setWeather(null)};
+  useEffect(()=>{saveLocal('aeroslate.planner.v2.dep',departure);saveLocal('aeroslate.planner.v2.dest',destination);saveLocal('aeroslate.planner.v2.alt',alternate);saveLocal('aeroslate.planner.v2.rules',flightRules);saveLocal('aeroslate.planner.v2.direction',direction);saveLocal('aeroslate.planner.v2.cruise',cruiseAltitude);saveLocal('aeroslate.planner.v2.altCruise',alternateAltitude);saveLocal('aeroslate.planner.v2.altRules',alternateFlightRules);saveLocal('aeroslate.planner.v2.altDirection',alternateDirection);saveLocal('aeroslate.planner.v2.route',route);saveLocal('aeroslate.planner.v2.flightNumber',flightNumber);saveLocal('aeroslate.planner.v2.schedOut',schedOut);},[departure,destination,alternate,flightRules,direction,cruiseAltitude,alternateAltitude,alternateFlightRules,alternateDirection,route,flightNumber,schedOut]);
+  const clearPlan=()=>{setDeparture('');setDestination('');setAlternate('');setFlightRules('');setDirection('');setCruiseAltitude('');setAlternateAltitude('');setAlternateFlightRules('');setAlternateDirection('');setRoute('');setFlightNumber('');setSchedOut('');setWeather(null)};
 
   const {telemetry,linked}=useSimTelemetry(); const [learning,setLearning]=useState(false); const samples=useRef<LearnSample[]>([]); const lastSample=useRef(0);
   useEffect(()=>{
@@ -79,8 +93,6 @@ export function FlightPlannerPage({ onLoadOFP, notify }:{onLoadOFP:(ofp:AnyRecor
 
   const createProfile=()=>{const id=`profile-${Date.now()}`;const next={...BLANK_PROFILE,id};setProfiles(current=>[...current,next]);setProfileId(id);setProfileOpen(true)};
   const removeProfile=()=>{if(profiles.length<=1)return notify('Keep at least one fuel profile.');const next=profiles.filter(p=>p.id!==profile.id);setProfiles(next);setProfileId(next[0].id)};
-  const cruiseOptions=useMemo(()=>altitudeOptions(flightRules,direction),[flightRules,direction]);
-  useEffect(()=>{if(cruiseAltitude&&!cruiseOptions.includes(numeric(cruiseAltitude)))setCruiseAltitude('')},[flightRules,direction]);
   const valid=useMemo(()=>Boolean(airportFor(departure)&&airportFor(destination)&&numeric(cruiseAltitude)>0&&profile.cruiseTasKt>0&&profile.cruiseFlow>0),[departure,destination,cruiseAltitude,profile]);
 
   const generate=async()=>{
@@ -108,10 +120,8 @@ export function FlightPlannerPage({ onLoadOFP, notify }:{onLoadOFP:(ofp:AnyRecor
         <AirportInput label="Departure" value={departure} onChange={setDeparture} placeholder="e.g. KIND"/>
         <AirportInput label="Destination" value={destination} onChange={setDestination} placeholder="e.g. KORD"/>
         <AirportInput label="Alternate (optional)" value={alternate} onChange={setAlternate} placeholder="e.g. KSBN"/>
-        <label className="planner-field"><span>Flight rules</span><select value={flightRules} onChange={e=>setFlightRules(e.target.value as FlightRules)} className={!flightRules?'placeholder-select':''}><option value="" disabled>VFR or IFR</option><option value="IFR">IFR</option><option value="VFR">VFR</option></select><small>Altitude filter</small></label>
-        <label className="planner-field"><span>Direction</span><select value={direction} onChange={e=>setDirection(e.target.value as Direction)} className={!direction?'placeholder-select':''}><option value="" disabled>Eastbound or westbound</option><option value="EAST">Eastbound · 000°–179°</option><option value="WEST">Westbound · 180°–359°</option></select><small>Hemispheric altitude filter</small></label>
-        <label className="planner-field"><span>Cruise altitude</span><select value={cruiseAltitude} onChange={e=>setCruiseAltitude(e.target.value)} disabled={!flightRules||!direction} className={!cruiseAltitude?'placeholder-select':''}><option value="" disabled>{flightRules&&direction?'Select cruise altitude':'Select rules + direction first'}</option>{cruiseOptions.map(altitude=><option key={altitude} value={altitude}>{altitudeLabel(altitude)}</option>)}</select><small>ForeFlight-style filtered altitude list</small></label>
-        <label className="planner-field"><span>Alternate cruise</span><input type="number" value={alternateAltitude} onChange={e=>setAlternateAltitude(e.target.value)} placeholder="e.g. 6000"/><small>feet MSL</small></label>
+        <AltitudePicker label="Cruise altitude" value={cruiseAltitude} onChange={setCruiseAltitude} rules={flightRules} onRulesChange={setFlightRules} direction={direction} onDirectionChange={setDirection}/>
+        <AltitudePicker label="Alternate cruise" value={alternateAltitude} onChange={setAlternateAltitude} rules={alternateFlightRules} onRulesChange={setAlternateFlightRules} direction={alternateDirection} onDirectionChange={setAlternateDirection} optional/>
         <label className="planner-field"><span>Flight / callsign</span><input value={flightNumber} onChange={e=>setFlightNumber(e.target.value.toUpperCase())} placeholder="e.g. AS001"/><small>Used on the generated release</small></label>
         <label className="planner-field"><span>STD (Zulu)</span><input value={schedOut} onChange={e=>setSchedOut(e.target.value)} placeholder="e.g. 14:30" inputMode="numeric"/><small>HH:MM Zulu</small></label>
         <label className="planner-field route-field"><span>Route</span><input value={route} onChange={e=>setRoute(e.target.value.toUpperCase())} placeholder="e.g. DCT or route string"/><small>Route text is preserved in the OFP; fuel/time uses great-circle distance in this version.</small></label>

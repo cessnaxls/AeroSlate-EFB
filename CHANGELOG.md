@@ -1,3 +1,7 @@
+## v0.17.2
+- Moved IFR/VFR and eastbound/westbound filters inside the Cruise Altitude dropdown dialogue.
+- Added the same integrated dropdown dialogue for Alternate Cruise altitude.
+
 ## v0.17.1
 - Made Aircraft Fuel Profiles collapsible.
 - Added aircraft-profile selection directly to Flight Planner.
