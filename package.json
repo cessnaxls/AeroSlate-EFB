@@ -2,7 +2,7 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.17.2",
+  "version": "0.17.4",
   "description": "AeroSlate EFB with custom flight planning, collapsible learnable fuel profiles, filtered cruise-altitude selection, and persistent active-navlog axis controls.",
   "main": "electron/main.cjs",
   "type": "module",

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, ChevronDown, CloudSun, FileText, Fuel, Plane, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Activity, ChevronDown, CloudSun, FileText, Fuel, Import, Plane, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import airportCatalog from '../data/airports.catalog.json';
 import type { Airport } from '../lib/dispatchlink';
 import { airportMap, normalizeAirportCode } from '../lib/dispatchlink';
 import { buildCustomOFP, type FuelProfile, type PlannerWeatherPayload } from '../lib/customPlanner';
-import type { AnyRecord } from '../lib/ofp';
+import { dig, type AnyRecord } from '../lib/ofp';
 import { loadLocal, saveLocal } from '../lib/storage';
 import { useSimTelemetry } from './SimPage';
 
@@ -49,7 +49,7 @@ function AltitudePicker({label,value,onChange,rules,onRulesChange,direction,onDi
   </details><small>{rules&&direction?`${rules} · ${direction==='EAST'?'Eastbound':'Westbound'}`:'Choose rules + direction inside the altitude menu'}</small></label>;
 }
 
-export function FlightPlannerPage({ onLoadOFP, notify }:{onLoadOFP:(ofp:AnyRecord)=>void;notify:(message:string)=>void}){
+export function FlightPlannerPage({ onLoadOFP, onFetchSimBriefOFP, notify }:{onLoadOFP:(ofp:AnyRecord)=>void;onFetchSimBriefOFP:()=>Promise<AnyRecord|null>;notify:(message:string)=>void}){
   const [profiles,setProfiles]=useState<FuelProfile[]>(()=>loadLocal('aeroslate.planner.profiles',[BLANK_PROFILE]));
   const [profileId,setProfileId]=useState(()=>loadLocal('aeroslate.planner.profileId','default'));
   const profile=profiles.find(p=>p.id===profileId) || profiles[0] || BLANK_PROFILE;
@@ -75,6 +75,35 @@ export function FlightPlannerPage({ onLoadOFP, notify }:{onLoadOFP:(ofp:AnyRecor
   const [busy,setBusy]=useState(false); const [weather,setWeather]=useState<PlannerWeatherPayload|null>(null);
   useEffect(()=>{saveLocal('aeroslate.planner.v2.dep',departure);saveLocal('aeroslate.planner.v2.dest',destination);saveLocal('aeroslate.planner.v2.alt',alternate);saveLocal('aeroslate.planner.v2.rules',flightRules);saveLocal('aeroslate.planner.v2.direction',direction);saveLocal('aeroslate.planner.v2.cruise',cruiseAltitude);saveLocal('aeroslate.planner.v2.altCruise',alternateAltitude);saveLocal('aeroslate.planner.v2.altRules',alternateFlightRules);saveLocal('aeroslate.planner.v2.altDirection',alternateDirection);saveLocal('aeroslate.planner.v2.route',route);saveLocal('aeroslate.planner.v2.flightNumber',flightNumber);saveLocal('aeroslate.planner.v2.schedOut',schedOut);},[departure,destination,alternate,flightRules,direction,cruiseAltitude,alternateAltitude,alternateFlightRules,alternateDirection,route,flightNumber,schedOut]);
   const clearPlan=()=>{setDeparture('');setDestination('');setAlternate('');setFlightRules('');setDirection('');setCruiseAltitude('');setAlternateAltitude('');setAlternateFlightRules('');setAlternateDirection('');setRoute('');setFlightNumber('');setSchedOut('');setWeather(null)};
+  const [importingSimBrief,setImportingSimBrief]=useState(false);
+  const applySimBriefPlan=(data:AnyRecord)=>{
+    const dep=String(dig(data,'origin.icao_code','params.orig')||'').toUpperCase();
+    const dest=String(dig(data,'destination.icao_code','params.dest')||'').toUpperCase();
+    const alt=String(dig(data,'alternate.icao_code','params.altn')||'').toUpperCase();
+    const importedRoute=String(dig(data,'general.route','params.route')||'').trim().toUpperCase();
+    if(!dep||!dest)throw new Error('The SimBrief OFP does not contain a valid departure and destination.');
+    setDeparture(dep); setDestination(dest); setAlternate(alt); setRoute(importedRoute||'DCT');
+    const importedFlight=String(dig(data,'general.flight_number','general.callsign')||'').trim().toUpperCase();
+    if(importedFlight)setFlightNumber(importedFlight);
+    const importedCruise=numeric(String(dig(data,'general.initial_altitude','params.initial_altitude')||''));
+    if(importedCruise>0)setCruiseAltitude(String(importedCruise));
+    const importedAltCruise=numeric(String(dig(data,'alternate.cruise_altitude')||''));
+    if(importedAltCruise>0)setAlternateAltitude(String(importedAltCruise));
+    const rawStd=dig<any>(data,'times.sched_out','times.sched_out_time');
+    if(rawStd!==undefined&&rawStd!==null){
+      const text=String(rawStd);
+      if(/^\d{1,2}:\d{2}$/.test(text))setSchedOut(text.padStart(5,'0'));
+      else if(/^\d+$/.test(text)){const seconds=Number(text);if(Number.isFinite(seconds)){const d=new Date(seconds*1000);setSchedOut(`${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`)}}
+    }
+    setWeather(null);
+    notify(`Imported ${dep}–${dest}${alt?` via alternate ${alt}`:''} from SimBrief. Select your AeroSlate aircraft profile and generate the new OFP.`);
+  };
+  const importSimBriefPlan=async()=>{
+    setImportingSimBrief(true);
+    try{const data=await onFetchSimBriefOFP();if(data)applySimBriefPlan(data)}
+    catch(error){notify(error instanceof Error?error.message:'Unable to import SimBrief plan data.')}
+    finally{setImportingSimBrief(false)}
+  };
 
   const {telemetry,linked}=useSimTelemetry(); const [learning,setLearning]=useState(false); const samples=useRef<LearnSample[]>([]); const lastSample=useRef(0);
   useEffect(()=>{
@@ -109,12 +138,12 @@ export function FlightPlannerPage({ onLoadOFP, notify }:{onLoadOFP:(ofp:AnyRecor
     <section className={`card planner-profile-card ${profileOpen?'':'collapsed'}`}><header><div><Fuel size={18}/><h3>Aircraft fuel profiles</h3></div><div className="header-actions"><button onClick={createProfile}><Plus size={15}/>New</button><button onClick={removeProfile}><Trash2 size={15}/>Delete</button><button className="profile-collapse-button" aria-expanded={profileOpen} onClick={()=>setProfileOpen(value=>!value)}><ChevronDown size={16}/>{profileOpen?'Collapse':'Expand'}</button></div></header>{profileOpen&&<div className="card-body custom-profile-layout">
       <div className="profile-selector"><label><span>Profile</span><select value={profile.id} onChange={e=>setProfileId(e.target.value)}>{profiles.map(p=><option key={p.id} value={p.id}>{p.name||p.aircraft||'Untitled profile'}</option>)}</select></label><label><span>Profile name</span><input value={profile.name} onChange={e=>updateProfile({name:e.target.value})} placeholder="e.g. C172 economy"/></label><label><span>Aircraft</span><input value={profile.aircraft} onChange={e=>updateProfile({aircraft:e.target.value.toUpperCase()})} placeholder="e.g. C172"/></label><label><span>Registration</span><input value={profile.registration} onChange={e=>updateProfile({registration:e.target.value.toUpperCase()})} placeholder="e.g. N123AB"/></label><label><span>Units</span><select value={profile.units} onChange={e=>updateProfile({units:e.target.value as 'LBS'|'KGS'})}><option>LBS</option><option>KGS</option></select></label></div>
       <div className="fuel-profile-grid">{[
-        ['Cruise TAS', 'cruiseTasKt','kt','120'],['Taxi fuel','taxiFuel',profile.units,'25'],['Climb fuel','climbFuel',profile.units,'80'],['Climb time','climbMinutes','min','12'],['Cruise flow','cruiseFlow',`${profile.units}/hr`,'55'],['Descent fuel','descentFuel',profile.units,'25'],['Descent time','descentMinutes','min','10'],['Holding flow','holdingFlow',`${profile.units}/hr`,'45'],['Final reserve','reserveMinutes','min','45'],['Contingency','contingencyPct','%','5'],['Usable fuel','usableFuel',profile.units,'300']
+        ['Cruise TAS', 'cruiseTasKt','kt','e.g. 120'],['Taxi fuel','taxiFuel',profile.units,'e.g. 25'],['Climb fuel','climbFuel',profile.units,'e.g. 80'],['Climb time','climbMinutes','min','e.g. 12'],['Cruise flow','cruiseFlow',`${profile.units}/hr`,'e.g. 55'],['Descent fuel','descentFuel',profile.units,'e.g. 25'],['Descent time','descentMinutes','min','e.g. 10'],['Holding flow','holdingFlow',`${profile.units}/hr`,'e.g. 45'],['Final reserve','reserveMinutes','min','e.g. 45'],['Contingency','contingencyPct','%','e.g. 5'],['Usable fuel','usableFuel',profile.units,'e.g. 300']
       ].map(([label,key,suffix,prompt])=><label key={key}><span>{label}</span><div><input type="number" step="any" value={profileNumber(profile,key as keyof FuelProfile)} placeholder={prompt} onChange={e=>updateProfile({[key]:numeric(e.target.value)} as any)}/><small>{suffix}</small></div></label>)}</div>
       <div className={`learning-panel ${learning?'active':''}`}><div><Activity size={18}/><span><strong>Learn from simulator</strong><small>{profile.learned?.samples?`${profile.learned.samples} samples · ${profile.learned.flights} session${profile.learned.flights===1?'':'s'} · ${profile.learned.hours.toFixed(1)} hr observed`:'No learned data yet. Manual values remain authoritative until observations are collected.'}</small></span></div><button className={learning?'danger-button':'primary'} disabled={!linked&&!learning} onClick={()=>{if(learning)stopLearning();else{samples.current=[];lastSample.current=0;setLearning(true)}}}>{learning?'Stop & update profile':linked?'Start learning':'Simulator offline'}</button></div>
     </div>}</section>
 
-    <section className="card custom-plan-card"><header><div><Plane size={18}/><h3>AeroSlate flight planner</h3></div><div className="header-actions"><button onClick={clearPlan}><RotateCcw size={15}/>New plan</button><span className="pill blue">CUSTOM OFP</span></div></header><div className="card-body">
+    <section className="card custom-plan-card"><header><div><Plane size={18}/><h3>AeroSlate flight planner</h3></div><div className="header-actions"><button onClick={()=>void importSimBriefPlan()} disabled={importingSimBrief}>{importingSimBrief?<Activity className="spin" size={15}/>:<Import size={15}/>} {importingSimBrief?'Importing…':'Import SimBrief plan'}</button><button onClick={clearPlan}><RotateCcw size={15}/>New plan</button><span className="pill blue">CUSTOM OFP</span></div></header><div className="card-body">
       <div className="custom-plan-grid">
         <label className="planner-field planner-profile-select"><span>Aircraft profile</span><select value={profile.id} onChange={e=>setProfileId(e.target.value)}><option value="" disabled>Select aircraft profile</option>{profiles.map(p=><option key={p.id} value={p.id}>{p.name||p.aircraft||'Untitled profile'}</option>)}</select><small>{profile.aircraft||profile.registration?`${profile.aircraft||'Aircraft'}${profile.registration?` · ${profile.registration}`:''}`:'Fuel and performance source'}</small></label>
         <AirportInput label="Departure" value={departure} onChange={setDeparture} placeholder="e.g. KIND"/>

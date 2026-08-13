@@ -147,6 +147,19 @@ export default function App() {
     };
   }, [refreshRuntime]);
 
+  const fetchLatestSimBriefOFP = useCallback(async (): Promise<AnyRecord | null> => {
+    if (!simbriefKey.trim()) { notify('Enter your SimBrief username or Pilot ID in Connections.'); return null; }
+    try {
+      const query = new URLSearchParams({ [simbriefMode]: simbriefKey.trim() });
+      const response = await fetch(`/api/simbrief?${query}`, { cache: 'no-store' }); const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Unable to import SimBrief OFP.');
+      const origin = String(dig(data, 'origin.icao_code') || ''); const destination = String(dig(data, 'destination.icao_code') || '');
+      if (!origin || !destination || /error|failed/i.test(String(dig(data, 'fetch.status') || ''))) throw new Error(String(dig(data, 'fetch.message') || 'Your latest SimBrief flight has not been generated yet.'));
+      saveLocal('aeroslate.simbriefKey', simbriefKey.trim()); saveLocal('aeroslate.simbriefMode', simbriefMode);
+      return data;
+    } catch (error) { notify(error instanceof Error ? error.message : 'Unable to import SimBrief OFP.'); return null; }
+  }, [simbriefKey, simbriefMode, notify]);
+
   const importOFP = useCallback(async (staticId = '', options: { stayOnPage?: boolean; silent?: boolean } = {}): Promise<boolean> => {
     if (!simbriefKey.trim()) { if (!options.silent) notify('Enter your SimBrief username or Pilot ID in Connections.'); return false; }
     setLoadingOFP(true);
@@ -225,7 +238,7 @@ export default function App() {
         {page === 'dashboard' && <Dashboard ofp={ofp} flight={flight} setPage={setPage} />}
         {page === 'finder' && <FlightFinderPage onDispatch={openDispatch} onSelect={setSelectedCandidate} onSchedule={scheduleTrip} notify={notify} />}
         {page === 'trips' && <TripsPage candidate={selectedCandidate} onDispatch={openDispatch} notify={notify} />}
-        {page === 'planner' && <FlightPlannerPage onLoadOFP={loadCustomOFP} notify={notify} />}
+        {page === 'planner' && <FlightPlannerPage onLoadOFP={loadCustomOFP} onFetchSimBriefOFP={fetchLatestSimBriefOFP} notify={notify} />}
         {page === 'navlog' && <NavlogPage ofp={ofp} flight={flight} />}
         {page === 'weather' && <WeatherPage ofp={ofp} flight={flight} />}
         {page === 'fuel' && <FuelPage ofp={ofp} flight={flight} />}

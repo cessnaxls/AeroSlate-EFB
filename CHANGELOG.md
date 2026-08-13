@@ -1,3 +1,8 @@
+## v0.17.4
+- Added SimBrief plan-data import to AeroSlate Flight Planner.
+- Imports departure, destination, alternate, route, and available plan metadata into the planner without replacing the selected custom fuel profile.
+- The imported route can then be regenerated as a native AeroSlate OFP using the selected profile and current planner weather.
+
 ## v0.17.2
 - Moved IFR/VFR and eastbound/westbound filters inside the Cruise Altitude dropdown dialogue.
 - Added the same integrated dropdown dialogue for Alternate Cruise altitude.
