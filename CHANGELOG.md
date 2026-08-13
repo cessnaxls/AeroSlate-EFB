@@ -1,3 +1,11 @@
+## v0.17.0
+- Fixed Active Navlog column panning so switching between Rows and Columns preserves the current vertical/horizontal position and horizontal mode remains vertically scrollable.
+- Added AeroSlate Flight Planner with manual aircraft fuel profiles and simulator-learned fuel burn observations.
+- Added departure, destination, optional alternate, cruise altitude, alternate altitude, route, STD, and callsign planning inputs.
+- Added server-side NOAA/NWS Aviation Weather Center METAR, TAF, and U.S. FD winds/temps retrieval for custom planning.
+- Custom plans generate an AeroSlate-native OFP and load through the same OFP/navlog/weather/fuel workflow as imported releases.
+- Included the current X-Plane bridge parser fix and bumped the service-worker cache.
+
 ## v0.16.4
 - Top-bar UTC clock now uses live simulator Zulu time while the simulator is linked.
 - When the simulator is offline, the top-bar clock automatically falls back to real device/browser UTC.

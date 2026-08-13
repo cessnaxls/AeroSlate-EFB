@@ -50,6 +50,93 @@ app.post('/api/sim/telemetry', (req, res) => {
 });
 app.get('/api/sim/telemetry', (_req, res) => { res.set('cache-control', 'no-store'); res.json({ linked: simLinked(), telemetry: latestTelemetry }); });
 
+
+const AWC_BASE = 'https://aviationweather.gov/api/data';
+const FD_REGIONS = ['bos','mia','chi','dfw','slc','sfo','sea','alaska','hawaii'];
+function awcHeaders() { return { accept: 'application/json,text/plain;q=0.9,*/*;q=0.8', 'user-agent': `AeroSlate-EFB/${packageVersion} flight-planner` }; }
+async function awcJson(pathname) {
+  const response = await fetch(`${AWC_BASE}${pathname}`, { signal: AbortSignal.timeout(12000), headers: awcHeaders() });
+  if (response.status === 204) return [];
+  if (!response.ok) throw new Error(`AviationWeather.gov returned HTTP ${response.status}`);
+  return response.json();
+}
+function rawWeatherText(row, kind) {
+  if (!row || typeof row !== 'object') return '';
+  const fields = kind === 'metar' ? ['rawOb','raw_text','raw','metar','text'] : ['rawTAF','raw_text','raw','taf','text'];
+  for (const key of fields) if (typeof row[key] === 'string' && row[key].trim()) return row[key].trim();
+  return '';
+}
+function stationId(row) { return String(row?.icaoId || row?.station_id || row?.stationId || row?.id || '').toUpperCase(); }
+function decodeFdGroup(group, altitudeFt) {
+  const value = String(group || '').trim().toUpperCase();
+  if (!/^\d{4}/.test(value) || value.startsWith('////')) return { altitudeFt, direction: null, speedKt: null, tempC: null };
+  let dd = Number(value.slice(0,2)); let ff = Number(value.slice(2,4));
+  if (dd === 99 && ff === 0) { dd = 0; ff = 0; }
+  else if (dd >= 51 && dd <= 86) { dd -= 50; ff += 100; }
+  const direction = dd === 0 ? 0 : dd * 10;
+  let tempC = null;
+  const tail = value.slice(4);
+  if (tail) {
+    if (/^[+-]\d{2}$/.test(tail)) tempC = Number(tail);
+    else if (/^\d{2}$/.test(tail)) tempC = altitudeFt >= 24000 ? -Number(tail) : Number(tail);
+    else if (/^[+-]?\d{2}/.test(tail)) tempC = Number(tail.slice(0,3));
+  }
+  return { altitudeFt, direction, speedKt: ff, tempC: Number.isFinite(tempC) ? tempC : null };
+}
+function parseFdTable(text, wantedStations) {
+  const lines = String(text || '').split(/\r?\n/).map(line => line.trimEnd());
+  const headerIndex = lines.findIndex(line => /3000\s+6000\s+9000\s+12000/i.test(line));
+  if (headerIndex < 0) return {};
+  const levels = [...lines[headerIndex].matchAll(/\b(3000|6000|9000|12000|18000|24000|30000|34000|39000|45000|53000)\b/g)].map(match => Number(match[1]));
+  const result = {};
+  for (const line of lines.slice(headerIndex + 1)) {
+    const parts = line.trim().split(/\s+/); if (parts.length < 2) continue;
+    const station = parts[0].toUpperCase(); if (!wantedStations.has(station)) continue;
+    const groups = parts.slice(1, levels.length + 1);
+    result[station] = { station, valid: (text.match(/DATA BASED ON\s+([^\n]+)/i)?.[1] || '').trim(), levels: levels.map((alt, index) => decodeFdGroup(groups[index], alt)), source: 'NWS Aviation Weather Center FD winds/temps' };
+  }
+  return result;
+}
+async function fetchFdStations(stations, requestedAltitudes = []) {
+  const wanted = new Set(stations.map(value => String(value || '').toUpperCase()).filter(value => /^[A-Z0-9]{3}$/.test(value)));
+  const found = {}; if (!wanted.size) return found;
+  const levels = requestedAltitudes.some(value => Number(value) > 39000) ? ['low','high'] : ['low'];
+  for (const level of levels) for (const region of FD_REGIONS) {
+    try {
+      const response = await fetch(`https://aviationweather.gov/api/data/windtemp?level=${level}&region=${encodeURIComponent(region)}`, { signal: AbortSignal.timeout(9000), headers: awcHeaders() });
+      if (!response.ok) continue;
+      const parsed = parseFdTable(await response.text(), wanted);
+      for (const [station, row] of Object.entries(parsed)) {
+        if (!found[station]) found[station] = row;
+        else { const merged = [...found[station].levels, ...row.levels]; const unique = new Map(merged.map(item => [item.altitudeFt, item])); found[station] = { ...found[station], levels:[...unique.values()].sort((a,b)=>a.altitudeFt-b.altitudeFt) }; }
+      }
+    } catch { /* continue through official regional products */ }
+  }
+  return found;
+}
+app.get('/api/planner/weather', async (req, res) => {
+  const ids = String(req.query.ids || '').toUpperCase().split(',').map(value => value.trim()).filter(value => /^[A-Z0-9]{4}$/.test(value)).slice(0, 4);
+  const windStations = String(req.query.windStations || '').toUpperCase().split(',').map(value => value.trim()).filter(value => /^[A-Z0-9]{3}$/.test(value)).slice(0, 4);
+  const requestedAltitudes = String(req.query.altitudes || '').split(',').map(Number).filter(Number.isFinite);
+  if (ids.length < 2) return res.status(400).json({ error: 'Departure and destination ICAO identifiers are required.' });
+  try {
+    const query = encodeURIComponent(ids.join(','));
+    const [metars, tafs, winds] = await Promise.all([
+      awcJson(`/metar?ids=${query}&format=json`),
+      awcJson(`/taf?ids=${query}&format=json`),
+      fetchFdStations(windStations, requestedAltitudes)
+    ]);
+    const stations = {};
+    ids.forEach(icao => { stations[icao] = { icao, metar:'', taf:'', source:'NWS Aviation Weather Center' }; });
+    for (const row of Array.isArray(metars) ? metars : []) { const id = stationId(row); if (stations[id]) { stations[id].metar = rawWeatherText(row,'metar'); stations[id].observedAt = row.reportTime || row.obsTime || row.receiptTime || ''; } }
+    for (const row of Array.isArray(tafs) ? tafs : []) { const id = stationId(row); if (stations[id]) stations[id].taf = rawWeatherText(row,'taf'); }
+    const warnings = [];
+    for (const icao of ids) { if (!stations[icao].metar) warnings.push(`No current METAR returned for ${icao}.`); if (!stations[icao].taf) warnings.push(`No current TAF returned for ${icao}.`); }
+    for (const station of windStations) if (!winds[station]) warnings.push(`No official FD winds/temps row was found for ${station}; the planner will use still-air cruise performance for that station.`);
+    res.set('cache-control','no-store').json({ fetchedAt:new Date().toISOString(), source:'NOAA/NWS Aviation Weather Center', stations, winds, warnings });
+  } catch (error) { res.status(502).json({ error:`Unable to retrieve current AviationWeather.gov planning data: ${error.message}` }); }
+});
+
 app.use('/api/records', (_req, res) => res.status(410).json({
   error: 'Server-side record storage is disabled on the free plan. AeroSlate saves locally and can synchronize an encrypted private GitHub Gist.'
 }));

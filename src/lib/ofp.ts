@@ -4,7 +4,7 @@ export type AnyRecord = Record<string, any>;
 
 export interface FlightSummary {
   release: string;
-  source: 'simbrief' | 'candidate' | 'none';
+  source: 'simbrief' | 'custom' | 'candidate' | 'none';
   airline: string;
   flightNumber: string;
   callsign: string;
@@ -273,7 +273,7 @@ export function summary(ofp: AnyRecord | null, fallback: FlightCandidate | null 
   const calculatedBlock = schedOut !== '--:--' && schedIn !== '--:--' ? durationBetweenZulu(schedOut, schedIn) : '--:--';
   return {
     release: String(dig(ofp, 'general.release', 'fetch.time') || fallbackData?.release || '—'),
-    source: 'simbrief',
+    source: String(dig(ofp, 'fetch.source') || '').toLowerCase().includes('aeroslate') ? 'custom' : 'simbrief',
     airline: String(dig(ofp, 'general.icao_airline', 'params.airline') || fallbackData?.airline || ''),
     flightNumber: String(dig(ofp, 'general.flight_number', 'params.fltnum') || fallbackData?.flightNumber || ''),
     callsign: String(dig(ofp, 'atc.callsign', 'general.callsign') || fallbackData?.callsign || ''),

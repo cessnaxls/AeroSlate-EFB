@@ -11,6 +11,7 @@ import { loadLocal, saveLocal } from './lib/storage';
 import type { FlightCandidate } from './lib/dispatchlink';
 import { FlightFinderPage } from './pages/FlightFinderPage';
 import { SimBriefDispatchPage } from './pages/SimBriefDispatchPage';
+import { FlightPlannerPage } from './pages/FlightPlannerPage';
 import { ChartsPage } from './pages/ChartsPage';
 import { OFPPage } from './pages/OFPPage';
 import { NavlogPage } from './pages/NavlogPage';
@@ -27,13 +28,14 @@ import { appendLedgerRecord, emptyLedger, getOrCreateDeviceId, normalizeLedger }
 import { addTripsLocal, tripToRecordData } from './lib/trips';
 import { generateDispatchPayload } from './lib/dispatchlink';
 
-type Page = 'dashboard' | 'finder' | 'trips' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'sim' | 'times' | 'gates' | 'flightlogs' | 'dutylogs' | 'help' | 'settings';
+type Page = 'dashboard' | 'finder' | 'trips' | 'planner' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'sim' | 'times' | 'gates' | 'flightlogs' | 'dutylogs' | 'help' | 'settings';
 interface RuntimeStatus { simLinked: boolean; mode: 'standalone' | 'sim-linked'; providerMode: 'official-web-session'; }
 interface NavItem { id: Page; label: string; shortLabel: string; icon: typeof LayoutDashboard; group: 'Plan' | 'Brief' | 'Fly' | 'Record' | 'System'; }
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Flight Overview', shortLabel: 'Overview', icon: LayoutDashboard, group: 'Plan' },
   { id: 'finder', label: 'Find flights', shortLabel: 'Find', icon: Search, group: 'Plan' },
   { id: 'trips', label: 'Trips', shortLabel: 'Trips', icon: CalendarDays, group: 'Plan' },
+  { id: 'planner', label: 'Flight planner', shortLabel: 'Planner', icon: FileText, group: 'Plan' },
   { id: 'simbrief', label: 'Dispatch', shortLabel: 'Dispatch', icon: Plane, group: 'Plan' },
   { id: 'charts', label: 'Charts', shortLabel: 'Charts', icon: Map, group: 'Brief' },
   { id: 'ofp', label: 'OFP', shortLabel: 'OFP', icon: FileText, group: 'Brief' },
@@ -168,6 +170,7 @@ export default function App() {
     saveLocal('aeroslate.dispatch.url', url); saveLocal('aeroslate.dispatch.flight', selected); saveLocal('aeroslate.dispatch.staticId', staticId); setPage('simbrief'); notify(`Prepared ${selected.flightNumber} for SimBrief.`);
   };
   const loadDemo = () => { setOfp(demoOFP); saveLocal('aeroslate.lastOFP', demoOFP); notify('Demo OFP loaded.'); setPage('dashboard'); };
+  const loadCustomOFP = useCallback((data: AnyRecord) => { migrateFlightLocalData(summary(ofp, dispatchFlight), summary(data, null)); setOfp(data); saveLocal('aeroslate.lastOFP', data); setDispatchFlight(null); setDispatchUrl(''); setDispatchStaticId(''); saveLocal('aeroslate.dispatch.flight', null); saveLocal('aeroslate.dispatch.url', ''); saveLocal('aeroslate.dispatch.staticId', ''); setPage('dashboard'); }, [ofp, dispatchFlight]);
   const scheduleTrip = useCallback(async (candidate: FlightCandidate): Promise<boolean> => {
     setSelectedCandidate(candidate); saveLocal('aeroslate.finder.flight', candidate);
     const local = addTripsLocal([candidate], String(candidate.date).slice(0, 10), '', true);
@@ -222,6 +225,7 @@ export default function App() {
         {page === 'dashboard' && <Dashboard ofp={ofp} flight={flight} setPage={setPage} />}
         {page === 'finder' && <FlightFinderPage onDispatch={openDispatch} onSelect={setSelectedCandidate} onSchedule={scheduleTrip} notify={notify} />}
         {page === 'trips' && <TripsPage candidate={selectedCandidate} onDispatch={openDispatch} notify={notify} />}
+        {page === 'planner' && <FlightPlannerPage onLoadOFP={loadCustomOFP} notify={notify} />}
         {page === 'navlog' && <NavlogPage ofp={ofp} flight={flight} />}
         {page === 'weather' && <WeatherPage ofp={ofp} flight={flight} />}
         {page === 'fuel' && <FuelPage ofp={ofp} flight={flight} />}

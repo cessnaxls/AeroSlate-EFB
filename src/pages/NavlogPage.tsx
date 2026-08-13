@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeftRight, ArrowUpDown, ArrowUpRight, Check, Clock3, Route } from 'lucide-react';
 import { duration, getNavlog, numberText, weight, type AnyRecord, type FlightSummary } from '../lib/ofp';
 import { loadLocal, saveLocal } from '../lib/storage';
@@ -74,6 +74,12 @@ export function NavlogPage({ ofp, flight }: { ofp: AnyRecord | null; flight: Fli
   const rawFixes = getNavlog(ofp);
   const [active, setActive] = useState(false);
   const [scrollAxis, setScrollAxis] = useState<'vertical' | 'horizontal'>('vertical');
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const changeAxis = (next: 'vertical' | 'horizontal') => {
+    const node = scrollRef.current; const top = node?.scrollTop || 0; const left = node?.scrollLeft || 0;
+    setScrollAxis(next);
+    window.requestAnimationFrame(() => { if (scrollRef.current) { scrollRef.current.scrollTop = top; scrollRef.current.scrollLeft = left; } });
+  };
   const key = `aeroslate.active-navlog.${flight.release}.${flight.origin}${flight.destination}`;
   const [rows, setRows] = useState<ActiveRows>(() => loadLocal(key, {}));
   useEffect(() => setRows(loadLocal(key, {})), [key]);
@@ -112,11 +118,11 @@ export function NavlogPage({ ofp, flight }: { ofp: AnyRecord | null; flight: Fli
   const displayAta = (plannedElapsed: number, entered: string) => entered || (activeReference ? addClock(`${String(Math.floor(activeReference.minute / 60)).padStart(2, '0')}:${String(activeReference.minute % 60).padStart(2, '0')}z`, plannedElapsed - activeReference.elapsed) : '—');
 
   return <section className="card navlog-card">
-    <header><div><Route size={18} /><h3>{flight.origin}–{flight.destination} navlog</h3></div><div className="header-actions"><span className="pill blue">{fixes.length} fixes</span><div className="segmented compact-axis" data-axis={scrollAxis} role="group" aria-label="Navlog scroll direction"><button className={scrollAxis === 'vertical' ? 'active' : ''} aria-pressed={scrollAxis === 'vertical'} title="Scroll rows vertically" onClick={() => setScrollAxis('vertical')}><ArrowUpDown size={14}/><span>Rows</span></button><button className={scrollAxis === 'horizontal' ? 'active' : ''} aria-pressed={scrollAxis === 'horizontal'} title="Pan columns horizontally" onClick={() => setScrollAxis('horizontal')}><ArrowLeftRight size={14}/><span>Columns</span></button></div><button className={active ? 'active' : ''} onClick={() => setActive(value => !value)}><Clock3 size={15} /> {active ? 'Active navlog on' : 'Use active navlog'}</button></div></header>
+    <header><div><Route size={18} /><h3>{flight.origin}–{flight.destination} navlog</h3></div><div className="header-actions"><span className="pill blue">{fixes.length} fixes</span><div className="segmented compact-axis" data-axis={scrollAxis} role="group" aria-label="Navlog scroll direction"><button className={scrollAxis === 'vertical' ? 'active' : ''} aria-pressed={scrollAxis === 'vertical'} title="Scroll rows vertically" onClick={() => changeAxis('vertical')}><ArrowUpDown size={14}/><span>Rows</span></button><button className={scrollAxis === 'horizontal' ? 'active' : ''} aria-pressed={scrollAxis === 'horizontal'} title="Pan columns horizontally" onClick={() => changeAxis('horizontal')}><ArrowLeftRight size={14}/><span>Columns</span></button></div><button className={active ? 'active' : ''} onClick={() => setActive(value => !value)}><Clock3 size={15} /> {active ? 'Active navlog on' : 'Use active navlog'}</button></div></header>
     <div className="card-body compact-card-body">
       {active && <div className="active-navlog-banner"><div><strong>Active navlog</strong><span>Record actual crossing, altitude, fuel and remarks. Fuel variance is compared with the planned remaining fuel at each fix.</span></div><span>{completed}/{fixes.length} complete</span></div>}
       {active && latestTrend && <div className={`navlog-fuel-trend ${latestTrend.variance < 0 ? 'behind' : 'ahead'}`}><div>{latestTrend.variance < 0 ? <AlertTriangle size={19} /> : <ArrowUpRight size={19} />}<span><strong>Latest fuel trend · {latestTrend.ident}</strong><small>Actual {Math.round(latestTrend.actual).toLocaleString()} · planned {Math.round(latestTrend.planned).toLocaleString()} {flight.units}</small></span></div><strong>{signed(latestTrend.variance, flight.units)}</strong></div>}
-      <div className={`table-scroll navlog-scroll axis-${scrollAxis}`}><table className={`navlog-table rich-navlog ${active ? 'active-mode' : ''}`}><thead><tr>
+      <div ref={scrollRef} className={`table-scroll navlog-scroll axis-${scrollAxis}`}><table className={`navlog-table rich-navlog ${active ? 'active-mode' : ''}`}><thead><tr>
         <th>#</th><th>Fix</th><th>Via</th><th>CRS</th><th>Dist</th><th>ALT</th><th>SPD</th><th>Wind & temp</th><th>LEG / ETA</th><th>Fuel</th>
         {active && <th>ATA / ALT / FUEL / REMARKS</th>}
       </tr></thead><tbody>
