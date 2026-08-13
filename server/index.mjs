@@ -13,6 +13,27 @@ const port = Number(process.env.PORT || 3000);
 const simLinkToken = process.env.SIM_LINK_TOKEN || 'development-sim-link';
 let lastSimHeartbeat = 0;
 let latestTelemetry = null;
+// Server-owned simulator learning session. This continues ingesting bridge telemetry even
+// when every AeroSlate browser/PWA is backgrounded, suspended, or closed.
+let simLearning = { active: false, profileId: null, units: 'LBS', startedAt: null, lastSampleAt: 0, samples: [] };
+const LEARNING_SAMPLE_MS = 5000;
+const MAX_LEARNING_SAMPLES = 17280; // ~24 hr at 5-second sampling
+function learningFuel(t) { return simLearning.units === 'KGS' ? Number(t.totalFuelKg) : Number(t.totalFuelLb); }
+function recordLearningSample(t) {
+  if (!simLearning.active) return;
+  const now = Date.now();
+  if (now - simLearning.lastSampleAt < LEARNING_SAMPLE_MS) return;
+  const fuel = learningFuel(t); if (!Number.isFinite(fuel)) return;
+  simLearning.lastSampleAt = now;
+  simLearning.samples.push({ at: now, fuel, altitude: Number(t.altitudeMslFt || 0), weight: simLearning.units === 'KGS' ? Number(t.totalWeightKg || 0) : Number(t.totalWeightLb || 0), ias: Number(t.indicatedAirspeedKt || 0), gs: Number(t.groundSpeedKt || 0), vs: Number(t.verticalSpeedFpm || 0), onGround: Boolean(t.onGround), enginesRunning: Boolean(t.enginesRunning), simZulu: t.simZulu || null });
+  if (simLearning.samples.length > MAX_LEARNING_SAMPLES) simLearning.samples.splice(0, simLearning.samples.length - MAX_LEARNING_SAMPLES);
+}
+function summarizeLearning(rows) {
+  const buckets = { climb: [], cruise: [], descent: [], ground: [] };
+  for (let i=1;i<rows.length;i++) { const a=rows[i-1], b=rows[i]; const hours=(b.at-a.at)/3600000; if(hours<=0)continue; const burn=a.fuel-b.fuel; if(burn<0)continue; const flow=burn/hours; if(!Number.isFinite(flow)||flow>100000)continue; const key=b.onGround?'ground':b.vs>300?'climb':b.vs<-300?'descent':'cruise'; buckets[key].push(flow); }
+  const avg=v=>v.length?v.reduce((a,b)=>a+b,0)/v.length:0;
+  return { samples: rows.length, hours: rows.length>1?(rows.at(-1).at-rows[0].at)/3600000:0, climbFlow:avg(buckets.climb), cruiseFlow:avg(buckets.cruise), descentFlow:avg(buckets.descent), groundFlow:avg(buckets.ground), phaseSamples:Object.fromEntries(Object.entries(buckets).map(([k,v])=>[k,v.length])) };
+}
 
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false, frameguard: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
@@ -45,10 +66,25 @@ app.post('/api/sim/telemetry', (req, res) => {
   const allowed = ['simulator','simZulu','simZuluSeconds','latitude','longitude','headingTrue','altitudeMslFt','altitudeAglFt','groundAltitudeM','groundSpeedKt','indicatedAirspeedKt','verticalSpeedFpm','onGround','parkingBrake','enginesRunning','surfaceType','surfaceCondition','aircraftTitle','registration','totalFuelLb','totalFuelKg','totalWeightLb','totalWeightKg'];
   const telemetry = {};
   for (const key of allowed) if (Object.hasOwn(req.body || {}, key)) telemetry[key] = req.body[key];
-  latestTelemetry = { ...telemetry, receivedAt: new Date().toISOString() }; lastSimHeartbeat = Date.now();
+  latestTelemetry = { ...telemetry, receivedAt: new Date().toISOString() }; lastSimHeartbeat = Date.now(); recordLearningSample(latestTelemetry);
   res.json({ ok: true, receivedAt: latestTelemetry.receivedAt });
 });
 app.get('/api/sim/telemetry', (_req, res) => { res.set('cache-control', 'no-store'); res.json({ linked: simLinked(), telemetry: latestTelemetry }); });
+
+app.post('/api/sim/learning/start', (req, res) => {
+  const profileId = String(req.body?.profileId || '').trim(); const units = req.body?.units === 'KGS' ? 'KGS' : 'LBS';
+  simLearning = { active: true, profileId, units, startedAt: new Date().toISOString(), lastSampleAt: 0, samples: [] };
+  if (latestTelemetry) recordLearningSample(latestTelemetry);
+  res.json({ ok:true, active:true, profileId, units, startedAt:simLearning.startedAt });
+});
+app.get('/api/sim/learning/status', (_req, res) => {
+  res.set('cache-control','no-store'); const summary=summarizeLearning(simLearning.samples);
+  res.json({ active:simLearning.active, profileId:simLearning.profileId, units:simLearning.units, startedAt:simLearning.startedAt, linked:simLinked(), ...summary });
+});
+app.post('/api/sim/learning/stop', (_req, res) => {
+  const summary=summarizeLearning(simLearning.samples); const result={ ok:true, active:false, profileId:simLearning.profileId, units:simLearning.units, startedAt:simLearning.startedAt, stoppedAt:new Date().toISOString(), ...summary };
+  simLearning.active=false; res.json(result);
+});
 
 
 const AWC_BASE = 'https://aviationweather.gov/api/data';

@@ -1,3 +1,8 @@
+## v0.17.5
+- Moved simulator fuel-profile learning to the server so bridge telemetry continues to be recorded while the browser/PWA is backgrounded, suspended, on another tab, or closed.
+- Added server learning start/status/stop APIs and reconnectable session status.
+- Browser now controls and displays the server-owned learning session instead of being the recorder.
+
 ## v0.17.4
 - Added SimBrief plan-data import to AeroSlate Flight Planner.
 - Imports departure, destination, alternate, route, and available plan metadata into the planner without replacing the selected custom fuel profile.

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Activity, ChevronDown, CloudSun, FileText, Fuel, Import, Plane, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import airportCatalog from '../data/airports.catalog.json';
 import type { Airport } from '../lib/dispatchlink';
@@ -11,7 +11,6 @@ import { useSimTelemetry } from './SimPage';
 const AIRPORTS = airportCatalog as Airport[];
 const AIRPORT_MAP = airportMap(AIRPORTS);
 const BLANK_PROFILE: FuelProfile = { id:'default', name:'', aircraft:'', registration:'', units:'LBS', cruiseTasKt:0, taxiFuel:0, climbFuel:0, climbMinutes:0, cruiseFlow:0, descentFuel:0, descentMinutes:0, holdingFlow:0, reserveMinutes:0, contingencyPct:0, usableFuel:0 };
-interface LearnSample { at:number; fuel:number; altitude:number; vs:number; onGround:boolean; }
 type FlightRules = '' | 'IFR' | 'VFR';
 type Direction = '' | 'EAST' | 'WEST';
 
@@ -105,20 +104,13 @@ export function FlightPlannerPage({ onLoadOFP, onFetchSimBriefOFP, notify }:{onL
     finally{setImportingSimBrief(false)}
   };
 
-  const {telemetry,linked}=useSimTelemetry(); const [learning,setLearning]=useState(false); const samples=useRef<LearnSample[]>([]); const lastSample=useRef(0);
-  useEffect(()=>{
-    if(!learning||!linked||!telemetry||typeof telemetry.totalFuelLb!=='number')return;
-    const now=Date.now(); if(now-lastSample.current<10000)return; lastSample.current=now;
-    const fuel=profile.units==='KGS'?Number(telemetry.totalFuelKg||0):Number(telemetry.totalFuelLb||0);
-    samples.current.push({at:now,fuel,altitude:Number(telemetry.altitudeMslFt||0),vs:Number(telemetry.verticalSpeedFpm||0),onGround:Boolean(telemetry.onGround)});
-  },[learning,linked,telemetry,profile.units]);
-  const stopLearning=()=>{
-    setLearning(false); const rows=samples.current; samples.current=[]; if(rows.length<3){notify('Not enough simulator samples were collected.');return;}
-    const buckets:{climb:number[];cruise:number[];descent:number[];ground:number[]}={climb:[],cruise:[],descent:[],ground:[]};
-    for(let i=1;i<rows.length;i++){const a=rows[i-1],b=rows[i];const hours=(b.at-a.at)/3600000;if(hours<=0)continue;const burn=a.fuel-b.fuel;if(burn<0||burn/hours>100000)continue;const flow=burn/hours;const bucket=b.onGround?'ground':b.vs>300?'climb':b.vs<-300?'descent':'cruise';buckets[bucket].push(flow)}
-    const avg=(v:number[])=>v.length?v.reduce((a,b)=>a+b,0)/v.length:0; const cruise=avg(buckets.cruise); const climb=avg(buckets.climb); const descent=avg(buckets.descent);
-    updateProfile({cruiseFlow:cruise||profile.cruiseFlow,climbFuel:climb&&profile.climbMinutes?climb*profile.climbMinutes/60:profile.climbFuel,descentFuel:descent&&profile.descentMinutes?descent*profile.descentMinutes/60:profile.descentFuel,learned:{samples:rows.length,flights:(profile.learned?.flights||0)+1,hours:(profile.learned?.hours||0)+(rows.at(-1)!.at-rows[0].at)/3600000,climbFlow:climb||profile.learned?.climbFlow,cruiseFlow:cruise||profile.learned?.cruiseFlow,descentFlow:descent||profile.learned?.descentFlow,updatedAt:new Date().toISOString()}}); notify('Simulator fuel observations were incorporated into this profile.');
-  };
+  const {linked}=useSimTelemetry();
+  const [learning,setLearning]=useState(false);
+  const [learningStatus,setLearningStatus]=useState<{samples:number;hours:number;linked?:boolean}>({samples:0,hours:0});
+  const refreshLearning=async()=>{try{const r=await fetch('/api/sim/learning/status',{cache:'no-store'});const d=await r.json();setLearning(Boolean(d.active));setLearningStatus({samples:Number(d.samples||0),hours:Number(d.hours||0),linked:Boolean(d.linked)});}catch{}};
+  useEffect(()=>{void refreshLearning();const timer=window.setInterval(()=>void refreshLearning(),5000);return()=>window.clearInterval(timer)},[]);
+  const startLearning=async()=>{try{const r=await fetch('/api/sim/learning/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({profileId:profile.id,units:profile.units})});if(!r.ok)throw new Error('Unable to start simulator learning.');setLearning(true);setLearningStatus({samples:0,hours:0,linked});notify('Server-side simulator learning started. It will continue if AeroSlate is backgrounded or closed.');}catch(error){notify(error instanceof Error?error.message:'Unable to start simulator learning.')}};
+  const stopLearning=async()=>{try{const r=await fetch('/api/sim/learning/stop',{method:'POST'});const d=await r.json();setLearning(false);setLearningStatus({samples:Number(d.samples||0),hours:Number(d.hours||0),linked});if(Number(d.samples||0)<3){notify('Not enough simulator samples were collected.');return;}const cruise=Number(d.cruiseFlow||0),climb=Number(d.climbFlow||0),descent=Number(d.descentFlow||0);updateProfile({cruiseFlow:cruise||profile.cruiseFlow,climbFuel:climb&&profile.climbMinutes?climb*profile.climbMinutes/60:profile.climbFuel,descentFuel:descent&&profile.descentMinutes?descent*profile.descentMinutes/60:profile.descentFuel,learned:{samples:Number(d.samples||0),flights:(profile.learned?.flights||0)+1,hours:(profile.learned?.hours||0)+Number(d.hours||0),climbFlow:climb||profile.learned?.climbFlow,cruiseFlow:cruise||profile.learned?.cruiseFlow,descentFlow:descent||profile.learned?.descentFlow,updatedAt:new Date().toISOString()}});notify('Background simulator observations were incorporated into this profile.');}catch(error){notify(error instanceof Error?error.message:'Unable to stop simulator learning.')}};
 
   const createProfile=()=>{const id=`profile-${Date.now()}`;const next={...BLANK_PROFILE,id};setProfiles(current=>[...current,next]);setProfileId(id);setProfileOpen(true)};
   const removeProfile=()=>{if(profiles.length<=1)return notify('Keep at least one fuel profile.');const next=profiles.filter(p=>p.id!==profile.id);setProfiles(next);setProfileId(next[0].id)};
@@ -140,7 +132,7 @@ export function FlightPlannerPage({ onLoadOFP, onFetchSimBriefOFP, notify }:{onL
       <div className="fuel-profile-grid">{[
         ['Cruise TAS', 'cruiseTasKt','kt','e.g. 120'],['Taxi fuel','taxiFuel',profile.units,'e.g. 25'],['Climb fuel','climbFuel',profile.units,'e.g. 80'],['Climb time','climbMinutes','min','e.g. 12'],['Cruise flow','cruiseFlow',`${profile.units}/hr`,'e.g. 55'],['Descent fuel','descentFuel',profile.units,'e.g. 25'],['Descent time','descentMinutes','min','e.g. 10'],['Holding flow','holdingFlow',`${profile.units}/hr`,'e.g. 45'],['Final reserve','reserveMinutes','min','e.g. 45'],['Contingency','contingencyPct','%','e.g. 5'],['Usable fuel','usableFuel',profile.units,'e.g. 300']
       ].map(([label,key,suffix,prompt])=><label key={key}><span>{label}</span><div><input type="number" step="any" value={profileNumber(profile,key as keyof FuelProfile)} placeholder={prompt} onChange={e=>updateProfile({[key]:numeric(e.target.value)} as any)}/><small>{suffix}</small></div></label>)}</div>
-      <div className={`learning-panel ${learning?'active':''}`}><div><Activity size={18}/><span><strong>Learn from simulator</strong><small>{profile.learned?.samples?`${profile.learned.samples} samples · ${profile.learned.flights} session${profile.learned.flights===1?'':'s'} · ${profile.learned.hours.toFixed(1)} hr observed`:'No learned data yet. Manual values remain authoritative until observations are collected.'}</small></span></div><button className={learning?'danger-button':'primary'} disabled={!linked&&!learning} onClick={()=>{if(learning)stopLearning();else{samples.current=[];lastSample.current=0;setLearning(true)}}}>{learning?'Stop & update profile':linked?'Start learning':'Simulator offline'}</button></div>
+      <div className={`learning-panel ${learning?'active':''}`}><div><Activity size={18}/><span><strong>Learn from simulator</strong><small>{learning?`${learningStatus.samples} server samples · ${learningStatus.hours.toFixed(1)} hr this session · continues in background`:profile.learned?.samples?`${profile.learned.samples} samples · ${profile.learned.flights} session${profile.learned.flights===1?'':'s'} · ${profile.learned.hours.toFixed(1)} hr observed`:'No learned data yet. Manual values remain authoritative until observations are collected.'}</small></span></div><button className={learning?'danger-button':'primary'} disabled={!linked&&!learning} onClick={()=>{if(learning)void stopLearning();else void startLearning()}}>{learning?'Stop & update profile':linked?'Start learning':'Simulator offline'}</button></div>
     </div>}</section>
 
     <section className="card custom-plan-card"><header><div><Plane size={18}/><h3>AeroSlate flight planner</h3></div><div className="header-actions"><button onClick={()=>void importSimBriefPlan()} disabled={importingSimBrief}>{importingSimBrief?<Activity className="spin" size={15}/>:<Import size={15}/>} {importingSimBrief?'Importing…':'Import SimBrief plan'}</button><button onClick={clearPlan}><RotateCcw size={15}/>New plan</button><span className="pill blue">CUSTOM OFP</span></div></header><div className="card-body">
