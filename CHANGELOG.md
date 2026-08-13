@@ -1,3 +1,10 @@
+## v0.17.1
+- Made Aircraft Fuel Profiles collapsible.
+- Added aircraft-profile selection directly to Flight Planner.
+- Added VFR/IFR and eastbound/westbound cruise-altitude filters with a filtered altitude dropdown.
+- Replaced editable default values with gray prompts for new plan/profile fields.
+- Restored a dedicated Rows/Columns navlog scroll selector and preserves the current row when changing scroll mode.
+
 ## v0.17.0
 - Fixed Active Navlog column panning so switching between Rows and Columns preserves the current vertical/horizontal position and horizontal mode remains vertically scrollable.
 - Added AeroSlate Flight Planner with manual aircraft fuel profiles and simulator-learned fuel burn observations.
