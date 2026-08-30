@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowLeftRight, ArrowUpDown, ArrowUpRight, Check, Clock3, Route } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, ArrowUpRight, Check, Clock3, Route } from 'lucide-react';
 import { duration, getNavlog, numberText, weight, type AnyRecord, type FlightSummary } from '../lib/ofp';
 import { loadLocal, saveLocal } from '../lib/storage';
 
@@ -73,29 +73,6 @@ function durationMinutes(value: unknown): number {
 export function NavlogPage({ ofp, flight }: { ofp: AnyRecord | null; flight: FlightSummary }) {
   const rawFixes = getNavlog(ofp);
   const [active, setActive] = useState(false);
-  const [scrollAxis, setScrollAxis] = useState<'vertical' | 'horizontal'>(() => loadLocal('aeroslate.navlog.scrollAxis', 'vertical'));
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const pendingScroll = useRef<{top:number;left:number}|null>(null);
-  const changeAxis = (next: 'vertical' | 'horizontal') => {
-    const node = scrollRef.current;
-    pendingScroll.current = { top: node?.scrollTop || 0, left: node?.scrollLeft || 0 };
-    setScrollAxis(next);
-    saveLocal('aeroslate.navlog.scrollAxis', next);
-  };
-  useLayoutEffect(() => {
-    const restore = pendingScroll.current;
-    const node = scrollRef.current;
-    if (!restore || !node) return;
-    node.scrollTop = restore.top;
-    node.scrollLeft = restore.left;
-    const frame = window.requestAnimationFrame(() => {
-      if (!scrollRef.current) return;
-      scrollRef.current.scrollTop = restore.top;
-      scrollRef.current.scrollLeft = restore.left;
-      pendingScroll.current = null;
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [scrollAxis]);
   const key = `aeroslate.active-navlog.${flight.release}.${flight.origin}${flight.destination}`;
   const [rows, setRows] = useState<ActiveRows>(() => loadLocal(key, {}));
   useEffect(() => setRows(loadLocal(key, {})), [key]);
@@ -138,8 +115,7 @@ export function NavlogPage({ ofp, flight }: { ofp: AnyRecord | null; flight: Fli
     <div className="card-body compact-card-body">
       {active && <div className="active-navlog-banner"><div><strong>Active navlog</strong><span>Record actual crossing, altitude, fuel and remarks. Fuel variance is compared with the planned remaining fuel at each fix.</span></div><span>{completed}/{fixes.length} complete</span></div>}
       {active && latestTrend && <div className={`navlog-fuel-trend ${latestTrend.variance < 0 ? 'behind' : 'ahead'}`}><div>{latestTrend.variance < 0 ? <AlertTriangle size={19} /> : <ArrowUpRight size={19} />}<span><strong>Latest fuel trend · {latestTrend.ident}</strong><small>Actual {Math.round(latestTrend.actual).toLocaleString()} · planned {Math.round(latestTrend.planned).toLocaleString()} {flight.units}</small></span></div><strong>{signed(latestTrend.variance, flight.units)}</strong></div>}
-      <div className="navlog-scroll-toolbar"><span>Scroll</span><div className="segmented compact-axis" data-axis={scrollAxis} role="group" aria-label="Navlog scroll direction"><button type="button" className={scrollAxis === 'vertical' ? 'active' : ''} aria-pressed={scrollAxis === 'vertical'} onClick={() => changeAxis('vertical')}><ArrowUpDown size={14}/><span>Rows</span></button><button type="button" className={scrollAxis === 'horizontal' ? 'active' : ''} aria-pressed={scrollAxis === 'horizontal'} onClick={() => changeAxis('horizontal')}><ArrowLeftRight size={14}/><span>Columns</span></button></div><small>{scrollAxis === 'vertical' ? 'Vertical row scrolling' : 'Horizontal column panning · row position preserved'}</small></div>
-      <div ref={scrollRef} className={`table-scroll navlog-scroll axis-${scrollAxis}`}><table className={`navlog-table rich-navlog ${active ? 'active-mode' : ''}`}><thead><tr>
+      <div className="table-scroll navlog-scroll"><table className={`navlog-table rich-navlog ${active ? 'active-mode' : ''}`}><thead><tr>
         <th>#</th><th>Fix</th><th>Via</th><th>CRS</th><th>Dist</th><th>ALT</th><th>SPD</th><th>Wind & temp</th><th>LEG / ETA</th><th>Fuel</th>
         {active && <th>ATA / ALT / FUEL / REMARKS</th>}
       </tr></thead><tbody>

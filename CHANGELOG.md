@@ -1,3 +1,7 @@
+## v0.18.1
+- Removed the Navlog Rows/Columns scroll selector.
+- Navlog now uses one natural two-axis scroll viewport for vertical row scrolling and horizontal column panning.
+
 # v0.18.0
 - Rebuilt Aircraft Fuel Profiles around performance tables rather than a single cruise-flow estimate.
 - Added cruise performance points by altitude, weight, ISA deviation, TAS and fuel flow.
