@@ -1,3 +1,8 @@
+## v0.18.2
+- Fixed Navlog ETA accumulation so numeric SimBrief `time_leg` values are always treated as seconds. Short legs can no longer turn into multi-hour ETA jumps.
+- ETA now accumulates exact leg seconds and only rounds when formatting the displayed clock, so sub-minute legs still contribute correctly.
+- Custom AeroSlate-generated navlogs now store leg times in seconds to match SimBrief/OFP semantics.
+
 ## v0.18.1
 - Removed the Navlog Rows/Columns scroll selector.
 - Navlog now uses one natural two-axis scroll viewport for vertical row scrolling and horizontal column panning.

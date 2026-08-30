@@ -63,11 +63,21 @@ function addClock(base: string, deltaMinutes: number): string {
   const total = ((start + Math.round(deltaMinutes)) % 1440 + 1440) % 1440;
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}z`;
 }
-function durationMinutes(value: unknown): number {
+function legDurationSeconds(value: unknown): number {
   const raw = String(value ?? '').trim();
-  if (/^\d+:\d{2}$/.test(raw)) { const [h, m] = raw.split(':').map(Number); return h * 60 + m; }
-  const number = Number(raw); if (!Number.isFinite(number)) return 0;
-  return number > 1000 ? number / 60 : number > 20 ? number / 60 : number * 60;
+  if (!raw) return 0;
+  // SimBrief navlog time_leg values are seconds. Keep numeric values in seconds
+  // regardless of size so short legs (e.g. 19 seconds) can never become 19 hours.
+  const numericValue = Number(raw);
+  if (Number.isFinite(numericValue) && !raw.includes(':')) return Math.max(0, numericValue);
+  // Also accept already-formatted duration strings for imported/non-SimBrief plans.
+  const match = raw.match(/^(\d+):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return 0;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3] || 0);
+  if (minutes > 59 || seconds > 59) return 0;
+  return Math.max(0, hours * 3600 + minutes * 60 + seconds);
 }
 
 export function NavlogPage({ ofp, flight }: { ofp: AnyRecord | null; flight: FlightSummary }) {
@@ -84,12 +94,13 @@ export function NavlogPage({ ofp, flight }: { ofp: AnyRecord | null; flight: Fli
     const explicitTotals = rawFixes.map(fix => Number(field(fix, 'fuel_total', 'fuel_remaining'))).filter(Number.isFinite);
     const firstLeg = rawFixes.length ? numeric(rawFixes[0], 'fuel_leg') : 0;
     let remaining = weight(ofp, 'fuel.plan_takeoff') || weight(ofp, 'fuel.plan_ramp') || ((explicitTotals[0] || 0) + firstLeg);
-    let elapsedMinutes = 0;
+    let elapsedSeconds = 0;
     return rawFixes.map((fix, index) => {
       const legFuel = numeric(fix, 'fuel_leg');
       if (index === 0 && remaining <= 0) remaining = Number(field(fix, 'fuel_total')) + legFuel || 0;
       remaining = Math.max(0, remaining - legFuel);
-      elapsedMinutes += durationMinutes(field(fix, 'time_leg'));
+      elapsedSeconds += legDurationSeconds(field(fix, 'time_leg'));
+      const elapsedMinutes = elapsedSeconds / 60;
       return { fix, index, legFuel, plannedRemaining: remaining, plannedElapsedMinutes: elapsedMinutes, plannedEta: addClock(flight.schedOut, elapsedMinutes) };
     });
   }, [rawFixes, ofp]);
