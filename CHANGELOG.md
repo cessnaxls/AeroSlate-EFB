@@ -1,3 +1,8 @@
+## v0.18.4
+- Added MCC-style custom totals/report builder for Flight and Duty logs.
+- Added arbitrary field filters, custom metric operations, unique counts, averages/min/max, and breakdown grouping.
+- Existing concise records browser and drill-down remain unchanged.
+
 ## v0.18.3
 - Rebuilt Flight and Duty history into concise analytics views with live totals, search, date filtering, grouping, and full per-record drill-down.
 - Totals recalculate against the current filtered dataset so users can inspect any period, aircraft, registration, role, operation, or duty scheme.

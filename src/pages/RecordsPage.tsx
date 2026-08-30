@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BookOpenCheck, CloudDownload, CloudUpload, Download, HardDrive, KeyRound, RefreshCw, Save, Search, ShieldCheck, Timer, Upload, X } from 'lucide-react';
+import { BookOpenCheck, Calculator, ChevronDown, ChevronUp, CloudDownload, CloudUpload, Download, HardDrive, KeyRound, Plus, RefreshCw, Save, Search, ShieldCheck, Timer, Trash2, Upload, X } from 'lucide-react';
 import { loadLocal, saveLocal } from '../lib/storage';
 import { addMinutesZulu, decimalHours, formatMinutes, minutesBetweenZulu, normalizeZulu, oooiStorageKey, useOOOITimes } from '../lib/flightTimes';
 import { ZuluTimeInput } from '../components/ZuluTimeInput';
@@ -31,6 +31,72 @@ const DUTY_SCHEMES = ['FAA Part 117', 'FAA Part 135', 'FAA Part 91 / company', '
 const DEFAULT_PRESETS: RecordPresets = { role: 'SIC', operation: 'Part 91', rules: 'IFR', crossCountry: true, autoDutyTimes: true, reportLeadMinutes: 60, postFlightMinutes: 15, defaultNight: 0, defaultInstrument: 0, defaultSimulatedInstrument: 0, defaultDayLandings: 0, defaultNightLandings: 0, defaultApproaches: '', defaultRemarks: '', defaultSigner: '', dutyRegulation: 'FAA Part 117', dutyRole: 'Flightcrew', restBefore: 10, maxDuty: 13, minRest: 10 };
 const LEDGER_KEY = 'aeroslate.records.ledger.v2';
 const CLOUD_KEY = 'aeroslate.records.github.v1';
+type ReportOperator = 'equals' | 'notEquals' | 'contains' | 'notContains' | 'gt' | 'gte' | 'lt' | 'lte' | 'truthy' | 'falsy';
+type MetricOperation = 'sum' | 'avg' | 'min' | 'max' | 'count' | 'unique';
+interface ReportCondition { id: string; field: string; operator: ReportOperator; value: string; }
+interface ReportMetric { id: string; field: string; operation: MetricOperation; label: string; }
+interface ReportField { key: string; label: string; kind: 'text' | 'number' | 'boolean' | 'date' | 'calculated'; }
+
+const FLIGHT_REPORT_FIELDS: ReportField[] = [
+  { key:'date', label:'Date', kind:'date' }, { key:'flightNumber', label:'Flight number', kind:'text' },
+  { key:'departure', label:'Departure', kind:'text' }, { key:'arrival', label:'Arrival', kind:'text' },
+  { key:'aircraftType', label:'Aircraft type', kind:'text' }, { key:'registration', label:'Registration', kind:'text' },
+  { key:'role', label:'Crew role', kind:'text' }, { key:'operation', label:'Operation', kind:'text' }, { key:'rules', label:'Flight rules', kind:'text' },
+  { key:'totalTime', label:'Block time', kind:'number' }, { key:'flightTime', label:'Airborne time', kind:'number' },
+  { key:'pic', label:'PIC', kind:'number' }, { key:'sic', label:'SIC / co-pilot', kind:'number' }, { key:'dual', label:'Dual', kind:'number' },
+  { key:'instructor', label:'Instructor', kind:'number' }, { key:'night', label:'Night', kind:'number' },
+  { key:'instrument', label:'Actual instrument', kind:'number' }, { key:'simulatedInstrument', label:'Simulated instrument', kind:'number' },
+  { key:'crossCountry', label:'Cross-country', kind:'number' }, { key:'dayLandings', label:'Day landings', kind:'number' },
+  { key:'nightLandings', label:'Night landings', kind:'number' }, { key:'approaches', label:'Approaches', kind:'text' }
+];
+const DUTY_REPORT_FIELDS: ReportField[] = [
+  { key:'date', label:'Date', kind:'date' }, { key:'regulation', label:'Scheme', kind:'text' }, { key:'role', label:'Role', kind:'text' },
+  { key:'flightNumber', label:'Flight number', kind:'text' }, { key:'departure', label:'Departure', kind:'text' }, { key:'arrival', label:'Arrival', kind:'text' },
+  { key:'dutyMinutes', label:'Duty duration', kind:'calculated' }, { key:'fdpMinutes', label:'FDP duration', kind:'calculated' },
+  { key:'sectors', label:'Sectors', kind:'number' }, { key:'standby', label:'Standby hours', kind:'number' }, { key:'restBefore', label:'Rest before', kind:'number' },
+  { key:'maxDuty', label:'Scheme max duty', kind:'number' }, { key:'minRest', label:'Scheme min rest', kind:'number' }, { key:'augmented', label:'Augmented crew', kind:'boolean' }
+];
+
+function reportValue(data: RecordData, key: string): string | number | boolean {
+  if (key === 'dutyMinutes') return minutesBetweenZulu(String(data.dutyStart || ''), String(data.dutyEnd || '')) || 0;
+  if (key === 'fdpMinutes') return minutesBetweenZulu(String(data.flightDutyStart || ''), String(data.flightDutyEnd || '')) || 0;
+  return data[key] ?? '';
+}
+function matchesReportCondition(data: RecordData, condition: ReportCondition): boolean {
+  const raw = reportValue(data, condition.field);
+  if (condition.operator === 'truthy') return Boolean(raw);
+  if (condition.operator === 'falsy') return !Boolean(raw);
+  const left = String(raw ?? '').trim().toLowerCase();
+  const right = condition.value.trim().toLowerCase();
+  if (condition.operator === 'contains') return left.includes(right);
+  if (condition.operator === 'notContains') return !left.includes(right);
+  if (condition.operator === 'equals') return left === right;
+  if (condition.operator === 'notEquals') return left !== right;
+  const a = Number(raw); const b = Number(condition.value);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+  if (condition.operator === 'gt') return a > b;
+  if (condition.operator === 'gte') return a >= b;
+  if (condition.operator === 'lt') return a < b;
+  if (condition.operator === 'lte') return a <= b;
+  return true;
+}
+function calculateMetric(records: any[], metric: ReportMetric): number {
+  if (metric.operation === 'count') return records.length;
+  const values = records.map(entry => reportValue(entry.data || {}, metric.field));
+  if (metric.operation === 'unique') return new Set(values.map(value => String(value ?? '').trim()).filter(Boolean)).size;
+  const numeric = values.map(Number).filter(Number.isFinite);
+  if (!numeric.length) return 0;
+  if (metric.operation === 'sum') return numeric.reduce((a,b)=>a+b,0);
+  if (metric.operation === 'avg') return numeric.reduce((a,b)=>a+b,0) / numeric.length;
+  if (metric.operation === 'min') return Math.min(...numeric);
+  if (metric.operation === 'max') return Math.max(...numeric);
+  return 0;
+}
+function metricDisplay(metric: ReportMetric, value: number) {
+  if (metric.field === 'dutyMinutes' || metric.field === 'fdpMinutes') return formatMinutes(Math.round(value));
+  if (metric.operation === 'count' || metric.operation === 'unique' || /Landings|sectors/i.test(metric.label)) return String(Math.round(value));
+  return value.toFixed(1);
+}
 function today() { return new Date().toISOString().slice(0, 10); }
 function recordDate(flight: FlightSummary) {
   const value = String(flight.flightDate || '').trim();
@@ -81,6 +147,13 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
   const [recordTo, setRecordTo] = useState('');
   const [recordGroup, setRecordGroup] = useState<'none' | 'year' | 'aircraft' | 'registration' | 'role' | 'operation'>('none');
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportConditions, setReportConditions] = useState<ReportCondition[]>([]);
+  const [reportMetrics, setReportMetrics] = useState<ReportMetric[]>([
+    { id:'count', field:'', operation:'count', label:'Records' },
+    { id:'time', field:'totalTime', operation:'sum', label:'Block' }
+  ]);
+  const [reportGroupBy, setReportGroupBy] = useState('');
 
   useEffect(() => saveLocal(LEDGER_KEY, ledger), [ledger]);
   useEffect(() => saveLocal(CLOUD_KEY, { gistId: cloud.gistId, token: cloud.rememberSecrets ? cloud.token : '', passphrase: cloud.rememberSecrets ? cloud.passphrase : '', autoSync: cloud.autoSync, rememberSecrets: cloud.rememberSecrets }), [cloud]);
@@ -206,12 +279,72 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([label, records]) => ({ label, records }));
   }, [filteredRecords, recordGroup]);
 
+  const reportFields = tab === 'logbook' ? FLIGHT_REPORT_FIELDS : DUTY_REPORT_FIELDS;
+  useEffect(() => {
+    setReportConditions([]);
+    setReportGroupBy('');
+    setReportMetrics(tab === 'logbook'
+      ? [{ id:'count', field:'', operation:'count', label:'Flights' }, { id:'block', field:'totalTime', operation:'sum', label:'Block' }]
+      : [{ id:'count', field:'', operation:'count', label:'Duties' }, { id:'duty', field:'dutyMinutes', operation:'sum', label:'Duty' }]);
+  }, [tab]);
+  const reportRecords = useMemo(() => filteredRecords.filter(entry => reportConditions.every(condition => matchesReportCondition(entry.data || {}, condition))), [filteredRecords, reportConditions]);
+  const reportRows = useMemo(() => {
+    const buckets = new Map<string, typeof reportRecords>();
+    if (!reportGroupBy) buckets.set('All matching records', reportRecords);
+    else for (const entry of reportRecords) {
+      const raw = reportValue(entry.data || {}, reportGroupBy);
+      const key = String(raw || 'Unknown');
+      buckets.set(key, [...(buckets.get(key) || []), entry]);
+    }
+    return [...buckets.entries()].sort(([a],[b]) => a.localeCompare(b)).map(([label, records]) => ({ label, records, values: reportMetrics.map(metric => calculateMetric(records, metric)) }));
+  }, [reportRecords, reportGroupBy, reportMetrics]);
+  const addReportCondition = () => setReportConditions(current => [...current, { id: crypto.randomUUID(), field: reportFields[0]?.key || 'date', operator:'equals', value:'' }]);
+  const addReportMetric = () => setReportMetrics(current => [...current, { id: crypto.randomUUID(), field: tab === 'logbook' ? 'totalTime' : 'dutyMinutes', operation:'sum', label: tab === 'logbook' ? 'Block' : 'Duty' }]);
+
   const analyticsToolbar = <div className="records-analytics-toolbar">
     <label className="records-search"><Search size={15}/><input value={recordSearch} onChange={e=>setRecordSearch(e.target.value)} placeholder="Search airport, tail, type, flight, role…"/></label>
     <label><span>From</span><input type="date" value={recordFrom} onChange={e=>setRecordFrom(e.target.value)}/></label>
     <label><span>To</span><input type="date" value={recordTo} onChange={e=>setRecordTo(e.target.value)}/></label>
     <label><span>Group</span><select value={recordGroup} onChange={e=>setRecordGroup(e.target.value as any)}><option value="none">None</option><option value="year">Year</option>{tab==='logbook'&&<><option value="aircraft">Aircraft type</option><option value="registration">Registration</option><option value="role">Role</option><option value="operation">Operation</option></>}{tab==='duty'&&<option value="operation">Scheme</option>}</select></label>
     {(recordSearch||recordFrom||recordTo||recordGroup!=='none')&&<button className="compact" onClick={()=>{setRecordSearch('');setRecordFrom('');setRecordTo('');setRecordGroup('none')}}><X size={14}/> Clear</button>}
+  </div>;
+
+  const reportBuilder = <div className="records-report-builder">
+    <button className="records-report-toggle" onClick={()=>setReportOpen(value=>!value)}><span><Calculator size={16}/><strong>Custom totals</strong><small>{reportRecords.length} matching · calculate any combination</small></span>{reportOpen?<ChevronUp size={17}/>:<ChevronDown size={17}/>}</button>
+    {reportOpen && <div className="records-report-body">
+      <div className="records-report-section-head"><div><strong>Filters</strong><span>All conditions are combined</span></div><button className="compact" onClick={addReportCondition}><Plus size={13}/> Filter</button></div>
+      <div className="records-report-rules">
+        {reportConditions.map(condition => {
+          const field = reportFields.find(item=>item.key===condition.field);
+          const operators: {value:ReportOperator;label:string}[] = field?.kind==='boolean'
+            ? [{value:'truthy',label:'Yes / true'},{value:'falsy',label:'No / false'}]
+            : field?.kind==='number'||field?.kind==='calculated'
+              ? [{value:'equals',label:'='},{value:'notEquals',label:'≠'},{value:'gt',label:'>'},{value:'gte',label:'≥'},{value:'lt',label:'<'},{value:'lte',label:'≤'}]
+              : [{value:'equals',label:'Is'},{value:'notEquals',label:'Is not'},{value:'contains',label:'Contains'},{value:'notContains',label:'Does not contain'}];
+          return <div className="records-report-rule" key={condition.id}>
+            <select value={condition.field} onChange={e=>setReportConditions(rows=>rows.map(row=>row.id===condition.id?{...row,field:e.target.value,value:''}:row))}>{reportFields.map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select>
+            <select value={condition.operator} onChange={e=>setReportConditions(rows=>rows.map(row=>row.id===condition.id?{...row,operator:e.target.value as ReportOperator}:row))}>{operators.map(op=><option key={op.value} value={op.value}>{op.label}</option>)}</select>
+            {!['truthy','falsy'].includes(condition.operator)&&<input value={condition.value} onChange={e=>setReportConditions(rows=>rows.map(row=>row.id===condition.id?{...row,value:e.target.value}:row))} placeholder="Value"/>}
+            <button className="icon-button compact" title="Remove filter" onClick={()=>setReportConditions(rows=>rows.filter(row=>row.id!==condition.id))}><Trash2 size={14}/></button>
+          </div>;
+        })}
+        {!reportConditions.length&&<span className="records-report-empty">No extra filters — using the records shown above.</span>}
+      </div>
+      <div className="records-report-section-head"><div><strong>Totals</strong><span>Choose exactly what AeroSlate should calculate</span></div><button className="compact" onClick={addReportMetric}><Plus size={13}/> Total</button></div>
+      <div className="records-report-metrics-editor">
+        {reportMetrics.map(metric=><div className="records-report-metric-edit" key={metric.id}>
+          <select value={metric.operation} onChange={e=>setReportMetrics(rows=>rows.map(row=>row.id===metric.id?{...row,operation:e.target.value as MetricOperation}:row))}><option value="sum">Total</option><option value="avg">Average</option><option value="min">Minimum</option><option value="max">Maximum</option><option value="count">Count records</option><option value="unique">Count unique</option></select>
+          {metric.operation!=='count'&&<select value={metric.field} onChange={e=>{const field=reportFields.find(item=>item.key===e.target.value);setReportMetrics(rows=>rows.map(row=>row.id===metric.id?{...row,field:e.target.value,label:field?.label||row.label}:row))}}>{reportFields.filter(item=>metric.operation==='unique'||['number','calculated'].includes(item.kind)).map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select>}
+          <input value={metric.label} onChange={e=>setReportMetrics(rows=>rows.map(row=>row.id===metric.id?{...row,label:e.target.value}:row))} placeholder="Label"/>
+          <button className="icon-button compact" title="Remove total" onClick={()=>setReportMetrics(rows=>rows.filter(row=>row.id!==metric.id))}><Trash2 size={14}/></button>
+        </div>)}
+      </div>
+      <label className="records-report-group"><span>Break down by</span><select value={reportGroupBy} onChange={e=>setReportGroupBy(e.target.value)}><option value="">No grouping</option>{reportFields.filter(item=>!['number','calculated'].includes(item.kind)).map(item=><option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
+      <div className="records-report-results">
+        <div className="records-report-results-head"><strong>{reportGroupBy?'Breakdown':'Calculated totals'}</strong><span>{reportRecords.length} records</span></div>
+        <div className="records-report-table-wrap"><table className="records-report-table"><thead><tr><th>{reportGroupBy?(reportFields.find(item=>item.key===reportGroupBy)?.label||'Group'):'Selection'}</th>{reportMetrics.map(metric=><th key={metric.id}>{metric.label||metric.operation}</th>)}</tr></thead><tbody>{reportRows.map(row=><tr key={row.label}><td>{row.label}</td>{row.values.map((value,index)=><td key={reportMetrics[index]?.id}>{metricDisplay(reportMetrics[index],value)}</td>)}</tr>)}</tbody></table></div>
+      </div>
+    </div>}
   </div>;
 
   const recordDetail = selectedRecord && <div className="record-detail-panel">
@@ -236,7 +369,7 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
       <fieldset><legend>Creditable time</legend><div className="form-grid four">{textInput(log, setLog, 'pic', 'PIC', 'number', '0.1')}{textInput(log, setLog, 'sic', 'SIC / co-pilot', 'number', '0.1')}{textInput(log, setLog, 'dual', 'Dual received', 'number', '0.1')}{textInput(log, setLog, 'instructor', 'Instructor', 'number', '0.1')}{textInput(log, setLog, 'night', 'Night', 'number', '0.1')}{textInput(log, setLog, 'instrument', 'Actual instrument', 'number', '0.1')}{textInput(log, setLog, 'simulatedInstrument', 'Simulated instrument', 'number', '0.1')}{textInput(log, setLog, 'crossCountry', 'Cross-country', 'number', '0.1')}{textInput(log, setLog, 'dayLandings', 'Day landings', 'number')}{textInput(log, setLog, 'nightLandings', 'Night landings', 'number')}{textInput(log, setLog, 'approaches', 'Approaches')}</div></fieldset>
       <fieldset><legend>Operation</legend><div className="form-grid three">{selectInput(log, setLog, 'role', 'Crew role', ['PIC', 'SIC', 'Dual', 'Instructor'])}{selectInput(log, setLog, 'operation', 'Operation', OPERATIONS)}{selectInput(log, setLog, 'rules', 'Flight rules', ['IFR', 'VFR'])}</div><label className="stacked-input"><span>Remarks / endorsements reference</span><textarea value={String(log.remarks)} onChange={event => update(setLog, 'remarks', event.target.value)} /></label></fieldset>
       <div className="attestation"><label><input type="checkbox" checked={Boolean(log.attested)} onChange={event => update(setLog, 'attested', event.target.checked)} /> I attest this entry is complete and accurate.</label>{textInput(log, setLog, 'signerName', 'Typed signature / name')}<button className="primary" disabled={busy} onClick={() => void saveRecord('logbook', log)}><Save size={16} /> Save record</button></div>
-    </div></section><section className="card record-history records-browser"><header><div><BookOpenCheck size={18} /><h3>Flight logs</h3></div><span className="pill blue">{filteredRecords.length} shown</span></header><div className="card-body">{analyticsToolbar}<div className="records-total-grid"><div><span>Flights</span><strong>{flightTotals.flights}</strong></div><div><span>Block</span><strong>{flightTotals.block.toFixed(1)}</strong></div><div><span>Airborne</span><strong>{flightTotals.airborne.toFixed(1)}</strong></div><div><span>PIC</span><strong>{flightTotals.pic.toFixed(1)}</strong></div><div><span>SIC</span><strong>{flightTotals.sic.toFixed(1)}</strong></div><div><span>Night</span><strong>{flightTotals.night.toFixed(1)}</strong></div><div><span>Instrument</span><strong>{flightTotals.instrument.toFixed(1)}</strong></div><div><span>XC</span><strong>{flightTotals.xc.toFixed(1)}</strong></div><div><span>Landings</span><strong>{flightTotals.landings}</strong></div></div><div className="record-list rich-record-list">{groupedRecords.map(group=><div className="record-group" key={group.label||'all'}>{group.label&&<div className="record-group-title"><strong>{group.label}</strong><span>{group.records.length} flights</span></div>}{group.records.slice().reverse().map(entry => <button className="record-row" key={entry.id} onClick={()=>setSelectedRecord(entry)}><div><strong>{String(entry.data.date)} · {String(entry.data.departure)}–{String(entry.data.arrival)}</strong><span>{String(entry.data.flightNumber||'')} · {String(entry.data.aircraftType)} {String(entry.data.registration)} · {Number(entry.data.totalTime||0).toFixed(1)} hr</span></div><div className="record-row-metrics"><span>PIC {Number(entry.data.pic||0).toFixed(1)}</span><span>SIC {Number(entry.data.sic||0).toFixed(1)}</span><span>Night {Number(entry.data.night||0).toFixed(1)}</span></div></button>)}</div>)}{!filteredRecords.length && <p className="muted">No flight records match these filters.</p>}</div>{recordDetail}</div></section></div>}
+    </div></section><section className="card record-history records-browser"><header><div><BookOpenCheck size={18} /><h3>Flight logs</h3></div><span className="pill blue">{filteredRecords.length} shown</span></header><div className="card-body">{analyticsToolbar}<div className="records-total-grid"><div><span>Flights</span><strong>{flightTotals.flights}</strong></div><div><span>Block</span><strong>{flightTotals.block.toFixed(1)}</strong></div><div><span>Airborne</span><strong>{flightTotals.airborne.toFixed(1)}</strong></div><div><span>PIC</span><strong>{flightTotals.pic.toFixed(1)}</strong></div><div><span>SIC</span><strong>{flightTotals.sic.toFixed(1)}</strong></div><div><span>Night</span><strong>{flightTotals.night.toFixed(1)}</strong></div><div><span>Instrument</span><strong>{flightTotals.instrument.toFixed(1)}</strong></div><div><span>XC</span><strong>{flightTotals.xc.toFixed(1)}</strong></div><div><span>Landings</span><strong>{flightTotals.landings}</strong></div></div>{reportBuilder}<div className="record-list rich-record-list">{groupedRecords.map(group=><div className="record-group" key={group.label||'all'}>{group.label&&<div className="record-group-title"><strong>{group.label}</strong><span>{group.records.length} flights</span></div>}{group.records.slice().reverse().map(entry => <button className="record-row" key={entry.id} onClick={()=>setSelectedRecord(entry)}><div><strong>{String(entry.data.date)} · {String(entry.data.departure)}–{String(entry.data.arrival)}</strong><span>{String(entry.data.flightNumber||'')} · {String(entry.data.aircraftType)} {String(entry.data.registration)} · {Number(entry.data.totalTime||0).toFixed(1)} hr</span></div><div className="record-row-metrics"><span>PIC {Number(entry.data.pic||0).toFixed(1)}</span><span>SIC {Number(entry.data.sic||0).toFixed(1)}</span><span>Night {Number(entry.data.night||0).toFixed(1)}</span></div></button>)}</div>)}{!filteredRecords.length && <p className="muted">No flight records match these filters.</p>}</div>{recordDetail}</div></section></div>}
 
     {tab === 'duty' && <div className="records-layout"><section className="card record-editor"><header><div><Timer size={18} /><h3>Duty log entry</h3></div><button onClick={() => exportRecords('duty')}><Download size={15} /> CSV</button></header><div className="card-body">
       <fieldset><legend>Attached flight and scheme</legend><div className="form-grid four">{synced(duty.date, 'Date')}<label><span>Attached flight log</span><select value={String(duty.flightRecordId || '')} onChange={event => update(setDuty, 'flightRecordId', event.target.value)}><option value="">Current flight · attach on save</option>{entries.slice().reverse().map(entry => <option key={entry.id} value={entry.id}>{String(entry.data.date)} · {String(entry.data.departure)}–{String(entry.data.arrival)} · {String(entry.data.registration)}</option>)}</select></label>{selectInput(duty, setDuty, 'regulation', 'Regulation / scheme', DUTY_SCHEMES)}{selectInput(duty, setDuty, 'role', 'Role', ['Flightcrew', 'PIC', 'SIC', 'Cabin crew', 'Other'])}{synced(duty.scheduledOut, 'STD')}{synced(duty.scheduledIn, 'STA')}</div></fieldset>
@@ -244,7 +377,7 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
       <div className="duty-summary"><div><span>Duty</span><strong>{dutyMinutes ? formatMinutes(dutyMinutes) : '--:--'}</strong></div><div><span>FDP</span><strong>{fdpMinutes ? formatMinutes(fdpMinutes) : '--:--'}</strong></div><div><span>Rest</span><strong>{String(duty.restBefore)} hr</strong></div><div><span>Sectors</span><strong>{String(duty.sectors)}</strong></div></div>
       <label className="stacked-input"><span>Notes / extensions / discretion / acclimatization</span><textarea value={String(duty.notes)} onChange={event => update(setDuty, 'notes', event.target.value)} /></label>
       <div className="attestation"><label><input type="checkbox" checked={Boolean(duty.attested)} onChange={event => update(setDuty, 'attested', event.target.checked)} /> I attest this duty record is complete and accurate.</label>{textInput(duty, setDuty, 'signerName', 'Typed signature / name')}<button className="primary" disabled={busy} onClick={() => void saveRecord('duty', duty)}><Save size={16} /> Save record</button></div>
-    </div></section><section className="card record-history records-browser"><header><div><Timer size={18} /><h3>Duty logs</h3></div><span className="pill blue">{filteredRecords.length} shown</span></header><div className="card-body">{analyticsToolbar}<div className="records-total-grid duty-totals"><div><span>Duties</span><strong>{dutyTotals.duties}</strong></div><div><span>Duty</span><strong>{formatMinutes(dutyTotals.dutyMin)}</strong></div><div><span>FDP</span><strong>{formatMinutes(dutyTotals.fdpMin)}</strong></div><div><span>Sectors</span><strong>{dutyTotals.sectors}</strong></div><div><span>Standby</span><strong>{dutyTotals.standby.toFixed(1)}</strong></div></div><div className="record-list rich-record-list">{groupedRecords.map(group=><div className="record-group" key={group.label||'all'}>{group.label&&<div className="record-group-title"><strong>{group.label}</strong><span>{group.records.length} duties</span></div>}{group.records.slice().reverse().map(entry => <button className="record-row" key={entry.id} onClick={()=>setSelectedRecord(entry)}><div><strong>{String(entry.data.date)} · {String(entry.data.regulation)}</strong><span>{String(entry.data.dutyStart)}–{String(entry.data.dutyEnd)} · {String(entry.data.flightNumber||'No flight')} · {String(entry.data.sectors||0)} sectors</span></div><div className="record-row-metrics"><span>Rest {String(entry.data.restBefore||0)}h</span><span>{entry.data.augmented?'Augmented':'Standard'}</span></div></button>)}</div>)}{!filteredRecords.length && <p className="muted">No duty records match these filters.</p>}</div>{recordDetail}</div></section></div>}
+    </div></section><section className="card record-history records-browser"><header><div><Timer size={18} /><h3>Duty logs</h3></div><span className="pill blue">{filteredRecords.length} shown</span></header><div className="card-body">{analyticsToolbar}<div className="records-total-grid duty-totals"><div><span>Duties</span><strong>{dutyTotals.duties}</strong></div><div><span>Duty</span><strong>{formatMinutes(dutyTotals.dutyMin)}</strong></div><div><span>FDP</span><strong>{formatMinutes(dutyTotals.fdpMin)}</strong></div><div><span>Sectors</span><strong>{dutyTotals.sectors}</strong></div><div><span>Standby</span><strong>{dutyTotals.standby.toFixed(1)}</strong></div></div>{reportBuilder}<div className="record-list rich-record-list">{groupedRecords.map(group=><div className="record-group" key={group.label||'all'}>{group.label&&<div className="record-group-title"><strong>{group.label}</strong><span>{group.records.length} duties</span></div>}{group.records.slice().reverse().map(entry => <button className="record-row" key={entry.id} onClick={()=>setSelectedRecord(entry)}><div><strong>{String(entry.data.date)} · {String(entry.data.regulation)}</strong><span>{String(entry.data.dutyStart)}–{String(entry.data.dutyEnd)} · {String(entry.data.flightNumber||'No flight')} · {String(entry.data.sectors||0)} sectors</span></div><div className="record-row-metrics"><span>Rest {String(entry.data.restBefore||0)}h</span><span>{entry.data.augmented?'Augmented':'Standard'}</span></div></button>)}</div>)}{!filteredRecords.length && <p className="muted">No duty records match these filters.</p>}</div>{recordDetail}</div></section></div>}
     <div className="notice warn compliance-note"><strong>Recordkeeping aid</strong><p>AeroSlate preserves entered data, attestations, exports and per-device audit chains. It does not determine whether time is legally loggable or certify compliance with an operator-specific FAA/EASA scheme.</p></div>
   </div>;
 }
