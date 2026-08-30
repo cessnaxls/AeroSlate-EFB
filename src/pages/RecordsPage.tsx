@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BookOpenCheck, CloudDownload, CloudUpload, Download, HardDrive, KeyRound, RefreshCw, Save, ShieldCheck, Timer, Upload } from 'lucide-react';
+import { BookOpenCheck, CloudDownload, CloudUpload, Download, HardDrive, KeyRound, RefreshCw, Save, Search, ShieldCheck, Timer, Upload, X } from 'lucide-react';
 import { loadLocal, saveLocal } from '../lib/storage';
 import { addMinutesZulu, decimalHours, formatMinutes, minutesBetweenZulu, normalizeZulu, oooiStorageKey, useOOOITimes } from '../lib/flightTimes';
 import { ZuluTimeInput } from '../components/ZuluTimeInput';
@@ -76,6 +76,11 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
   const [log, setLog] = useState<RecordData>(() => loadLocal(logKey, baseLog(flight, blockHours, airborneHours, presets, times)));
   const [duty, setDuty] = useState<RecordData>(() => loadLocal(dutyKey, baseDuty(flight, times, presets)));
   const entries = ledger.logbook; const duties = ledger.duty;
+  const [recordSearch, setRecordSearch] = useState('');
+  const [recordFrom, setRecordFrom] = useState('');
+  const [recordTo, setRecordTo] = useState('');
+  const [recordGroup, setRecordGroup] = useState<'none' | 'year' | 'aircraft' | 'registration' | 'role' | 'operation'>('none');
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
 
   useEffect(() => saveLocal(LEDGER_KEY, ledger), [ledger]);
   useEffect(() => saveLocal(CLOUD_KEY, { gistId: cloud.gistId, token: cloud.rememberSecrets ? cloud.token : '', passphrase: cloud.rememberSecrets ? cloud.passphrase : '', autoSync: cloud.autoSync, rememberSecrets: cloud.rememberSecrets }), [cloud]);
@@ -158,6 +163,63 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
   const dutyMinutes = useMemo(() => { const value = minutesBetweenZulu(String(duty.dutyStart || ''), String(duty.dutyEnd || '')); return value === null ? 0 : value; }, [duty.dutyStart, duty.dutyEnd]);
   const fdpMinutes = useMemo(() => { const value = minutesBetweenZulu(String(duty.flightDutyStart || ''), String(duty.flightDutyEnd || '')); return value === null ? 0 : value; }, [duty.flightDutyStart, duty.flightDutyEnd]);
 
+  const filteredRecords = useMemo(() => {
+    const source = tab === 'logbook' ? entries : duties;
+    const q = recordSearch.trim().toLowerCase();
+    return source.filter(entry => {
+      const d = entry.data || {};
+      const date = String(d.date || '');
+      if (recordFrom && date && date < recordFrom) return false;
+      if (recordTo && date && date > recordTo) return false;
+      if (!q) return true;
+      return Object.values(d).some(value => String(value ?? '').toLowerCase().includes(q));
+    });
+  }, [tab, entries, duties, recordSearch, recordFrom, recordTo]);
+
+  const flightTotals = useMemo(() => {
+    const sum = (key: string) => filteredRecords.reduce((total, entry) => total + Number(entry.data?.[key] || 0), 0);
+    return { flights: filteredRecords.length, block: sum('totalTime'), airborne: sum('flightTime'), pic: sum('pic'), sic: sum('sic'), night: sum('night'), instrument: sum('instrument'), xc: sum('crossCountry'), landings: sum('dayLandings') + sum('nightLandings') };
+  }, [filteredRecords]);
+
+  const dutyTotals = useMemo(() => {
+    let dutyMin = 0, fdpMin = 0, sectors = 0, standby = 0;
+    for (const entry of filteredRecords) {
+      const d = entry.data || {};
+      dutyMin += minutesBetweenZulu(String(d.dutyStart || ''), String(d.dutyEnd || '')) || 0;
+      fdpMin += minutesBetweenZulu(String(d.flightDutyStart || ''), String(d.flightDutyEnd || '')) || 0;
+      sectors += Number(d.sectors || 0); standby += Number(d.standby || 0);
+    }
+    return { duties: filteredRecords.length, dutyMin, fdpMin, sectors, standby };
+  }, [filteredRecords]);
+
+  const groupedRecords = useMemo(() => {
+    if (recordGroup === 'none') return [{ label: '', records: filteredRecords }];
+    const groups = new Map<string, typeof filteredRecords>();
+    for (const entry of filteredRecords) {
+      const d = entry.data || {};
+      const key = recordGroup === 'year' ? String(d.date || '').slice(0, 4) || 'Unknown' :
+        recordGroup === 'aircraft' ? String(d.aircraftType || 'Unknown') :
+        recordGroup === 'registration' ? String(d.registration || 'Unknown') :
+        recordGroup === 'role' ? String(d.role || 'Unknown') : String(d.operation || d.regulation || 'Unknown');
+      groups.set(key, [...(groups.get(key) || []), entry]);
+    }
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([label, records]) => ({ label, records }));
+  }, [filteredRecords, recordGroup]);
+
+  const analyticsToolbar = <div className="records-analytics-toolbar">
+    <label className="records-search"><Search size={15}/><input value={recordSearch} onChange={e=>setRecordSearch(e.target.value)} placeholder="Search airport, tail, type, flight, role…"/></label>
+    <label><span>From</span><input type="date" value={recordFrom} onChange={e=>setRecordFrom(e.target.value)}/></label>
+    <label><span>To</span><input type="date" value={recordTo} onChange={e=>setRecordTo(e.target.value)}/></label>
+    <label><span>Group</span><select value={recordGroup} onChange={e=>setRecordGroup(e.target.value as any)}><option value="none">None</option><option value="year">Year</option>{tab==='logbook'&&<><option value="aircraft">Aircraft type</option><option value="registration">Registration</option><option value="role">Role</option><option value="operation">Operation</option></>}{tab==='duty'&&<option value="operation">Scheme</option>}</select></label>
+    {(recordSearch||recordFrom||recordTo||recordGroup!=='none')&&<button className="compact" onClick={()=>{setRecordSearch('');setRecordFrom('');setRecordTo('');setRecordGroup('none')}}><X size={14}/> Clear</button>}
+  </div>;
+
+  const recordDetail = selectedRecord && <div className="record-detail-panel">
+    <div className="record-detail-head"><div><strong>{tab==='logbook'?'Flight record':'Duty record'}</strong><span>{String(selectedRecord.data?.date||'')} · {String(selectedRecord.data?.flightNumber||'')}</span></div><button className="icon-button" onClick={()=>setSelectedRecord(null)}><X size={17}/></button></div>
+    <div className="record-detail-grid">{Object.entries(selectedRecord.data || {}).filter(([,value])=>value!==''&&value!==null&&value!==undefined).map(([key,value])=><div key={key}><span>{key.replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase())}</span><strong>{typeof value==='boolean'?(value?'Yes':'No'):String(value)}</strong></div>)}</div>
+    <div className="record-audit-line">Audit {selectedRecord.auditHash} · Device sequence {selectedRecord.sequence}</div>
+  </div>;
+
   return <div className="records-page">
     <section className="card records-connect cloud-records"><header><div><ShieldCheck size={18} /><h3>Free encrypted cloud records</h3></div><span className="pill good">NO RENDER DISK</span></header><div className="card-body">
       <div className="cloud-explainer"><HardDrive size={20} /><div><strong>Local-first, cloud-backed</strong><p>Every entry is written to this device first. Optional sync encrypts the complete ledger in your browser and stores only ciphertext in a private GitHub Gist. Your token and passphrase are never sent to Render.</p></div></div>
@@ -174,7 +236,7 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
       <fieldset><legend>Creditable time</legend><div className="form-grid four">{textInput(log, setLog, 'pic', 'PIC', 'number', '0.1')}{textInput(log, setLog, 'sic', 'SIC / co-pilot', 'number', '0.1')}{textInput(log, setLog, 'dual', 'Dual received', 'number', '0.1')}{textInput(log, setLog, 'instructor', 'Instructor', 'number', '0.1')}{textInput(log, setLog, 'night', 'Night', 'number', '0.1')}{textInput(log, setLog, 'instrument', 'Actual instrument', 'number', '0.1')}{textInput(log, setLog, 'simulatedInstrument', 'Simulated instrument', 'number', '0.1')}{textInput(log, setLog, 'crossCountry', 'Cross-country', 'number', '0.1')}{textInput(log, setLog, 'dayLandings', 'Day landings', 'number')}{textInput(log, setLog, 'nightLandings', 'Night landings', 'number')}{textInput(log, setLog, 'approaches', 'Approaches')}</div></fieldset>
       <fieldset><legend>Operation</legend><div className="form-grid three">{selectInput(log, setLog, 'role', 'Crew role', ['PIC', 'SIC', 'Dual', 'Instructor'])}{selectInput(log, setLog, 'operation', 'Operation', OPERATIONS)}{selectInput(log, setLog, 'rules', 'Flight rules', ['IFR', 'VFR'])}</div><label className="stacked-input"><span>Remarks / endorsements reference</span><textarea value={String(log.remarks)} onChange={event => update(setLog, 'remarks', event.target.value)} /></label></fieldset>
       <div className="attestation"><label><input type="checkbox" checked={Boolean(log.attested)} onChange={event => update(setLog, 'attested', event.target.checked)} /> I attest this entry is complete and accurate.</label>{textInput(log, setLog, 'signerName', 'Typed signature / name')}<button className="primary" disabled={busy} onClick={() => void saveRecord('logbook', log)}><Save size={16} /> Save record</button></div>
-    </div></section><section className="card record-history"><header><div><BookOpenCheck size={18} /><h3>Flight logs</h3></div></header><div className="card-body record-list">{entries.slice().reverse().slice(0, 30).map(entry => <article key={entry.id}><div><strong>{String(entry.data.date)} · {String(entry.data.departure)}–{String(entry.data.arrival)}</strong><span>{String(entry.data.aircraftType)} {String(entry.data.registration)} · {String(entry.data.totalTime)} hr</span></div><small>{entry.auditHash.slice(0, 12)}…</small></article>)}{!entries.length && <p className="muted">No flight records saved on this device.</p>}</div></section></div>}
+    </div></section><section className="card record-history records-browser"><header><div><BookOpenCheck size={18} /><h3>Flight logs</h3></div><span className="pill blue">{filteredRecords.length} shown</span></header><div className="card-body">{analyticsToolbar}<div className="records-total-grid"><div><span>Flights</span><strong>{flightTotals.flights}</strong></div><div><span>Block</span><strong>{flightTotals.block.toFixed(1)}</strong></div><div><span>Airborne</span><strong>{flightTotals.airborne.toFixed(1)}</strong></div><div><span>PIC</span><strong>{flightTotals.pic.toFixed(1)}</strong></div><div><span>SIC</span><strong>{flightTotals.sic.toFixed(1)}</strong></div><div><span>Night</span><strong>{flightTotals.night.toFixed(1)}</strong></div><div><span>Instrument</span><strong>{flightTotals.instrument.toFixed(1)}</strong></div><div><span>XC</span><strong>{flightTotals.xc.toFixed(1)}</strong></div><div><span>Landings</span><strong>{flightTotals.landings}</strong></div></div><div className="record-list rich-record-list">{groupedRecords.map(group=><div className="record-group" key={group.label||'all'}>{group.label&&<div className="record-group-title"><strong>{group.label}</strong><span>{group.records.length} flights</span></div>}{group.records.slice().reverse().map(entry => <button className="record-row" key={entry.id} onClick={()=>setSelectedRecord(entry)}><div><strong>{String(entry.data.date)} · {String(entry.data.departure)}–{String(entry.data.arrival)}</strong><span>{String(entry.data.flightNumber||'')} · {String(entry.data.aircraftType)} {String(entry.data.registration)} · {Number(entry.data.totalTime||0).toFixed(1)} hr</span></div><div className="record-row-metrics"><span>PIC {Number(entry.data.pic||0).toFixed(1)}</span><span>SIC {Number(entry.data.sic||0).toFixed(1)}</span><span>Night {Number(entry.data.night||0).toFixed(1)}</span></div></button>)}</div>)}{!filteredRecords.length && <p className="muted">No flight records match these filters.</p>}</div>{recordDetail}</div></section></div>}
 
     {tab === 'duty' && <div className="records-layout"><section className="card record-editor"><header><div><Timer size={18} /><h3>Duty log entry</h3></div><button onClick={() => exportRecords('duty')}><Download size={15} /> CSV</button></header><div className="card-body">
       <fieldset><legend>Attached flight and scheme</legend><div className="form-grid four">{synced(duty.date, 'Date')}<label><span>Attached flight log</span><select value={String(duty.flightRecordId || '')} onChange={event => update(setDuty, 'flightRecordId', event.target.value)}><option value="">Current flight · attach on save</option>{entries.slice().reverse().map(entry => <option key={entry.id} value={entry.id}>{String(entry.data.date)} · {String(entry.data.departure)}–{String(entry.data.arrival)} · {String(entry.data.registration)}</option>)}</select></label>{selectInput(duty, setDuty, 'regulation', 'Regulation / scheme', DUTY_SCHEMES)}{selectInput(duty, setDuty, 'role', 'Role', ['Flightcrew', 'PIC', 'SIC', 'Cabin crew', 'Other'])}{synced(duty.scheduledOut, 'STD')}{synced(duty.scheduledIn, 'STA')}</div></fieldset>
@@ -182,7 +244,7 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
       <div className="duty-summary"><div><span>Duty</span><strong>{dutyMinutes ? formatMinutes(dutyMinutes) : '--:--'}</strong></div><div><span>FDP</span><strong>{fdpMinutes ? formatMinutes(fdpMinutes) : '--:--'}</strong></div><div><span>Rest</span><strong>{String(duty.restBefore)} hr</strong></div><div><span>Sectors</span><strong>{String(duty.sectors)}</strong></div></div>
       <label className="stacked-input"><span>Notes / extensions / discretion / acclimatization</span><textarea value={String(duty.notes)} onChange={event => update(setDuty, 'notes', event.target.value)} /></label>
       <div className="attestation"><label><input type="checkbox" checked={Boolean(duty.attested)} onChange={event => update(setDuty, 'attested', event.target.checked)} /> I attest this duty record is complete and accurate.</label>{textInput(duty, setDuty, 'signerName', 'Typed signature / name')}<button className="primary" disabled={busy} onClick={() => void saveRecord('duty', duty)}><Save size={16} /> Save record</button></div>
-    </div></section><section className="card record-history"><header><div><Timer size={18} /><h3>Duty logs</h3></div></header><div className="card-body record-list">{duties.slice().reverse().slice(0, 30).map(entry => <article key={entry.id}><div><strong>{String(entry.data.date)} · {String(entry.data.regulation)}</strong><span>{String(entry.data.dutyStart)}–{String(entry.data.dutyEnd)} · {String(entry.data.sectors)} sectors · {entry.data.flightRecordId ? `Flight ${String(entry.data.flightNumber || '')}` : 'Unattached'}</span></div><small>{entry.auditHash.slice(0, 12)}…</small></article>)}{!duties.length && <p className="muted">No duty records saved on this device.</p>}</div></section></div>}
+    </div></section><section className="card record-history records-browser"><header><div><Timer size={18} /><h3>Duty logs</h3></div><span className="pill blue">{filteredRecords.length} shown</span></header><div className="card-body">{analyticsToolbar}<div className="records-total-grid duty-totals"><div><span>Duties</span><strong>{dutyTotals.duties}</strong></div><div><span>Duty</span><strong>{formatMinutes(dutyTotals.dutyMin)}</strong></div><div><span>FDP</span><strong>{formatMinutes(dutyTotals.fdpMin)}</strong></div><div><span>Sectors</span><strong>{dutyTotals.sectors}</strong></div><div><span>Standby</span><strong>{dutyTotals.standby.toFixed(1)}</strong></div></div><div className="record-list rich-record-list">{groupedRecords.map(group=><div className="record-group" key={group.label||'all'}>{group.label&&<div className="record-group-title"><strong>{group.label}</strong><span>{group.records.length} duties</span></div>}{group.records.slice().reverse().map(entry => <button className="record-row" key={entry.id} onClick={()=>setSelectedRecord(entry)}><div><strong>{String(entry.data.date)} · {String(entry.data.regulation)}</strong><span>{String(entry.data.dutyStart)}–{String(entry.data.dutyEnd)} · {String(entry.data.flightNumber||'No flight')} · {String(entry.data.sectors||0)} sectors</span></div><div className="record-row-metrics"><span>Rest {String(entry.data.restBefore||0)}h</span><span>{entry.data.augmented?'Augmented':'Standard'}</span></div></button>)}</div>)}{!filteredRecords.length && <p className="muted">No duty records match these filters.</p>}</div>{recordDetail}</div></section></div>}
     <div className="notice warn compliance-note"><strong>Recordkeeping aid</strong><p>AeroSlate preserves entered data, attestations, exports and per-device audit chains. It does not determine whether time is legally loggable or certify compliance with an operator-specific FAA/EASA scheme.</p></div>
   </div>;
 }

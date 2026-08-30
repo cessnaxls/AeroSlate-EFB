@@ -1,3 +1,7 @@
+## v0.18.3
+- Rebuilt Flight and Duty history into concise analytics views with live totals, search, date filtering, grouping, and full per-record drill-down.
+- Totals recalculate against the current filtered dataset so users can inspect any period, aircraft, registration, role, operation, or duty scheme.
+
 ## v0.18.2
 - Fixed Navlog ETA accumulation so numeric SimBrief `time_leg` values are always treated as seconds. Short legs can no longer turn into multi-hour ETA jumps.
 - ETA now accumulates exact leg seconds and only rounds when formatting the displayed clock, so sub-minute legs still contribute correctly.
