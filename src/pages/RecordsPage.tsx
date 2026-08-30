@@ -23,12 +23,15 @@ import {
   type RecordKind
 } from '../lib/cloudLedger';
 
-interface RecordPresets { role: 'PIC' | 'SIC' | 'Dual' | 'Instructor'; operation: string; rules: 'IFR' | 'VFR'; crossCountry: boolean; autoDutyTimes: boolean; reportLeadMinutes: number; postFlightMinutes: number; defaultNight: number; defaultInstrument: number; defaultSimulatedInstrument: number; defaultDayLandings: number; defaultNightLandings: number; defaultApproaches: string; defaultRemarks: string; defaultSigner: string; dutyRegulation: string; dutyRole: string; restBefore: number; maxDuty: number; minRest: number; }
+interface RecordPresets { role: 'PIC' | 'SIC' | 'Dual' | 'Instructor'; operation: string; rules: 'IFR' | 'VFR'; crossCountry: boolean; autoDutyTimes: boolean; reportLeadMinutes: number; postFlightMinutes: number; defaultNight: number; defaultInstrument: number; defaultSimulatedInstrument: number; defaultDayLandings: number; defaultNightLandings: number; defaultApproaches: string; defaultRemarks: string; defaultSigner: string; dutyRegulation: string; dutyRole: string; restBefore: number; maxDuty: number; maxFdp: number; minRest: number; }
 interface CloudPrefs { gistId: string; token: string; passphrase: string; autoSync: boolean; rememberSecrets: boolean; }
+interface CurrencyPrefs { dayWindowDays: number; dayLandings: number; nightWindowDays: number; nightLandings: number; instrumentWindowMonths: number; instrumentApproaches: number; requireHolding: boolean; requireTracking: boolean; }
+const DEFAULT_CURRENCY: CurrencyPrefs = { dayWindowDays: 90, dayLandings: 3, nightWindowDays: 90, nightLandings: 3, instrumentWindowMonths: 6, instrumentApproaches: 6, requireHolding: true, requireTracking: true };
+const CURRENCY_KEY = 'aeroslate.records.currency.v1';
 
 const OPERATIONS = ['Part 91', 'Part 121', 'Part 135', 'EASA CAT', 'EASA NCC', 'EASA NCO', 'Training', 'Other'];
 const DUTY_SCHEMES = ['FAA Part 117', 'FAA Part 135', 'FAA Part 91 / company', 'EASA ORO.FTL.205', 'Company scheme', 'Other'];
-const DEFAULT_PRESETS: RecordPresets = { role: 'SIC', operation: 'Part 91', rules: 'IFR', crossCountry: true, autoDutyTimes: true, reportLeadMinutes: 60, postFlightMinutes: 15, defaultNight: 0, defaultInstrument: 0, defaultSimulatedInstrument: 0, defaultDayLandings: 0, defaultNightLandings: 0, defaultApproaches: '', defaultRemarks: '', defaultSigner: '', dutyRegulation: 'FAA Part 117', dutyRole: 'Flightcrew', restBefore: 10, maxDuty: 13, minRest: 10 };
+const DEFAULT_PRESETS: RecordPresets = { role: 'SIC', operation: 'Part 91', rules: 'IFR', crossCountry: true, autoDutyTimes: true, reportLeadMinutes: 60, postFlightMinutes: 15, defaultNight: 0, defaultInstrument: 0, defaultSimulatedInstrument: 0, defaultDayLandings: 0, defaultNightLandings: 0, defaultApproaches: '', defaultRemarks: '', defaultSigner: '', dutyRegulation: 'FAA Part 117', dutyRole: 'Flightcrew', restBefore: 10, maxDuty: 13, maxFdp: 13, minRest: 10 };
 const LEDGER_KEY = 'aeroslate.records.ledger.v2';
 const CLOUD_KEY = 'aeroslate.records.github.v1';
 type ReportOperator = 'equals' | 'notEquals' | 'contains' | 'notContains' | 'gt' | 'gte' | 'lt' | 'lte' | 'truthy' | 'falsy';
@@ -47,14 +50,14 @@ const FLIGHT_REPORT_FIELDS: ReportField[] = [
   { key:'instructor', label:'Instructor', kind:'number' }, { key:'night', label:'Night', kind:'number' },
   { key:'instrument', label:'Actual instrument', kind:'number' }, { key:'simulatedInstrument', label:'Simulated instrument', kind:'number' },
   { key:'crossCountry', label:'Cross-country', kind:'number' }, { key:'dayLandings', label:'Day landings', kind:'number' },
-  { key:'nightLandings', label:'Night landings', kind:'number' }, { key:'approaches', label:'Approaches', kind:'text' }
+  { key:'nightLandings', label:'Night landings', kind:'number' }, { key:'approaches', label:'Approaches', kind:'text' }, { key:'holds', label:'Holding events', kind:'number' }, { key:'tracking', label:'Intercept / track performed', kind:'boolean' }
 ];
 const DUTY_REPORT_FIELDS: ReportField[] = [
   { key:'date', label:'Date', kind:'date' }, { key:'regulation', label:'Scheme', kind:'text' }, { key:'role', label:'Role', kind:'text' },
   { key:'flightNumber', label:'Flight number', kind:'text' }, { key:'departure', label:'Departure', kind:'text' }, { key:'arrival', label:'Arrival', kind:'text' },
   { key:'dutyMinutes', label:'Duty duration', kind:'calculated' }, { key:'fdpMinutes', label:'FDP duration', kind:'calculated' },
   { key:'sectors', label:'Sectors', kind:'number' }, { key:'standby', label:'Standby hours', kind:'number' }, { key:'restBefore', label:'Rest before', kind:'number' },
-  { key:'maxDuty', label:'Scheme max duty', kind:'number' }, { key:'minRest', label:'Scheme min rest', kind:'number' }, { key:'augmented', label:'Augmented crew', kind:'boolean' }
+  { key:'maxDuty', label:'Scheme max duty', kind:'number' }, { key:'maxFdp', label:'Scheme max FDP', kind:'number' }, { key:'minRest', label:'Scheme min rest', kind:'number' }, { key:'augmented', label:'Augmented crew', kind:'boolean' }
 ];
 
 function reportValue(data: RecordData, key: string): string | number | boolean {
@@ -97,6 +100,33 @@ function metricDisplay(metric: ReportMetric, value: number) {
   if (metric.operation === 'count' || metric.operation === 'unique' || /Landings|sectors/i.test(metric.label)) return String(Math.round(value));
   return value.toFixed(1);
 }
+function approachCount(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.round(value));
+  const text = String(value ?? '').trim();
+  if (!text) return 0;
+  if (/^\d+$/.test(text)) return Number(text);
+  return text.split(/[,;|\n]+/).map(part => part.trim()).filter(Boolean).length;
+}
+function dateDaysAgo(days: number): string {
+  const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - Math.max(0, days)); return d.toISOString().slice(0,10);
+}
+function calendarMonthsAgo(months: number): string {
+  const d = new Date(); d.setHours(0,0,0,0); d.setDate(1); d.setMonth(d.getMonth() - Math.max(0, months - 1)); return d.toISOString().slice(0,10);
+}
+function zuluNow(date = new Date()) { return `${date.getUTCHours().toString().padStart(2,'0')}:${date.getUTCMinutes().toString().padStart(2,'0')}z`; }
+function addDaysIso(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`); if (Number.isNaN(d.getTime())) return ''; d.setUTCDate(d.getUTCDate()+days); return d.toISOString().slice(0,10);
+}
+function nthEventExpiry(records: any[], field: string, required: number, windowDays: number): string {
+  if (required <= 0) return '';
+  const events: string[] = [];
+  for (const entry of records) {
+    const date = String(entry.data?.date || ''); const count = Math.max(0, Math.round(Number(entry.data?.[field] || 0)));
+    for (let i=0;i<count;i++) events.push(date);
+  }
+  events.sort((a,b)=>b.localeCompare(a));
+  const anchor = events[required-1]; return anchor ? addDaysIso(anchor, windowDays) : '';
+}
 function today() { return new Date().toISOString().slice(0, 10); }
 function recordDate(flight: FlightSummary) {
   const value = String(flight.flightDate || '').trim();
@@ -113,7 +143,7 @@ function baseLog(flight: FlightSummary, block: number, airborne: number, presets
     pic: presets.role === 'PIC' ? block : 0, sic: presets.role === 'SIC' ? block : 0, dual: presets.role === 'Dual' ? block : 0,
     instructor: presets.role === 'Instructor' ? block : 0, night: presets.defaultNight, instrument: presets.defaultInstrument, simulatedInstrument: presets.defaultSimulatedInstrument,
     crossCountry: presets.crossCountry ? block : 0, dayLandings: presets.defaultDayLandings, nightLandings: presets.defaultNightLandings, approaches: presets.defaultApproaches, operation: presets.operation,
-    role: presets.role, rules: presets.rules, remarks: presets.defaultRemarks, attested: false, signerName: presets.defaultSigner
+    role: presets.role, rules: presets.rules, holds: 0, tracking: false, remarks: presets.defaultRemarks, attested: false, signerName: presets.defaultSigner
   };
 }
 function baseDuty(flight: FlightSummary, times: { in: string }, presets: RecordPresets): RecordData {
@@ -122,7 +152,7 @@ function baseDuty(flight: FlightSummary, times: { in: string }, presets: RecordP
     flightRecordId: '', flightReference: `${recordDate(flight)}|${flight.origin}|${flight.destination}|${flight.airline}${flight.flightNumber}`, departure: flight.origin, arrival: flight.destination, flightNumber: `${flight.airline}${flight.flightNumber}`,
     dutyStart: report, reportTime: report, flightDutyStart: report, flightDutyEnd: times.in,
     dutyEnd: presets.autoDutyTimes && times.in ? addMinutesZulu(times.in, presets.postFlightMinutes) : '',
-    sectors: flight.origin !== '----' && flight.destination !== '----' ? 1 : 0, standby: 0, restBefore: presets.restBefore, maxDuty: presets.maxDuty, minRest: presets.minRest,
+    sectors: flight.origin !== '----' && flight.destination !== '----' ? 1 : 0, standby: 0, restBefore: presets.restBefore, maxDuty: presets.maxDuty, maxFdp: presets.maxFdp, minRest: presets.minRest,
     augmented: false, notes: '', attested: false, signerName: presets.defaultSigner };
 }
 
@@ -154,19 +184,23 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
     { id:'time', field:'totalTime', operation:'sum', label:'Block' }
   ]);
   const [reportGroupBy, setReportGroupBy] = useState('');
+  const [currencyPrefs, setCurrencyPrefs] = useState<CurrencyPrefs>(() => ({ ...DEFAULT_CURRENCY, ...loadLocal<Partial<CurrencyPrefs>>(CURRENCY_KEY, {}) }));
+  const [nowTick, setNowTick] = useState(() => new Date());
 
   useEffect(() => saveLocal(LEDGER_KEY, ledger), [ledger]);
   useEffect(() => saveLocal(CLOUD_KEY, { gistId: cloud.gistId, token: cloud.rememberSecrets ? cloud.token : '', passphrase: cloud.rememberSecrets ? cloud.passphrase : '', autoSync: cloud.autoSync, rememberSecrets: cloud.rememberSecrets }), [cloud]);
   useEffect(() => saveLocal('aeroslate.records.presets', presets), [presets]);
+  useEffect(() => saveLocal(CURRENCY_KEY, currencyPrefs), [currencyPrefs]);
+  useEffect(() => { const timer = window.setInterval(() => setNowTick(new Date()), 30000); return () => window.clearInterval(timer); }, []);
   useEffect(() => { const refresh=()=>{setPresets({ ...DEFAULT_PRESETS, ...loadLocal<Partial<RecordPresets>>('aeroslate.records.presets', {}) });}; window.addEventListener('aeroslate-record-settings-updated',refresh); return()=>window.removeEventListener('aeroslate-record-settings-updated',refresh); }, []);
   useEffect(() => saveLocal(logKey, log), [logKey, log]); useEffect(() => saveLocal(dutyKey, duty), [dutyKey, duty]);
   useEffect(() => { if (!status) return; const timer = window.setTimeout(() => setStatus(''), 6000); return () => window.clearTimeout(timer); }, [status]);
   useEffect(() => {
     const generated = baseLog(flight, blockHours, airborneHours, presets, times);
-    setLog(current => ({ ...current, ...generated, remarks: current.remarks || '', approaches: current.approaches || '', signerName: current.signerName || '', attested: current.attested || false }));
+    setLog(current => ({ ...current, ...generated, remarks: current.remarks || '', approaches: current.approaches || '', holds: current.holds || 0, tracking: current.tracking || false, signerName: current.signerName || '', attested: current.attested || false }));
     const dutyBase = baseDuty(flight, times, presets);
     setDuty(current => ({ ...current, ...dutyBase, flightRecordId: current.flightRecordId || dutyBase.flightRecordId, regulation: current.regulation || dutyBase.regulation, role: current.role || dutyBase.role, notes: current.notes || '', signerName: current.signerName || '', attested: current.attested || false }));
-  }, [flight.release, flight.origin, flight.destination, flight.aircraft, flight.registration, flight.flightNumber, flight.airline, flight.schedOut, flight.schedIn, flight.flightDate, times.out, times.off, times.on, times.in, blockHours, airborneHours, presets.role, presets.operation, presets.rules, presets.crossCountry, presets.autoDutyTimes, presets.reportLeadMinutes, presets.postFlightMinutes, presets.defaultNight, presets.defaultInstrument, presets.defaultSimulatedInstrument, presets.defaultDayLandings, presets.defaultNightLandings, presets.defaultApproaches, presets.defaultRemarks, presets.defaultSigner, presets.dutyRegulation, presets.dutyRole, presets.restBefore, presets.maxDuty, presets.minRest]);
+  }, [flight.release, flight.origin, flight.destination, flight.aircraft, flight.registration, flight.flightNumber, flight.airline, flight.schedOut, flight.schedIn, flight.flightDate, times.out, times.off, times.on, times.in, blockHours, airborneHours, presets.role, presets.operation, presets.rules, presets.crossCountry, presets.autoDutyTimes, presets.reportLeadMinutes, presets.postFlightMinutes, presets.defaultNight, presets.defaultInstrument, presets.defaultSimulatedInstrument, presets.defaultDayLandings, presets.defaultNightLandings, presets.defaultApproaches, presets.defaultRemarks, presets.defaultSigner, presets.dutyRegulation, presets.dutyRole, presets.restBefore, presets.maxDuty, presets.maxFdp, presets.minRest]);
 
   const cloudConfig = (override?: Partial<GitHubCloudConfig>): GitHubCloudConfig => ({ token: cloud.token.trim(), gistId: cloud.gistId.trim(), passphrase: cloud.passphrase, ...override });
   const requireCloud = () => {
@@ -235,6 +269,57 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
   const dutyZulu = (key: string, label: string, locked = false) => <label className={locked ? 'synced-field' : ''}><span>{label}{locked && <small>Auto-derived</small>}</span><ZuluTimeInput value={String(duty[key] || '')} readOnly={locked} onChange={value => update(setDuty, key, normalizeZulu(value))} /></label>;
   const dutyMinutes = useMemo(() => { const value = minutesBetweenZulu(String(duty.dutyStart || ''), String(duty.dutyEnd || '')); return value === null ? 0 : value; }, [duty.dutyStart, duty.dutyEnd]);
   const fdpMinutes = useMemo(() => { const value = minutesBetweenZulu(String(duty.flightDutyStart || ''), String(duty.flightDutyEnd || '')); return value === null ? 0 : value; }, [duty.flightDutyStart, duty.flightDutyEnd]);
+
+  const currency = useMemo(() => {
+    const daySince = dateDaysAgo(currencyPrefs.dayWindowDays);
+    const nightSince = dateDaysAgo(currencyPrefs.nightWindowDays);
+    const instrumentSince = calendarMonthsAgo(currencyPrefs.instrumentWindowMonths);
+    const dayRecords = entries.filter(entry => String(entry.data?.date || '') >= daySince);
+    const nightRecords = entries.filter(entry => String(entry.data?.date || '') >= nightSince);
+    const instrumentRecords = entries.filter(entry => String(entry.data?.date || '') >= instrumentSince);
+    const day = dayRecords.reduce((sum,e)=>sum+Number(e.data?.dayLandings||0),0);
+    const night = nightRecords.reduce((sum,e)=>sum+Number(e.data?.nightLandings||0),0);
+    const approaches = instrumentRecords.reduce((sum,e)=>sum+approachCount(e.data?.approaches),0);
+    const holds = instrumentRecords.reduce((sum,e)=>sum+Number(e.data?.holds||0),0);
+    const tracking = instrumentRecords.some(e=>Boolean(e.data?.tracking));
+    return {
+      day, night, approaches, holds, tracking, daySince, nightSince, instrumentSince,
+      dayExpiry: nthEventExpiry(dayRecords,'dayLandings',currencyPrefs.dayLandings,currencyPrefs.dayWindowDays),
+      nightExpiry: nthEventExpiry(nightRecords,'nightLandings',currencyPrefs.nightLandings,currencyPrefs.nightWindowDays)
+    };
+  }, [entries, currencyPrefs]);
+
+  const dutyStatus = useMemo(() => {
+    const now = zuluNow(nowTick);
+    const date = String(duty.date || today());
+    const clockMs = (clock: string, afterMs?: number) => {
+      const normalized = normalizeZulu(clock); const match = normalized.match(/^(\d{2}):(\d{2})z$/); if (!match) return null;
+      let value = Date.parse(`${date}T${match[1]}:${match[2]}:00Z`);
+      if (afterMs !== undefined && value < afterMs) value += 86400000;
+      return value;
+    };
+    const dutyStart = String(duty.dutyStart || ''); const dutyEnd = String(duty.dutyEnd || '');
+    const fdpStart = String(duty.flightDutyStart || ''); const fdpEnd = String(duty.flightDutyEnd || '');
+    const dutyStartMs = clockMs(dutyStart); const dutyEndMs = dutyStartMs === null ? null : clockMs(dutyEnd, dutyStartMs);
+    const fdpStartMs = clockMs(fdpStart); const fdpEndMs = fdpStartMs === null ? null : clockMs(fdpEnd, fdpStartMs);
+    const nowMs = nowTick.getTime();
+    const dutyHasStarted = dutyStartMs !== null && nowMs >= dutyStartMs;
+    const fdpHasStarted = fdpStartMs !== null && nowMs >= fdpStartMs;
+    const activeDuty = Boolean(dutyHasStarted && !dutyEnd);
+    const activeFdp = Boolean(fdpHasStarted && !fdpEnd);
+    const elapsedDuty = dutyStartMs === null || !dutyHasStarted ? 0 : Math.max(0, Math.round(((dutyEndMs ?? nowMs) - dutyStartMs) / 60000));
+    const elapsedFdp = fdpStartMs === null || !fdpHasStarted ? 0 : Math.max(0, Math.round(((fdpEndMs ?? nowMs) - fdpStartMs) / 60000));
+    const maxDutyMin = Math.max(0, Number(duty.maxDuty || 0) * 60);
+    const maxFdpMin = Math.max(0, Number(duty.maxFdp || duty.maxDuty || 0) * 60);
+    const remainingDuty = maxDutyMin ? Math.max(0, maxDutyMin - elapsedDuty) : null;
+    const remainingFdp = maxFdpMin ? Math.max(0, maxFdpMin - elapsedFdp) : null;
+    const dutyLimit = dutyStart && maxDutyMin ? addMinutesZulu(dutyStart, maxDutyMin) : '';
+    const fdpLimit = fdpStart && maxFdpMin ? addMinutesZulu(fdpStart, maxFdpMin) : '';
+    const minRest = Math.max(0, Number(duty.minRest || 0));
+    const restComplete = dutyEnd && minRest ? addMinutesZulu(dutyEnd, Math.round(minRest*60)) : '';
+    const priorRestOk = Number(duty.restBefore || 0) >= minRest;
+    return { now, activeDuty, activeFdp, dutyHasStarted, fdpHasStarted, elapsedDuty, elapsedFdp, remainingDuty, remainingFdp, dutyLimit, fdpLimit, minRest, restComplete, priorRestOk };
+  }, [duty.date,duty.dutyStart,duty.dutyEnd,duty.flightDutyStart,duty.flightDutyEnd,duty.maxDuty,duty.maxFdp,duty.minRest,duty.restBefore,nowTick]);
 
   const filteredRecords = useMemo(() => {
     const source = tab === 'logbook' ? entries : duties;
@@ -364,16 +449,39 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
     </div></section>
 
 
+    {tab === 'logbook' && <section className="card currency-tracker"><header><div><ShieldCheck size={18}/><h3>Pilot currency</h3></div><span className="pill neutral">LOGBOOK-BASED</span></header><div className="card-body">
+      <div className="currency-grid">
+        <div className={currency.day>=currencyPrefs.dayLandings?'currency-card good':'currency-card warn'}><span>Day landings</span><strong>{currency.day} / {currencyPrefs.dayLandings}</strong><small>{currency.day>=currencyPrefs.dayLandings ? (currency.dayExpiry ? `Target retained through ${currency.dayExpiry}` : 'Entered target met') : `${Math.max(0,currencyPrefs.dayLandings-currency.day)} needed`} · last {currencyPrefs.dayWindowDays} days</small></div>
+        <div className={currency.night>=currencyPrefs.nightLandings?'currency-card good':'currency-card warn'}><span>Night landings</span><strong>{currency.night} / {currencyPrefs.nightLandings}</strong><small>{currency.night>=currencyPrefs.nightLandings ? (currency.nightExpiry ? `Target retained through ${currency.nightExpiry}` : 'Entered target met') : `${Math.max(0,currencyPrefs.nightLandings-currency.night)} needed`} · last {currencyPrefs.nightWindowDays} days</small></div>
+        <div className={(currency.approaches>=currencyPrefs.instrumentApproaches&&(!currencyPrefs.requireHolding||currency.holds>0)&&(!currencyPrefs.requireTracking||currency.tracking))?'currency-card good':'currency-card warn'}><span>Instrument experience</span><strong>{currency.approaches} / {currencyPrefs.instrumentApproaches} approaches</strong><small>{currencyPrefs.requireHolding?`Hold ${currency.holds>0?'✓':'needed'} · `:''}{currencyPrefs.requireTracking?`Intercept/track ${currency.tracking?'✓':'needed'} · `:''}since {currency.instrumentSince}</small></div>
+      </div>
+      <details className="currency-targets"><summary>Currency targets</summary><div className="currency-target-grid"><label><span>Day window (days)</span><input type="number" value={currencyPrefs.dayWindowDays} onChange={e=>setCurrencyPrefs({...currencyPrefs,dayWindowDays:Number(e.target.value)})}/></label><label><span>Day landings</span><input type="number" value={currencyPrefs.dayLandings} onChange={e=>setCurrencyPrefs({...currencyPrefs,dayLandings:Number(e.target.value)})}/></label><label><span>Night window (days)</span><input type="number" value={currencyPrefs.nightWindowDays} onChange={e=>setCurrencyPrefs({...currencyPrefs,nightWindowDays:Number(e.target.value)})}/></label><label><span>Night landings</span><input type="number" value={currencyPrefs.nightLandings} onChange={e=>setCurrencyPrefs({...currencyPrefs,nightLandings:Number(e.target.value)})}/></label><label><span>Instrument window (months)</span><input type="number" value={currencyPrefs.instrumentWindowMonths} onChange={e=>setCurrencyPrefs({...currencyPrefs,instrumentWindowMonths:Number(e.target.value)})}/></label><label><span>Approaches</span><input type="number" value={currencyPrefs.instrumentApproaches} onChange={e=>setCurrencyPrefs({...currencyPrefs,instrumentApproaches:Number(e.target.value)})}/></label><label className="check-inline"><input type="checkbox" checked={currencyPrefs.requireHolding} onChange={e=>setCurrencyPrefs({...currencyPrefs,requireHolding:e.target.checked})}/> Require holding event</label><label className="check-inline"><input type="checkbox" checked={currencyPrefs.requireTracking} onChange={e=>setCurrencyPrefs({...currencyPrefs,requireTracking:e.target.checked})}/> Require intercept/track</label></div></details>
+      <p className="currency-disclaimer">Planning aid based only on saved AeroSlate records and your entered targets. Verify the exact regulatory, operator, aircraft, and passenger-carrying requirements that apply to your operation.</p>
+    </div></section>}
+
     {tab === 'logbook' && <div className="records-layout"><section className="card record-editor"><header><div><BookOpenCheck size={18} /><h3>Flight log entry</h3></div><button onClick={() => exportRecords('logbook')}><Download size={15} /> CSV</button></header><div className="card-body">
       <fieldset><legend>Flight identity and authoritative times</legend><div className="form-grid four">{synced(log.date, 'Date')}{synced(log.flightNumber, 'Flight')}{synced(log.departure, 'Departure')}{synced(log.arrival, 'Arrival')}{synced(log.aircraftType, 'Aircraft')}{synced(log.registration, 'Registration')}{synced(log.scheduledOut, 'STD')}{synced(log.scheduledIn, 'STA')}{synced(log.out, 'OUT', 'OOOI')}{synced(log.off, 'OFF', 'OOOI')}{synced(log.on, 'ON', 'OOOI')}{synced(log.in, 'IN', 'OOOI')}{synced(log.totalTime, 'Block', 'OUT–IN')}{synced(log.flightTime, 'Airborne', 'OFF–ON')}</div></fieldset>
-      <fieldset><legend>Creditable time</legend><div className="form-grid four">{textInput(log, setLog, 'pic', 'PIC', 'number', '0.1')}{textInput(log, setLog, 'sic', 'SIC / co-pilot', 'number', '0.1')}{textInput(log, setLog, 'dual', 'Dual received', 'number', '0.1')}{textInput(log, setLog, 'instructor', 'Instructor', 'number', '0.1')}{textInput(log, setLog, 'night', 'Night', 'number', '0.1')}{textInput(log, setLog, 'instrument', 'Actual instrument', 'number', '0.1')}{textInput(log, setLog, 'simulatedInstrument', 'Simulated instrument', 'number', '0.1')}{textInput(log, setLog, 'crossCountry', 'Cross-country', 'number', '0.1')}{textInput(log, setLog, 'dayLandings', 'Day landings', 'number')}{textInput(log, setLog, 'nightLandings', 'Night landings', 'number')}{textInput(log, setLog, 'approaches', 'Approaches')}</div></fieldset>
+      <fieldset><legend>Creditable time</legend><div className="form-grid four">{textInput(log, setLog, 'pic', 'PIC', 'number', '0.1')}{textInput(log, setLog, 'sic', 'SIC / co-pilot', 'number', '0.1')}{textInput(log, setLog, 'dual', 'Dual received', 'number', '0.1')}{textInput(log, setLog, 'instructor', 'Instructor', 'number', '0.1')}{textInput(log, setLog, 'night', 'Night', 'number', '0.1')}{textInput(log, setLog, 'instrument', 'Actual instrument', 'number', '0.1')}{textInput(log, setLog, 'simulatedInstrument', 'Simulated instrument', 'number', '0.1')}{textInput(log, setLog, 'crossCountry', 'Cross-country', 'number', '0.1')}{textInput(log, setLog, 'dayLandings', 'Day landings', 'number')}{textInput(log, setLog, 'nightLandings', 'Night landings', 'number')}{textInput(log, setLog, 'approaches', 'Approaches')}{textInput(log, setLog, 'holds', 'Holding events', 'number')}<label><span>Intercept / track</span><select value={Boolean(log.tracking)?'Yes':'No'} onChange={event=>update(setLog,'tracking',event.target.value==='Yes')}><option>No</option><option>Yes</option></select></label></div></fieldset>
       <fieldset><legend>Operation</legend><div className="form-grid three">{selectInput(log, setLog, 'role', 'Crew role', ['PIC', 'SIC', 'Dual', 'Instructor'])}{selectInput(log, setLog, 'operation', 'Operation', OPERATIONS)}{selectInput(log, setLog, 'rules', 'Flight rules', ['IFR', 'VFR'])}</div><label className="stacked-input"><span>Remarks / endorsements reference</span><textarea value={String(log.remarks)} onChange={event => update(setLog, 'remarks', event.target.value)} /></label></fieldset>
       <div className="attestation"><label><input type="checkbox" checked={Boolean(log.attested)} onChange={event => update(setLog, 'attested', event.target.checked)} /> I attest this entry is complete and accurate.</label>{textInput(log, setLog, 'signerName', 'Typed signature / name')}<button className="primary" disabled={busy} onClick={() => void saveRecord('logbook', log)}><Save size={16} /> Save record</button></div>
     </div></section><section className="card record-history records-browser"><header><div><BookOpenCheck size={18} /><h3>Flight logs</h3></div><span className="pill blue">{filteredRecords.length} shown</span></header><div className="card-body">{analyticsToolbar}<div className="records-total-grid"><div><span>Flights</span><strong>{flightTotals.flights}</strong></div><div><span>Block</span><strong>{flightTotals.block.toFixed(1)}</strong></div><div><span>Airborne</span><strong>{flightTotals.airborne.toFixed(1)}</strong></div><div><span>PIC</span><strong>{flightTotals.pic.toFixed(1)}</strong></div><div><span>SIC</span><strong>{flightTotals.sic.toFixed(1)}</strong></div><div><span>Night</span><strong>{flightTotals.night.toFixed(1)}</strong></div><div><span>Instrument</span><strong>{flightTotals.instrument.toFixed(1)}</strong></div><div><span>XC</span><strong>{flightTotals.xc.toFixed(1)}</strong></div><div><span>Landings</span><strong>{flightTotals.landings}</strong></div></div>{reportBuilder}<div className="record-list rich-record-list">{groupedRecords.map(group=><div className="record-group" key={group.label||'all'}>{group.label&&<div className="record-group-title"><strong>{group.label}</strong><span>{group.records.length} flights</span></div>}{group.records.slice().reverse().map(entry => <button className="record-row" key={entry.id} onClick={()=>setSelectedRecord(entry)}><div><strong>{String(entry.data.date)} · {String(entry.data.departure)}–{String(entry.data.arrival)}</strong><span>{String(entry.data.flightNumber||'')} · {String(entry.data.aircraftType)} {String(entry.data.registration)} · {Number(entry.data.totalTime||0).toFixed(1)} hr</span></div><div className="record-row-metrics"><span>PIC {Number(entry.data.pic||0).toFixed(1)}</span><span>SIC {Number(entry.data.sic||0).toFixed(1)}</span><span>Night {Number(entry.data.night||0).toFixed(1)}</span></div></button>)}</div>)}{!filteredRecords.length && <p className="muted">No flight records match these filters.</p>}</div>{recordDetail}</div></section></div>}
 
+    {tab === 'duty' && <section className="card duty-status-card"><header><div><Timer size={18}/><h3>Duty status</h3></div><span className={`pill ${dutyStatus.activeDuty?'warn':'neutral'}`}>{dutyStatus.activeDuty?'ON DUTY':duty.dutyEnd?'COMPLETE':dutyStatus.dutyHasStarted?'OPEN':'NOT STARTED'}</span></header><div className="card-body">
+      <div className="duty-status-grid">
+        <div><span>Duty elapsed</span><strong>{duty.dutyStart?formatMinutes(dutyStatus.elapsedDuty):'--:--'}</strong><small>{dutyStatus.activeDuty?'running now':duty.dutyEnd?'completed':'enter duty on'}</small></div>
+        <div className={dutyStatus.remainingDuty!==null&&dutyStatus.remainingDuty<=60?'attention':''}><span>Duty remaining</span><strong>{dutyStatus.remainingDuty===null?'—':formatMinutes(dutyStatus.remainingDuty)}</strong><small>{dutyStatus.dutyLimit?`entered limit ${dutyStatus.dutyLimit}`:'set scheme max duty'}</small></div>
+        <div><span>FDP elapsed</span><strong>{duty.flightDutyStart?formatMinutes(dutyStatus.elapsedFdp):'--:--'}</strong><small>{dutyStatus.activeFdp?'running now':duty.flightDutyEnd?'completed':'awaiting FDP start'}</small></div>
+        <div className={dutyStatus.remainingFdp!==null&&dutyStatus.remainingFdp<=60?'attention':''}><span>FDP remaining</span><strong>{dutyStatus.remainingFdp===null?'—':formatMinutes(dutyStatus.remainingFdp)}</strong><small>{dutyStatus.fdpLimit?`entered limit ${dutyStatus.fdpLimit}`:'set scheme max FDP'}</small></div>
+        <div className={dutyStatus.priorRestOk?'good':'attention'}><span>Rest before</span><strong>{Number(duty.restBefore||0).toFixed(1)} hr</strong><small>{dutyStatus.minRest?`${dutyStatus.priorRestOk?'meets':'below'} entered ${dutyStatus.minRest.toFixed(1)} hr minimum`:'no minimum entered'}</small></div>
+        <div><span>Required rest after</span><strong>{dutyStatus.minRest?`${dutyStatus.minRest.toFixed(1)} hr`:'—'}</strong><small>{dutyStatus.restComplete?`complete at ${dutyStatus.restComplete}`:dutyStatus.activeDuty?'starts at duty off':'enter duty off to calculate'}</small></div>
+      </div>
+      <div className="duty-status-strip"><span>Current Z {dutyStatus.now}</span><span>Scheme {String(duty.regulation||'Not set')}</span><span>{String(duty.sectors||0)} sector{Number(duty.sectors||0)===1?'':'s'}</span>{Boolean(duty.augmented)&&<span>Augmented</span>}</div>
+      <p className="currency-disclaimer">Remaining duty/FDP and rest are calculated from the limits entered in this duty record; AeroSlate does not infer operator-specific legality or extensions automatically.</p>
+    </div></section>}
+
     {tab === 'duty' && <div className="records-layout"><section className="card record-editor"><header><div><Timer size={18} /><h3>Duty log entry</h3></div><button onClick={() => exportRecords('duty')}><Download size={15} /> CSV</button></header><div className="card-body">
       <fieldset><legend>Attached flight and scheme</legend><div className="form-grid four">{synced(duty.date, 'Date')}<label><span>Attached flight log</span><select value={String(duty.flightRecordId || '')} onChange={event => update(setDuty, 'flightRecordId', event.target.value)}><option value="">Current flight · attach on save</option>{entries.slice().reverse().map(entry => <option key={entry.id} value={entry.id}>{String(entry.data.date)} · {String(entry.data.departure)}–{String(entry.data.arrival)} · {String(entry.data.registration)}</option>)}</select></label>{selectInput(duty, setDuty, 'regulation', 'Regulation / scheme', DUTY_SCHEMES)}{selectInput(duty, setDuty, 'role', 'Role', ['Flightcrew', 'PIC', 'SIC', 'Cabin crew', 'Other'])}{synced(duty.scheduledOut, 'STD')}{synced(duty.scheduledIn, 'STA')}</div></fieldset>
-      <fieldset><legend>Duty times</legend><div className="form-grid four">{dutyZulu('dutyStart', 'Duty on', presets.autoDutyTimes)}{dutyZulu('reportTime', 'Report', presets.autoDutyTimes)}{dutyZulu('flightDutyStart', 'FDP start', presets.autoDutyTimes)}{synced(duty.flightDutyEnd, 'FDP end / IN', 'OOOI')}{dutyZulu('dutyEnd', 'Duty off', presets.autoDutyTimes)}{textInput(duty, setDuty, 'sectors', 'Sectors', 'number')}{textInput(duty, setDuty, 'standby', 'Standby hours', 'number', '0.1')}{textInput(duty, setDuty, 'restBefore', 'Rest before', 'number', '0.1')}{textInput(duty, setDuty, 'maxDuty', 'Scheme max duty', 'number', '0.1')}{textInput(duty, setDuty, 'minRest', 'Scheme min rest', 'number', '0.1')}</div><label className="check-inline"><input type="checkbox" checked={Boolean(duty.augmented)} onChange={event => update(setDuty, 'augmented', event.target.checked)} /> Augmented crew / relief available</label></fieldset>
+      <fieldset><legend>Duty times</legend><div className="form-grid four">{dutyZulu('dutyStart', 'Duty on', presets.autoDutyTimes)}{dutyZulu('reportTime', 'Report', presets.autoDutyTimes)}{dutyZulu('flightDutyStart', 'FDP start', presets.autoDutyTimes)}{synced(duty.flightDutyEnd, 'FDP end / IN', 'OOOI')}{dutyZulu('dutyEnd', 'Duty off', presets.autoDutyTimes)}{textInput(duty, setDuty, 'sectors', 'Sectors', 'number')}{textInput(duty, setDuty, 'standby', 'Standby hours', 'number', '0.1')}{textInput(duty, setDuty, 'restBefore', 'Rest before', 'number', '0.1')}{textInput(duty, setDuty, 'maxDuty', 'Scheme max duty', 'number', '0.1')}{textInput(duty, setDuty, 'maxFdp', 'Scheme max FDP', 'number', '0.1')}{textInput(duty, setDuty, 'minRest', 'Scheme min rest', 'number', '0.1')}</div><label className="check-inline"><input type="checkbox" checked={Boolean(duty.augmented)} onChange={event => update(setDuty, 'augmented', event.target.checked)} /> Augmented crew / relief available</label></fieldset>
       <div className="duty-summary"><div><span>Duty</span><strong>{dutyMinutes ? formatMinutes(dutyMinutes) : '--:--'}</strong></div><div><span>FDP</span><strong>{fdpMinutes ? formatMinutes(fdpMinutes) : '--:--'}</strong></div><div><span>Rest</span><strong>{String(duty.restBefore)} hr</strong></div><div><span>Sectors</span><strong>{String(duty.sectors)}</strong></div></div>
       <label className="stacked-input"><span>Notes / extensions / discretion / acclimatization</span><textarea value={String(duty.notes)} onChange={event => update(setDuty, 'notes', event.target.value)} /></label>
       <div className="attestation"><label><input type="checkbox" checked={Boolean(duty.attested)} onChange={event => update(setDuty, 'attested', event.target.checked)} /> I attest this duty record is complete and accurate.</label>{textInput(duty, setDuty, 'signerName', 'Typed signature / name')}<button className="primary" disabled={busy} onClick={() => void saveRecord('duty', duty)}><Save size={16} /> Save record</button></div>

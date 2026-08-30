@@ -1,3 +1,9 @@
+## v0.18.5
+- Added configurable pilot currency tracking from saved flight records, including rolling day/night landing targets and instrument-experience targets.
+- Added holding/intercept-track capture to flight records for instrument currency tracking.
+- Added a live duty status dashboard with elapsed and remaining duty/FDP, entered hard-stop times, prior-rest comparison, and required-rest completion time.
+- Added separate configurable maximum FDP to duty defaults and records.
+
 ## v0.18.4
 - Added MCC-style custom totals/report builder for Flight and Duty logs.
 - Added arbitrary field filters, custom metric operations, unique counts, averages/min/max, and breakdown grouping.
