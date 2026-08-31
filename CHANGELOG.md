@@ -1,3 +1,9 @@
+## v0.18.6
+- Replaced the generic currency tracker with operator/aircraft/operation/position training and qualification records.
+- Added FAA/EASA baseline matrices, editable intervals, completion dates, due dates, evidence and custom requirements.
+- Added current/due/expired status summary.
+- Clarified that AeroSlate tracks compliance against the user/operator program and does not itself confer regulatory approval.
+
 ## v0.18.5
 - Added configurable pilot currency tracking from saved flight records, including rolling day/night landing targets and instrument-experience targets.
 - Added holding/intercept-track capture to flight records for instrument currency tracking.
