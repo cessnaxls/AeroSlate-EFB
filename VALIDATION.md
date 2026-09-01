@@ -1,13 +1,7 @@
-# AeroSlate 0.13.1 Validation
+# AeroSlate v0.19.2 validation
 
-Passed:
-
-- TypeScript project validation (`tsc -b --pretty false`)
-- Exact FR24 parser regression suite
-- AeroSlate workflow regression suite
-- Node server syntax validation
-- Electron main-process syntax validation
-- Complete XML leaf traversal and coverage accounting compiled successfully
-- PDF generator exposes standard, appendix, suppressed, and total XML leaf counts
-
-The source package is ready for the normal GitHub Actions and Render production build.
+- TypeScript check: PASS (`npm run check`)
+- Server syntax: PASS (`node --check server/index.mjs`)
+- Parser regression: PASS
+- Workflow regression: PASS
+- Full Vite bundle: not run in this environment because the Vite executable/dependencies are not installed.

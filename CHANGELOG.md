@@ -1,3 +1,16 @@
+## 0.19.2
+- Added a dedicated Training Records tab linked from each qualification requirement.
+- Added FAA/EASA regulatory-baseline competency/checking sheets with per-item S/U/W/N/A grading and aircraft/simulator device recording.
+- Completing a satisfactory check automatically updates the linked qualification completion/evidence fields and due-date logic.
+- Uses current FAA competency/checking-record terminology rather than the retired FAA Form 8410-3.
+
+## 0.19.1
+- Reworked Training & Qualification rows into a compact no-horizontal-scroll matrix.
+- Regulatory requirement titles and legal-basis columns are now read-only generated values.
+- Due dates now calculate automatically from the applicable recurring rule after the completion date is entered.
+- FAA Part 121 recurring items use calendar-month expiration logic and the Part 121 eligibility-month framework; rolling aircraft recency stays in the aircraft-currency panel.
+- Removed editable interval and due-date controls from baseline legal rows; evidence remains editable and notes are collapsed by default.
+
 ## 0.19.0
 - Replaced the generic career progression builder with a professional per-aircraft upgrade ladder tied to the active training record.
 - Uses fixed industry-style progression titles; users only edit hour thresholds.

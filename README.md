@@ -39,3 +39,6 @@ npm run build
 The Plan group includes a native flight planner. Aircraft fuel profiles can be entered manually or refined from simulator fuel telemetry. The planner accepts departure, destination, optional alternate, cruise altitudes, route text, STD and callsign, retrieves current NOAA/NWS Aviation Weather Center METAR/TAF data plus U.S. FD winds/temps where available, and loads the generated AeroSlate OFP into the same Overview/OFP/Navlog/Weather/Fuel workflow used by imported releases.
 
 Custom fuel planning is a planning aid and does not replace an approved aircraft performance source, AFM/POH, operator release, or required regulatory weather/NOTAM briefing.
+
+## v0.19.2
+Adds a dedicated Training Records workspace with linked competency/checking sheets for generated qualification requirements. Satisfactory completion writes the check date and record reference back to the linked qualification requirement.

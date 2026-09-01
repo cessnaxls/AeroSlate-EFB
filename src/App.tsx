@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Activity, BookOpenCheck, Calculator, CalendarDays, Check, ChevronRight, CloudSun, FileText, Fuel, Gauge, HelpCircle, Import,
+  Activity, BookOpenCheck, Calculator, CalendarDays, Check, ChevronRight, ClipboardCheck, CloudSun, FileText, Fuel, Gauge, HelpCircle, Import,
   LayoutDashboard, Link2, Map, MapPin, Menu, PanelLeftClose, PanelLeftOpen, Plane, RefreshCw, Route, Search, Settings, Timer, X
 } from 'lucide-react';
 import { AeroSlateLogo } from './components/AeroSlateLogo';
@@ -21,6 +21,7 @@ import { RunwayAnalysisPage } from './pages/RunwayAnalysisPage';
 import { SimPage, useSimTelemetry } from './pages/SimPage';
 import { OOOIPage } from './pages/OOOIPage';
 import { RecordsPage } from './pages/RecordsPage';
+import { TrainingRecordsPage } from './pages/TrainingRecordsPage';
 import { GatePage } from './pages/GatePage';
 import { TripsPage } from './pages/TripsPage';
 import { HelpPage } from './pages/HelpPage';
@@ -28,7 +29,7 @@ import { appendLedgerRecord, emptyLedger, getOrCreateDeviceId, normalizeLedger }
 import { addTripsLocal, tripToRecordData } from './lib/trips';
 import { generateDispatchPayload } from './lib/dispatchlink';
 
-type Page = 'dashboard' | 'finder' | 'trips' | 'planner' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'sim' | 'times' | 'gates' | 'flightlogs' | 'dutylogs' | 'help' | 'settings';
+type Page = 'dashboard' | 'finder' | 'trips' | 'planner' | 'simbrief' | 'charts' | 'ofp' | 'navlog' | 'weather' | 'fuel' | 'performance' | 'sim' | 'times' | 'gates' | 'flightlogs' | 'dutylogs' | 'trainingrecords' | 'help' | 'settings';
 interface RuntimeStatus { simLinked: boolean; mode: 'standalone' | 'sim-linked'; providerMode: 'official-web-session'; }
 interface NavItem { id: Page; label: string; shortLabel: string; icon: typeof LayoutDashboard; group: 'Plan' | 'Brief' | 'Fly' | 'Record' | 'System'; }
 const NAV_ITEMS: NavItem[] = [
@@ -47,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'times', label: 'OOOI', shortLabel: 'OOOI', icon: Timer, group: 'Fly' },
   { id: 'flightlogs', label: 'Flights', shortLabel: 'Flights', icon: BookOpenCheck, group: 'Record' },
   { id: 'dutylogs', label: 'Duty', shortLabel: 'Duty', icon: Timer, group: 'Record' },
+  { id: 'trainingrecords', label: 'Training records', shortLabel: 'Training', icon: ClipboardCheck, group: 'Record' },
   { id: 'gates', label: 'Gates', shortLabel: 'Gates', icon: MapPin, group: 'Fly' },
   { id: 'help', label: 'Help', shortLabel: 'Help', icon: HelpCircle, group: 'System' },
   { id: 'settings', label: 'Settings', shortLabel: 'More', icon: Settings, group: 'System' }
@@ -244,8 +246,9 @@ export default function App() {
         {page === 'fuel' && <FuelPage ofp={ofp} flight={flight} />}
         {page === 'sim' && <SimPage />}
         {page === 'times' && <OOOIPage release={flight.release} origin={flight.origin} destination={flight.destination} schedOut={flight.schedOut} schedIn={flight.schedIn} />}
-        {page === 'flightlogs' && <RecordsPage flight={flight} mode="logbook" />}
+        {page === 'flightlogs' && <RecordsPage flight={flight} mode="logbook" onOpenTrainingRecord={()=>setPage('trainingrecords')} />}
         {page === 'dutylogs' && <RecordsPage flight={flight} mode="duty" />}
+        {page === 'trainingrecords' && <TrainingRecordsPage onBack={()=>setPage('flightlogs')} />}
         {page === 'gates' && <GatePage ofp={ofp} flight={flight} notify={notify} />}
         {page === 'help' && <HelpPage />}
         {page === 'settings' && <SettingsPage simbriefKey={simbriefKey} setSimbriefKey={setSimbriefKey} mode={simbriefMode} setMode={setSimbriefMode} loading={loadingOFP} importOFP={async () => { await importOFP(); }} loadDemo={loadDemo} runtime={runtime} refreshRuntime={refreshRuntime} notify={notify} theme={theme} setTheme={setTheme} />}

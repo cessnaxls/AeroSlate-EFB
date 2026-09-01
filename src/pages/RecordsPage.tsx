@@ -25,13 +25,14 @@ import {
 
 interface RecordPresets { role: 'PIC' | 'SIC' | 'Dual' | 'Instructor'; operation: string; rules: 'IFR' | 'VFR'; crossCountry: boolean; autoDutyTimes: boolean; reportLeadMinutes: number; postFlightMinutes: number; defaultNight: number; defaultInstrument: number; defaultSimulatedInstrument: number; defaultDayLandings: number; defaultNightLandings: number; defaultApproaches: string; defaultRemarks: string; defaultSigner: string; dutyRegulation: string; dutyRole: string; restBefore: number; maxDuty: number; maxFdp: number; minRest: number; }
 interface CloudPrefs { gistId: string; token: string; passphrase: string; autoSync: boolean; rememberSecrets: boolean; }
-interface TrainingRequirement { id: string; title: string; category: string; basis: string; intervalMonths: number; lastCompleted: string; dueOverride: string; evidence: string; notes: string; required: boolean; }
+export interface TrainingRequirement { id: string; title: string; category: string; basis: string; intervalMonths: number; lastCompleted: string; dueOverride: string; evidence: string; notes: string; required: boolean; }
 interface AircraftCurrencyConfig { lookbackDays:number; requiredFlights:number; requiredHours:number; requiredDayLandings:number; requiredNightLandings:number; requiredApproaches:number; requiredHolds:number; requireTracking:boolean; registrationFilter:string; }
 interface AircraftUpgradeConfig { hours: Record<string, number>; }
-interface TrainingProfile { id: string; airline: string; aircraft: string; operation: string; position: 'PIC' | 'SIC'; authority: 'FAA' | 'EASA'; createdAt: string; requirements: TrainingRequirement[]; currency?: AircraftCurrencyConfig; upgrade?: AircraftUpgradeConfig; }
+export interface TrainingProfile { id: string; airline: string; aircraft: string; operation: string; position: 'PIC' | 'SIC'; authority: 'FAA' | 'EASA'; createdAt: string; requirements: TrainingRequirement[]; currency?: AircraftCurrencyConfig; upgrade?: AircraftUpgradeConfig; }
 interface UpgradeStageDefinition { key:string; title:string; description:string; defaultHours:number; }
-const TRAINING_KEY = 'aeroslate.records.trainingProfiles.v1';
-const TRAINING_ACTIVE_KEY = 'aeroslate.records.trainingProfiles.active.v1';
+export const TRAINING_KEY = 'aeroslate.records.trainingProfiles.v1';
+export const TRAINING_ACTIVE_KEY = 'aeroslate.records.trainingProfiles.active.v1';
+export const TRAINING_RECORD_TARGET_KEY = 'aeroslate.records.trainingRecordTarget.v1';
 const DEFAULT_AIRCRAFT_CURRENCY: AircraftCurrencyConfig = { lookbackDays:90, requiredFlights:0, requiredHours:0, requiredDayLandings:3, requiredNightLandings:3, requiredApproaches:0, requiredHolds:0, requireTracking:false, registrationFilter:'' };
 
 function upgradeStages(profile: TrainingProfile): UpgradeStageDefinition[] {
@@ -105,9 +106,49 @@ function baselineTraining(authority:'FAA'|'EASA', operation:string, position:'PI
 function addCalendarMonthsIso(date:string, months:number): string {
   if (!date || !months) return ''; const d=new Date(`${date}T00:00:00Z`); if(Number.isNaN(d.getTime())) return ''; d.setUTCMonth(d.getUTCMonth()+months); return d.toISOString().slice(0,10);
 }
-function trainingDue(item:TrainingRequirement): string { return item.dueOverride || addCalendarMonthsIso(item.lastCompleted,item.intervalMonths); }
-function trainingStatus(item:TrainingRequirement): 'current'|'due'|'expired'|'open' {
-  const due=trainingDue(item); if(!item.required) return 'current'; if(!item.lastCompleted&&!item.dueOverride) return 'open'; if(!due) return 'open'; const todayIso=new Date().toISOString().slice(0,10); const soon=new Date(); soon.setUTCDate(soon.getUTCDate()+45); const soonIso=soon.toISOString().slice(0,10); if(due<todayIso) return 'expired'; if(due<=soonIso) return 'due'; return 'current';
+interface TrainingRule { title:string; basis:string; intervalMonths:number; mode:'calendar-month'|'exact-date'|'rolling'|'manual'|'none'; detail:string; }
+function endOfMonthIso(year:number, monthZero:number): string { return new Date(Date.UTC(year,monthZero+1,0)).toISOString().slice(0,10); }
+function calendarMonthDue(date:string, months:number): string {
+  if(!date || !months) return ''; const d=new Date(`${date}T00:00:00Z`); if(Number.isNaN(d.getTime())) return '';
+  return endOfMonthIso(d.getUTCFullYear(),d.getUTCMonth()+months);
+}
+function exactMonthDue(date:string, months:number): string { return addCalendarMonthsIso(date,months); }
+function trainingRule(profile:TrainingProfile,item:TrainingRequirement):TrainingRule {
+  const title=item.title.toLowerCase();
+  if(profile.authority==='FAA' && profile.operation==='Part 121') {
+    if(title.includes('recurrent ground') || title.includes('ground / flight')) return {title:'Recurrent ground / flight training',basis:'14 CFR 121.433(c) · 121.427',intervalMonths:12,mode:'calendar-month',detail:'Required within the preceding 12 calendar months.'};
+    if(title.includes('proficiency')) return profile.position==='PIC'
+      ? {title:'Proficiency / FFS event',basis:'14 CFR 121.441(a)(1)',intervalMonths:6,mode:'calendar-month',detail:'PIC: 6-month proficiency/approved FFS event; 12-month type proficiency check also applies.'}
+      : {title:'Proficiency / FFS event',basis:'14 CFR 121.441(a)(2)',intervalMonths:12,mode:'calendar-month',detail:'SIC: 12-month proficiency/FFS event; separate 24-month proficiency-check-or-LOFT requirement also applies.'};
+    if(title.includes('line / operating') || title.includes('operating experience')) return {title:'Operating experience / consolidation',basis:'14 CFR 121.434',intervalMonths:0,mode:'none',detail:'Qualification event. Consolidation is generally 100 hours within 120 days after the triggering qualification event.'};
+    if(title.includes('recent experience') || title.includes('landing curr')) return {title:'Recent experience / landing currency',basis:'14 CFR 121.439 · operator program',intervalMonths:0,mode:'rolling',detail:'Rolling aircraft recency is calculated in the Aircraft Currency section above.'};
+    if(title.includes('emergency') || title.includes('recurrent modules')) return {title:'Recurrent program modules',basis:'14 CFR 121.427 · approved program',intervalMonths:12,mode:'calendar-month',detail:'Tracked with the carrier-approved recurrent curriculum; exact module cadence may be program-specific.'};
+    if(title.includes('medical')) return {title:'Medical certificate / qualification',basis:'14 CFR Part 61 · company qualification',intervalMonths:0,mode:'manual',detail:'Validity depends on certificate class, age, privileges and company requirements.'};
+  }
+  if(profile.authority==='FAA' && profile.operation==='Part 135') {
+    const mode:'calendar-month'='calendar-month';
+    if(title.includes('135.293') || title.includes('knowledge') || title.includes('competency')) return {title:item.title,basis:item.basis,intervalMonths:12,mode,detail:'Part 135 test/check eligibility uses calendar-month rules; verify the approved program.'};
+    if(title.includes('instrument proficiency')) return {title:item.title,basis:'14 CFR 135.297',intervalMonths:6,mode,detail:'PIC instrument proficiency check.'};
+    if(title.includes('line check')) return {title:item.title,basis:'14 CFR 135.299',intervalMonths:12,mode,detail:'PIC line check.'};
+  }
+  if(profile.authority==='EASA') return {title:item.title,basis:item.basis,intervalMonths:item.intervalMonths,mode:item.intervalMonths?'exact-date':'manual',detail:item.notes||'Validity follows the applicable EASA/operator requirement.'};
+  return {title:item.title,basis:item.basis,intervalMonths:item.intervalMonths,mode:item.intervalMonths?'exact-date':'manual',detail:item.notes||'Verify the applicable operator or authority requirement.'};
+}
+function trainingDue(profile:TrainingProfile,item:TrainingRequirement): string {
+  if(item.dueOverride) return item.dueOverride;
+  const rule=trainingRule(profile,item);
+  if(!item.lastCompleted) return '';
+  if(rule.mode==='calendar-month') return calendarMonthDue(item.lastCompleted,rule.intervalMonths);
+  if(rule.mode==='exact-date') return exactMonthDue(item.lastCompleted,rule.intervalMonths);
+  return '';
+}
+function trainingStatus(profile:TrainingProfile,item:TrainingRequirement): 'current'|'due'|'expired'|'open' {
+  const rule=trainingRule(profile,item), due=trainingDue(profile,item); if(!item.required) return 'current';
+  if(rule.mode==='rolling') return 'current';
+  if(rule.mode==='none') return item.lastCompleted?'current':'open';
+  if(rule.mode==='manual' && !item.dueOverride) return item.lastCompleted?'current':'open';
+  if(!item.lastCompleted&&!item.dueOverride) return 'open'; if(!due) return 'open';
+  const todayIso=new Date().toISOString().slice(0,10); const soon=new Date(); soon.setUTCDate(soon.getUTCDate()+45); const soonIso=soon.toISOString().slice(0,10); if(due<todayIso) return 'expired'; if(due<=soonIso) return 'due'; return 'current';
 }
 const OPERATIONS = ['Part 91', 'Part 121', 'Part 135', 'EASA CAT', 'EASA NCC', 'EASA NCO', 'Training', 'Other'];
 const DUTY_SCHEMES = ['FAA Part 117', 'FAA Part 135', 'FAA Part 91 / company', 'EASA ORO.FTL.205', 'Company scheme', 'Other'];
@@ -236,7 +277,7 @@ function baseDuty(flight: FlightSummary, times: { in: string }, presets: RecordP
     augmented: false, notes: '', attested: false, signerName: presets.defaultSigner };
 }
 
-export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummary; mode?: 'logbook' | 'duty' }) {
+export function RecordsPage({ flight, mode = 'logbook', onOpenTrainingRecord }: { flight: FlightSummary; mode?: 'logbook' | 'duty'; onOpenTrainingRecord?: (profileId:string, requirementId:string)=>void }) {
   const tab = mode;
   const [ledger, setLedger] = useState<AeroSlateLedger>(() => normalizeLedger(loadLocal(LEDGER_KEY, emptyLedger())));
   const [status, setStatus] = useState('');
@@ -499,7 +540,7 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
   const activeTraining = trainingProfiles.find(profile=>profile.id===activeTrainingId) || trainingProfiles[0] || null;
   const trainingSummary = useMemo(() => {
     if (!activeTraining) return { current:0, due:0, expired:0, open:0 };
-    return activeTraining.requirements.reduce((acc,item)=>{ acc[trainingStatus(item)] += 1; return acc; }, { current:0, due:0, expired:0, open:0 });
+    return activeTraining.requirements.reduce((acc,item)=>{ acc[trainingStatus(activeTraining,item)] += 1; return acc; }, { current:0, due:0, expired:0, open:0 });
   }, [activeTraining]);
   const aircraftCurrency = useMemo(() => {
     if (!activeTraining) return null;
@@ -525,8 +566,6 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
     setTrainingProfiles(current=>[...current,profile]); setActiveTrainingId(id); setStatus('Training & qualification matrix created. Review operator-specific items and enter completion dates.');
   };
   const updateTrainingRequirement = (profileId:string, requirementId:string, patch:Partial<TrainingRequirement>) => setTrainingProfiles(current=>current.map(profile=>profile.id!==profileId?profile:{...profile,requirements:profile.requirements.map(item=>item.id===requirementId?{...item,...patch}:item)}));
-  const addTrainingRequirement = () => { if(!activeTraining)return; const item=req('Custom requirement','Operator','Operator / authority program',12,''); setTrainingProfiles(current=>current.map(profile=>profile.id===activeTraining.id?{...profile,requirements:[...profile.requirements,item]}:profile)); };
-  const removeTrainingRequirement = (requirementId:string) => { if(!activeTraining)return; setTrainingProfiles(current=>current.map(profile=>profile.id===activeTraining.id?{...profile,requirements:profile.requirements.filter(item=>item.id!==requirementId)}:profile)); };
   const deleteTrainingProfile = () => { if(!activeTraining)return; const remaining=trainingProfiles.filter(profile=>profile.id!==activeTraining.id); setTrainingProfiles(remaining); setActiveTrainingId(remaining[0]?.id||''); };
 
   const upgradeStats = useMemo(()=>{
@@ -593,19 +632,16 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
           </div></details>
           <p className="currency-disclaimer">Aircraft currency is calculated from saved flight-log entries matching this aircraft/type, crew position and optional registration. Set the rolling window and targets to the operator or authority rule that actually applies.</p>
         </div>}
-        <div className="training-matrix">
-          <div className="training-matrix-head"><span>Requirement</span><span>Basis</span><span>Last completed</span><span>Interval</span><span>Due</span><span>Evidence / notes</span><span></span></div>
-          {activeTraining.requirements.map(item=>{const state=trainingStatus(item),due=trainingDue(item);return <div className={`training-row ${state}`} key={item.id}>
-            <div><input className="training-title-input" value={item.title} onChange={e=>updateTrainingRequirement(activeTraining.id,item.id,{title:e.target.value})}/><small>{item.category}</small></div>
-            <div><input value={item.basis} onChange={e=>updateTrainingRequirement(activeTraining.id,item.id,{basis:e.target.value})}/></div>
-            <div><input type="date" value={item.lastCompleted} onChange={e=>updateTrainingRequirement(activeTraining.id,item.id,{lastCompleted:e.target.value})}/><button className="tiny-button" onClick={()=>updateTrainingRequirement(activeTraining.id,item.id,{lastCompleted:today(),dueOverride:''})}>Today</button></div>
-            <div><input type="number" min="0" value={item.intervalMonths||''} placeholder="months" onChange={e=>updateTrainingRequirement(activeTraining.id,item.id,{intervalMonths:Number(e.target.value)})}/></div>
-            <div><input type="date" value={item.dueOverride} placeholder={due||''} onChange={e=>updateTrainingRequirement(activeTraining.id,item.id,{dueOverride:e.target.value})}/><strong className={`training-status ${state}`}>{state==='current'?'CURRENT':state==='due'?'DUE SOON':state==='expired'?'EXPIRED':'ENTER DATE'}</strong><small>{due&&!item.dueOverride?`Auto ${due}`:item.dueOverride?'Manual due':''}</small></div>
-            <div><input value={item.evidence} onChange={e=>updateTrainingRequirement(activeTraining.id,item.id,{evidence:e.target.value})} placeholder="check airman / cert / record #"/><textarea value={item.notes} onChange={e=>updateTrainingRequirement(activeTraining.id,item.id,{notes:e.target.value})} placeholder="operator-specific notes"/></div>
-            <button className="icon-button danger-button" title="Remove requirement" onClick={()=>removeTrainingRequirement(item.id)}><Trash2 size={14}/></button>
+        <div className="training-matrix compact-training-matrix">
+          <div className="training-matrix-head"><span>Requirement</span><span>Legal basis</span><span>Completed</span><span>Due / status</span><span>Evidence</span></div>
+          {activeTraining.requirements.map(item=>{const rule=trainingRule(activeTraining,item),state=trainingStatus(activeTraining,item),due=trainingDue(activeTraining,item);return <div className={`training-row ${state}`} key={item.id}>
+            <div className="training-fixed"><strong>{rule.title}</strong><small>{item.category}</small></div>
+            <div className="training-fixed training-basis"><strong>{rule.basis}</strong><small>{rule.detail}</small></div>
+            <div className="training-completed"><input aria-label={`${rule.title} last completed`} type="date" value={item.lastCompleted} onChange={e=>updateTrainingRequirement(activeTraining.id,item.id,{lastCompleted:e.target.value,dueOverride:''})}/><button className="tiny-button" onClick={()=>updateTrainingRequirement(activeTraining.id,item.id,{lastCompleted:today(),dueOverride:''})}>Today</button></div>
+            <div className="training-due-cell"><strong className={`training-status ${state}`}>{state==='current'?'CURRENT':state==='due'?'DUE SOON':state==='expired'?'EXPIRED':rule.mode==='rolling'?'LIVE':'ENTER DATE'}</strong>{due?<strong className="training-due-date">{due}</strong>:<small>{rule.mode==='rolling'?'Calculated from logbook':rule.mode==='none'?'Event-based requirement':rule.mode==='manual'?'Enter completion / operator expiry':'Enter completion date'}</small>}{rule.intervalMonths>0&&<small>{rule.intervalMonths} calendar month{rule.intervalMonths===1?'':'s'}</small>}</div>
+            <div className="training-evidence"><input value={item.evidence} onChange={e=>updateTrainingRequirement(activeTraining.id,item.id,{evidence:e.target.value})} placeholder="check pilot / cert / record #"/><button className="training-record-link" onClick={()=>{saveLocal(TRAINING_RECORD_TARGET_KEY,{profileId:activeTraining.id,requirementId:item.id});onOpenTrainingRecord?.(activeTraining.id,item.id);}}><BookOpenCheck size={13}/> Check record</button><details><summary>Notes</summary><textarea value={item.notes} onChange={e=>updateTrainingRequirement(activeTraining.id,item.id,{notes:e.target.value})} placeholder="Operator-specific notes"/></details></div>
           </div>})}
         </div>
-        <button className="compact" onClick={addTrainingRequirement}><Plus size={14}/> Add custom requirement</button>
       </> : <div className="training-empty"><BookOpenCheck size={22}/><div><strong>Create your first training record</strong><p>AeroSlate will generate a regulatory baseline from the authority, operation and crew position, then you can adapt it to the operator's approved training program.</p></div></div>}
       <p className="currency-disclaimer">AeroSlate generates a regulatory baseline and maintenance record, not an FAA/EASA approval. Operator manuals, approved training programs, OpSpecs/approvals, aircraft differences, checking-month rules and competent-authority interpretations can add or alter requirements. Verify the matrix against the program that actually governs you.</p>
     </div></section>}
