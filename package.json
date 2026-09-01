@@ -2,7 +2,7 @@
   "name": "aeroslate-efb",
   "productName": "AeroSlate EFB",
   "private": true,
-  "version": "0.18.9",
+  "version": "0.19.0",
   "description": "AeroSlate EFB with server-side background simulator telemetry learning and custom flight planning.",
   "main": "electron/main.cjs",
   "type": "module",

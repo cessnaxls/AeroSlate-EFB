@@ -1,3 +1,9 @@
+## 0.19.0
+- Replaced the generic career progression builder with a professional per-aircraft upgrade ladder tied to the active training record.
+- Uses fixed industry-style progression titles; users only edit hour thresholds.
+- Adds operation-sensitive default thresholds, current time-in-type, remaining hours, and reset-to-defaults.
+- Removes game-like custom stages, manual gates, goals, and percentages from career progression.
+
 ## 0.18.9
 - Added customizable, multi-stage career progression to Records.
 - Career stages can contain automatic logbook gates or manual milestones.
