@@ -1,3 +1,12 @@
+## 0.19.3
+
+- Overhauled AeroSlate's visual system for a flatter, calmer iPad-first presentation with fewer borders, reduced nested-card clutter, stronger typography, tabular numerals, restrained accent use, and tighter consistent controls.
+- Made the top bar context-aware on Records, Training, Help, and Settings so irrelevant OFP/STD controls no longer crowd those workspaces.
+- Reworked Training & Qualification, Aircraft Currency, Training Records, and Aircraft Upgrade surfaces to avoid horizontal pane scrolling and clipping on tablet widths.
+- Converted competency/check rows and upgrade rows to responsive stacked layouts instead of fixed-width desktop tables.
+- Reduced visual collisions from sidebar selection glow, oversized badges, nested scroll panes, and dense evidence/actions.
+- Preserved the navlog as the only intentionally wide operational grid while tightening its row presentation.
+
 ## 0.19.2
 - Added a dedicated Training Records tab linked from each qualification requirement.
 - Added FAA/EASA regulatory-baseline competency/checking sheets with per-item S/U/W/N/A grading and aircraft/simulator device recording.

@@ -40,5 +40,5 @@ The Plan group includes a native flight planner. Aircraft fuel profiles can be e
 
 Custom fuel planning is a planning aid and does not replace an approved aircraft performance source, AFM/POH, operator release, or required regulatory weather/NOTAM briefing.
 
-## v0.19.2
+## v0.19.3
 Adds a dedicated Training Records workspace with linked competency/checking sheets for generated qualification requirements. Satisfactory completion writes the check date and record reference back to the linked qualification requirement.

@@ -218,7 +218,7 @@ export default function App() {
     </aside>
 
     <main>
-      <header className="topbar">
+      <header className={`topbar topbar-${page} ${['flightlogs','dutylogs','trainingrecords','settings','help'].includes(page) ? 'topbar-contextual' : ''}`}>
         <button className="menu-button always-menu" aria-label="Toggle navigation" onClick={() => { const landscapeTablet = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; if (landscapeTablet || window.innerWidth > 1180) setSidebarCollapsed(value => !value); else setMenuOpen(true); }}><Menu /></button>
         <div className="flight-ident">
           <div className="flight-primary"><span>{flight.airline}{flight.flightNumber || '—'}</span><strong>{flight.origin} <Plane size={16} /> {flight.destination}</strong></div>

@@ -1,4 +1,4 @@
-const CACHE = 'aeroslate-efb-shell-v25';
+const CACHE = 'aeroslate-efb-shell-v26';
 const APP_SHELL = ['/'];
 
 self.addEventListener('install', event => {
