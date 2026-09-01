@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BookOpenCheck, Calculator, ChevronDown, ChevronUp, CloudDownload, CloudUpload, Download, HardDrive, KeyRound, Plus, RefreshCw, Save, Search, ShieldCheck, Timer, Trash2, Upload, X } from 'lucide-react';
+import { BookOpenCheck, Calculator, ChevronDown, ChevronUp, CloudDownload, CloudUpload, Download, HardDrive, KeyRound, Plus, RefreshCw, Save, Search, ShieldCheck, Plane, Timer, Trash2, Upload, X } from 'lucide-react';
 import { loadLocal, saveLocal } from '../lib/storage';
 import { addMinutesZulu, decimalHours, formatMinutes, minutesBetweenZulu, normalizeZulu, oooiStorageKey, useOOOITimes } from '../lib/flightTimes';
 import { ZuluTimeInput } from '../components/ZuluTimeInput';
@@ -26,10 +26,11 @@ import {
 interface RecordPresets { role: 'PIC' | 'SIC' | 'Dual' | 'Instructor'; operation: string; rules: 'IFR' | 'VFR'; crossCountry: boolean; autoDutyTimes: boolean; reportLeadMinutes: number; postFlightMinutes: number; defaultNight: number; defaultInstrument: number; defaultSimulatedInstrument: number; defaultDayLandings: number; defaultNightLandings: number; defaultApproaches: string; defaultRemarks: string; defaultSigner: string; dutyRegulation: string; dutyRole: string; restBefore: number; maxDuty: number; maxFdp: number; minRest: number; }
 interface CloudPrefs { gistId: string; token: string; passphrase: string; autoSync: boolean; rememberSecrets: boolean; }
 interface TrainingRequirement { id: string; title: string; category: string; basis: string; intervalMonths: number; lastCompleted: string; dueOverride: string; evidence: string; notes: string; required: boolean; }
-interface TrainingProfile { id: string; airline: string; aircraft: string; operation: string; position: 'PIC' | 'SIC'; authority: 'FAA' | 'EASA'; createdAt: string; requirements: TrainingRequirement[]; }
+interface AircraftCurrencyConfig { lookbackDays:number; requiredFlights:number; requiredHours:number; requiredDayLandings:number; requiredNightLandings:number; requiredApproaches:number; requiredHolds:number; requireTracking:boolean; registrationFilter:string; }
+interface TrainingProfile { id: string; airline: string; aircraft: string; operation: string; position: 'PIC' | 'SIC'; authority: 'FAA' | 'EASA'; createdAt: string; requirements: TrainingRequirement[]; currency?: AircraftCurrencyConfig; }
 const TRAINING_KEY = 'aeroslate.records.trainingProfiles.v1';
 const TRAINING_ACTIVE_KEY = 'aeroslate.records.trainingProfiles.active.v1';
-
+const DEFAULT_AIRCRAFT_CURRENCY: AircraftCurrencyConfig = { lookbackDays:90, requiredFlights:0, requiredHours:0, requiredDayLandings:3, requiredNightLandings:3, requiredApproaches:0, requiredHolds:0, requireTracking:false, registrationFilter:'' };
 function req(title:string, category:string, basis:string, intervalMonths:number, notes=''): TrainingRequirement {
   return { id:`req-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, title, category, basis, intervalMonths, lastCompleted:'', dueOverride:'', evidence:'', notes, required:true };
 }
@@ -478,9 +479,27 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
     if (!activeTraining) return { current:0, due:0, expired:0, open:0 };
     return activeTraining.requirements.reduce((acc,item)=>{ acc[trainingStatus(item)] += 1; return acc; }, { current:0, due:0, expired:0, open:0 });
   }, [activeTraining]);
+  const aircraftCurrency = useMemo(() => {
+    if (!activeTraining) return null;
+    const cfg={...DEFAULT_AIRCRAFT_CURRENCY,...(activeTraining.currency||{})};
+    const cutoff=new Date(); cutoff.setUTCDate(cutoff.getUTCDate()-Math.max(1,cfg.lookbackDays)); const cutoffIso=cutoff.toISOString().slice(0,10);
+    const aircraftKey=activeTraining.aircraft.trim().toLowerCase(); const regKey=cfg.registrationFilter.trim().toLowerCase();
+    const matched=entries.filter(entry=>{ const d=entry.data; const type=String(d.aircraftType||'').trim().toLowerCase(); const reg=String(d.registration||'').trim().toLowerCase(); const date=String(d.date||''); const roleTime=activeTraining.position==='PIC'?Number(d.pic||0):Number(d.sic||0); return type===aircraftKey && (!regKey||reg===regKey) && date>=cutoffIso && roleTime>0; });
+    const sum=(key:string)=>matched.reduce((total,entry)=>total+Number(entry.data[key]||0),0);
+    const hours=activeTraining.position==='PIC'?sum('pic'):sum('sic'); const dayLandings=sum('dayLandings'); const nightLandings=sum('nightLandings'); const approaches=matched.reduce((t,e)=>t+approachCount(e.data.approaches),0); const holds=sum('holds'); const tracking=matched.some(e=>Boolean(e.data.tracking));
+    const lastFlight=matched.map(e=>String(e.data.date||'')).sort().at(-1)||'';
+    const checks=[
+      {label:'Flights',value:matched.length,target:cfg.requiredFlights}, {label:`${activeTraining.position} hours`,value:hours,target:cfg.requiredHours,decimal:true},
+      {label:'Day landings',value:dayLandings,target:cfg.requiredDayLandings}, {label:'Night landings',value:nightLandings,target:cfg.requiredNightLandings},
+      {label:'Approaches',value:approaches,target:cfg.requiredApproaches}, {label:'Holds',value:holds,target:cfg.requiredHolds},
+    ];
+    const required=checks.filter(c=>c.target>0); const current=required.every(c=>c.value>=c.target) && (!cfg.requireTracking||tracking);
+    return { cfg, matched, hours, dayLandings, nightLandings, approaches, holds, tracking, lastFlight, checks, current };
+  }, [activeTraining,entries]);
+  const updateAircraftCurrency=(patch:Partial<AircraftCurrencyConfig>)=>{ if(!activeTraining)return; setTrainingProfiles(current=>current.map(profile=>profile.id===activeTraining.id?{...profile,currency:{...DEFAULT_AIRCRAFT_CURRENCY,...(profile.currency||{}),...patch}}:profile)); };
   const createTrainingProfile = () => {
     if (!trainingDraft.airline.trim() || !trainingDraft.aircraft.trim()) { setStatus('Enter an airline/operator and aircraft/type first.'); return; }
-    const id=`training-${Date.now()}`; const profile:TrainingProfile={ id, airline:trainingDraft.airline.trim(), aircraft:trainingDraft.aircraft.trim(), operation:trainingDraft.operation, position:trainingDraft.position, authority:trainingDraft.authority, createdAt:new Date().toISOString(), requirements:baselineTraining(trainingDraft.authority,trainingDraft.operation,trainingDraft.position) };
+    const id=`training-${Date.now()}`; const profile:TrainingProfile={ id, airline:trainingDraft.airline.trim(), aircraft:trainingDraft.aircraft.trim(), operation:trainingDraft.operation, position:trainingDraft.position, authority:trainingDraft.authority, createdAt:new Date().toISOString(), requirements:baselineTraining(trainingDraft.authority,trainingDraft.operation,trainingDraft.position), currency:{...DEFAULT_AIRCRAFT_CURRENCY} };
     setTrainingProfiles(current=>[...current,profile]); setActiveTrainingId(id); setStatus('Training & qualification matrix created. Review operator-specific items and enter completion dates.');
   };
   const updateTrainingRequirement = (profileId:string, requirementId:string, patch:Partial<TrainingRequirement>) => setTrainingProfiles(current=>current.map(profile=>profile.id!==profileId?profile:{...profile,requirements:profile.requirements.map(item=>item.id===requirementId?{...item,...patch}:item)}));
@@ -518,6 +537,27 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
       {activeTraining ? <>
         <div className="training-summary"><div><span>Current</span><strong>{trainingSummary.current}</strong></div><div className="warn"><span>Due ≤45d</span><strong>{trainingSummary.due}</strong></div><div className="bad"><span>Expired</span><strong>{trainingSummary.expired}</strong></div><div><span>Needs entry</span><strong>{trainingSummary.open}</strong></div></div>
         <div className="training-identity"><strong>{activeTraining.airline}</strong><span>{activeTraining.aircraft} · {activeTraining.authority} {activeTraining.operation} · {activeTraining.position}</span></div>
+        <div className="training-section-divider"><div><Plane size={16}/><strong>Aircraft currency & recent experience</strong></div><span>LOGBOOK-DERIVED</span></div>
+        {aircraftCurrency && <div className="aircraft-currency-panel">
+          <div className="aircraft-currency-head"><div><strong>Aircraft currency</strong><span>{activeTraining.aircraft}{aircraftCurrency.cfg.registrationFilter?` · ${aircraftCurrency.cfg.registrationFilter}`:''} · rolling {aircraftCurrency.cfg.lookbackDays} days · {activeTraining.position}</span></div><span className={`pill ${aircraftCurrency.current?'good':'warn'}`}>{aircraftCurrency.current?'CURRENT':'ACTION NEEDED'}</span></div>
+          <div className="aircraft-currency-grid">
+            <div><span>Last flight</span><strong>{aircraftCurrency.lastFlight||'—'}</strong><small>{aircraftCurrency.matched.length} qualifying flight{aircraftCurrency.matched.length===1?'':'s'}</small></div>
+            {aircraftCurrency.checks.map(check=><div className={check.target>0&&check.value<check.target?'attention':'good'} key={check.label}><span>{check.label}</span><strong>{check.decimal?check.value.toFixed(1):check.value}{check.target>0?` / ${check.target}`:''}</strong><small>{check.target>0?(check.value>=check.target?'target met':`${Math.max(0,check.target-check.value).toFixed(check.decimal?1:0)} remaining`):'tracking only'}</small></div>)}
+            <div className={aircraftCurrency.cfg.requireTracking&&!aircraftCurrency.tracking?'attention':'good'}><span>Intercept / track</span><strong>{aircraftCurrency.tracking?'YES':'NO'}</strong><small>{aircraftCurrency.cfg.requireTracking?'required in window':'tracking only'}</small></div>
+          </div>
+          <details className="aircraft-currency-settings"><summary>Aircraft currency rules</summary><div className="aircraft-currency-settings-grid">
+            <label><span>Rolling window (days)</span><input type="number" min="1" value={aircraftCurrency.cfg.lookbackDays} onChange={e=>updateAircraftCurrency({lookbackDays:Number(e.target.value)||90})}/></label>
+            <label><span>Registration (optional)</span><input value={aircraftCurrency.cfg.registrationFilter} placeholder="All tails of this type" onChange={e=>updateAircraftCurrency({registrationFilter:e.target.value})}/></label>
+            <label><span>Required flights</span><input type="number" min="0" value={aircraftCurrency.cfg.requiredFlights} onChange={e=>updateAircraftCurrency({requiredFlights:Number(e.target.value)||0})}/></label>
+            <label><span>Required {activeTraining.position} hours</span><input type="number" min="0" step="0.1" value={aircraftCurrency.cfg.requiredHours} onChange={e=>updateAircraftCurrency({requiredHours:Number(e.target.value)||0})}/></label>
+            <label><span>Day landings</span><input type="number" min="0" value={aircraftCurrency.cfg.requiredDayLandings} onChange={e=>updateAircraftCurrency({requiredDayLandings:Number(e.target.value)||0})}/></label>
+            <label><span>Night landings</span><input type="number" min="0" value={aircraftCurrency.cfg.requiredNightLandings} onChange={e=>updateAircraftCurrency({requiredNightLandings:Number(e.target.value)||0})}/></label>
+            <label><span>Approaches</span><input type="number" min="0" value={aircraftCurrency.cfg.requiredApproaches} onChange={e=>updateAircraftCurrency({requiredApproaches:Number(e.target.value)||0})}/></label>
+            <label><span>Holds</span><input type="number" min="0" value={aircraftCurrency.cfg.requiredHolds} onChange={e=>updateAircraftCurrency({requiredHolds:Number(e.target.value)||0})}/></label>
+            <label className="check-inline"><input type="checkbox" checked={aircraftCurrency.cfg.requireTracking} onChange={e=>updateAircraftCurrency({requireTracking:e.target.checked})}/> Require intercept/track</label>
+          </div></details>
+          <p className="currency-disclaimer">Aircraft currency is calculated from saved flight-log entries matching this aircraft/type, crew position and optional registration. Set the rolling window and targets to the operator or authority rule that actually applies.</p>
+        </div>}
         <div className="training-matrix">
           <div className="training-matrix-head"><span>Requirement</span><span>Basis</span><span>Last completed</span><span>Interval</span><span>Due</span><span>Evidence / notes</span><span></span></div>
           {activeTraining.requirements.map(item=>{const state=trainingStatus(item),due=trainingDue(item);return <div className={`training-row ${state}`} key={item.id}>

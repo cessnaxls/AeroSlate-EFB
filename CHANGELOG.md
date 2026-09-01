@@ -1,4 +1,15 @@
-## v0.18.6
+## 0.18.8
+- Promoted Aircraft Currency & Recent Experience to a clearly labeled first-class section immediately above the training matrix.
+- Strengthened visual treatment so aircraft currency cannot be mistaken for part of the training requirements table.
+- Bumped service-worker cache to force the updated Records UI after deployment.
+
+## 0.18.7
+- Added aircraft/type currency tracking to each Training & Qualification profile.
+- Currency is calculated automatically from saved flight-log records for the selected aircraft and PIC/SIC position, with optional tail-specific filtering.
+- Added configurable rolling windows and targets for flights, role hours, day/night landings, approaches, holds, and intercept/track experience.
+- Added current/action-needed status, last qualifying flight, and remaining-to-target indicators.
+
+## v0.18.7
 - Replaced the generic currency tracker with operator/aircraft/operation/position training and qualification records.
 - Added FAA/EASA baseline matrices, editable intervals, completion dates, due dates, evidence and custom requirements.
 - Added current/due/expired status summary.
