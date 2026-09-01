@@ -1,3 +1,9 @@
+## 0.18.9
+- Added customizable, multi-stage career progression to Records.
+- Career stages can contain automatic logbook gates or manual milestones.
+- Automatic gates support total time, PIC/SIC, night, instrument, cross-country, landings, approaches, holds, flight count, unique tails/types, plus aircraft/operation/role filters.
+- Added stage and overall progress, target dates, current-stage highlighting, and persistent local career plans.
+
 ## 0.18.8
 - Promoted Aircraft Currency & Recent Experience to a clearly labeled first-class section immediately above the training matrix.
 - Strengthened visual treatment so aircraft currency cannot be mistaken for part of the training requirements table.

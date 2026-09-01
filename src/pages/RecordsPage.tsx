@@ -28,8 +28,19 @@ interface CloudPrefs { gistId: string; token: string; passphrase: string; autoSy
 interface TrainingRequirement { id: string; title: string; category: string; basis: string; intervalMonths: number; lastCompleted: string; dueOverride: string; evidence: string; notes: string; required: boolean; }
 interface AircraftCurrencyConfig { lookbackDays:number; requiredFlights:number; requiredHours:number; requiredDayLandings:number; requiredNightLandings:number; requiredApproaches:number; requiredHolds:number; requireTracking:boolean; registrationFilter:string; }
 interface TrainingProfile { id: string; airline: string; aircraft: string; operation: string; position: 'PIC' | 'SIC'; authority: 'FAA' | 'EASA'; createdAt: string; requirements: TrainingRequirement[]; currency?: AircraftCurrencyConfig; }
+interface CareerRequirement { id:string; label:string; kind:'auto'|'manual'; metric:string; target:number; aircraftFilter:string; operationFilter:string; roleFilter:string; completed:boolean; notes:string; }
+interface CareerStage { id:string; title:string; targetDate:string; notes:string; requirements:CareerRequirement[]; }
+interface CareerPlan { id:string; name:string; goal:string; createdAt:string; stages:CareerStage[]; }
 const TRAINING_KEY = 'aeroslate.records.trainingProfiles.v1';
 const TRAINING_ACTIVE_KEY = 'aeroslate.records.trainingProfiles.active.v1';
+const CAREER_KEY = 'aeroslate.records.careerPlans.v1';
+const CAREER_ACTIVE_KEY = 'aeroslate.records.careerPlans.active.v1';
+const CAREER_METRICS = [
+  {key:'totalTime',label:'Total time'}, {key:'pic',label:'PIC'}, {key:'sic',label:'SIC / co-pilot'}, {key:'night',label:'Night'},
+  {key:'instrument',label:'Actual instrument'}, {key:'crossCountry',label:'Cross-country'}, {key:'dayLandings',label:'Day landings'},
+  {key:'nightLandings',label:'Night landings'}, {key:'approaches',label:'Approaches'}, {key:'holds',label:'Holding events'},
+  {key:'flights',label:'Flights'}, {key:'uniqueTails',label:'Unique registrations'}, {key:'uniqueTypes',label:'Unique aircraft types'}
+];
 const DEFAULT_AIRCRAFT_CURRENCY: AircraftCurrencyConfig = { lookbackDays:90, requiredFlights:0, requiredHours:0, requiredDayLandings:3, requiredNightLandings:3, requiredApproaches:0, requiredHolds:0, requireTracking:false, registrationFilter:'' };
 function req(title:string, category:string, basis:string, intervalMonths:number, notes=''): TrainingRequirement {
   return { id:`req-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, title, category, basis, intervalMonths, lastCompleted:'', dueOverride:'', evidence:'', notes, required:true };
@@ -245,6 +256,9 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
   const [trainingProfiles, setTrainingProfiles] = useState<TrainingProfile[]>(() => loadLocal<TrainingProfile[]>(TRAINING_KEY, []));
   const [activeTrainingId, setActiveTrainingId] = useState<string>(() => loadLocal<string>(TRAINING_ACTIVE_KEY, ''));
   const [trainingDraft, setTrainingDraft] = useState({ airline:'', aircraft:'', operation:'Part 121', position:'SIC' as 'PIC'|'SIC', authority:'FAA' as 'FAA'|'EASA' });
+  const [careerPlans, setCareerPlans] = useState<CareerPlan[]>(() => loadLocal<CareerPlan[]>(CAREER_KEY, []));
+  const [activeCareerId, setActiveCareerId] = useState<string>(() => loadLocal<string>(CAREER_ACTIVE_KEY, ''));
+  const [careerDraft, setCareerDraft] = useState({ name:'', goal:'' });
   const [nowTick, setNowTick] = useState(() => new Date());
 
   useEffect(() => saveLocal(LEDGER_KEY, ledger), [ledger]);
@@ -252,6 +266,8 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
   useEffect(() => saveLocal('aeroslate.records.presets', presets), [presets]);
   useEffect(() => saveLocal(TRAINING_KEY, trainingProfiles), [trainingProfiles]);
   useEffect(() => saveLocal(TRAINING_ACTIVE_KEY, activeTrainingId), [activeTrainingId]);
+  useEffect(() => saveLocal(CAREER_KEY, careerPlans), [careerPlans]);
+  useEffect(() => saveLocal(CAREER_ACTIVE_KEY, activeCareerId), [activeCareerId]);
   useEffect(() => { const timer = window.setInterval(() => setNowTick(new Date()), 30000); return () => window.clearInterval(timer); }, []);
   useEffect(() => { const refresh=()=>{setPresets({ ...DEFAULT_PRESETS, ...loadLocal<Partial<RecordPresets>>('aeroslate.records.presets', {}) });}; window.addEventListener('aeroslate-record-settings-updated',refresh); return()=>window.removeEventListener('aeroslate-record-settings-updated',refresh); }, []);
   useEffect(() => saveLocal(logKey, log), [logKey, log]); useEffect(() => saveLocal(dutyKey, duty), [dutyKey, duty]);
@@ -507,6 +523,32 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
   const removeTrainingRequirement = (requirementId:string) => { if(!activeTraining)return; setTrainingProfiles(current=>current.map(profile=>profile.id===activeTraining.id?{...profile,requirements:profile.requirements.filter(item=>item.id!==requirementId)}:profile)); };
   const deleteTrainingProfile = () => { if(!activeTraining)return; const remaining=trainingProfiles.filter(profile=>profile.id!==activeTraining.id); setTrainingProfiles(remaining); setActiveTrainingId(remaining[0]?.id||''); };
 
+  const activeCareer = careerPlans.find(plan=>plan.id===activeCareerId) || careerPlans[0] || null;
+  const careerRequirementValue = (item:CareerRequirement) => {
+    if (item.kind==='manual') return item.completed ? 1 : 0;
+    const aircraft=item.aircraftFilter.trim().toLowerCase(); const operation=item.operationFilter.trim().toLowerCase(); const role=item.roleFilter.trim().toUpperCase();
+    const matched=entries.filter(entry=>{ const d=entry.data||{}; const type=String(d.aircraftType||'').toLowerCase(); const op=String(d.operation||'').toLowerCase(); const rowRole=String(d.role||'').toUpperCase(); return (!aircraft||type.includes(aircraft))&&(!operation||op.includes(operation))&&(!role||role==='ANY'||rowRole===role); });
+    if(item.metric==='flights') return matched.length;
+    if(item.metric==='uniqueTails') return new Set(matched.map(entry=>String(entry.data?.registration||'').trim()).filter(Boolean)).size;
+    if(item.metric==='uniqueTypes') return new Set(matched.map(entry=>String(entry.data?.aircraftType||'').trim()).filter(Boolean)).size;
+    if(item.metric==='approaches') return matched.reduce((total,entry)=>total+approachCount(entry.data?.approaches),0);
+    return matched.reduce((total,entry)=>total+Number(entry.data?.[item.metric]||0),0);
+  };
+  const careerStats = useMemo(()=>{
+    if(!activeCareer) return null;
+    const stages=activeCareer.stages.map(stage=>{ const reqs=stage.requirements.map(item=>{ const value=careerRequirementValue(item); const target=item.kind==='manual'?1:Math.max(0,item.target); const complete=item.kind==='manual'?item.completed:(target<=0?true:value>=target); return {item,value,target,complete}; }); const complete=reqs.length>0&&reqs.every(row=>row.complete); const progress=reqs.length?reqs.reduce((sum,row)=>sum+(row.complete?1:Math.min(1,row.target>0?row.value/row.target:1)),0)/reqs.length:0; return {stage,reqs,complete,progress}; });
+    const totalReq=stages.reduce((n,row)=>n+row.reqs.length,0); const completedReq=stages.reduce((n,row)=>n+row.reqs.filter(req=>req.complete).length,0); const currentIndex=Math.max(0,stages.findIndex(row=>!row.complete)); const current=stages.length?(stages.find(row=>!row.complete)||stages[stages.length-1]):null; return {stages,totalReq,completedReq,percent:totalReq?Math.round(completedReq/totalReq*100):0,current,currentIndex};
+  },[activeCareer,entries]);
+  const createCareerPlan=()=>{ const name=careerDraft.name.trim(); if(!name){setStatus('Name the career progression first.');return;} const id=`career-${Date.now()}`; const plan:CareerPlan={id,name,goal:careerDraft.goal.trim(),createdAt:new Date().toISOString(),stages:[{id:`stage-${Date.now()}`,title:'Next step',targetDate:'',notes:'',requirements:[]}]}; setCareerPlans(rows=>[...rows,plan]);setActiveCareerId(id);setCareerDraft({name:'',goal:''});setStatus('Career progression created. Add stages and logbook-linked or manual gates.'); };
+  const updateCareerPlan=(patch:Partial<CareerPlan>)=>{if(!activeCareer)return;setCareerPlans(rows=>rows.map(plan=>plan.id===activeCareer.id?{...plan,...patch}:plan));};
+  const addCareerStage=()=>{if(!activeCareer)return;const stage:CareerStage={id:`stage-${Date.now()}-${Math.random().toString(36).slice(2,5)}`,title:'New stage',targetDate:'',notes:'',requirements:[]};updateCareerPlan({stages:[...activeCareer.stages,stage]});};
+  const updateCareerStage=(stageId:string,patch:Partial<CareerStage>)=>{if(!activeCareer)return;updateCareerPlan({stages:activeCareer.stages.map(stage=>stage.id===stageId?{...stage,...patch}:stage)});};
+  const removeCareerStage=(stageId:string)=>{if(!activeCareer)return;updateCareerPlan({stages:activeCareer.stages.filter(stage=>stage.id!==stageId)});};
+  const addCareerRequirement=(stageId:string,kind:'auto'|'manual')=>{if(!activeCareer)return;const item:CareerRequirement={id:`career-req-${Date.now()}-${Math.random().toString(36).slice(2,5)}`,label:kind==='manual'?'Manual milestone':'Total time',kind,metric:'totalTime',target:kind==='manual'?1:1000,aircraftFilter:'',operationFilter:'',roleFilter:'Any',completed:false,notes:''};updateCareerPlan({stages:activeCareer.stages.map(stage=>stage.id===stageId?{...stage,requirements:[...stage.requirements,item]}:stage)});};
+  const updateCareerRequirement=(stageId:string,reqId:string,patch:Partial<CareerRequirement>)=>{if(!activeCareer)return;updateCareerPlan({stages:activeCareer.stages.map(stage=>stage.id===stageId?{...stage,requirements:stage.requirements.map(item=>item.id===reqId?{...item,...patch}:item)}:stage)});};
+  const removeCareerRequirement=(stageId:string,reqId:string)=>{if(!activeCareer)return;updateCareerPlan({stages:activeCareer.stages.map(stage=>stage.id===stageId?{...stage,requirements:stage.requirements.filter(item=>item.id!==reqId)}:stage)});};
+  const deleteCareerPlan=()=>{if(!activeCareer)return;const remaining=careerPlans.filter(plan=>plan.id!==activeCareer.id);setCareerPlans(remaining);setActiveCareerId(remaining[0]?.id||'');};
+
   const recordDetail = selectedRecord && <div className="record-detail-panel">
     <div className="record-detail-head"><div><strong>{tab==='logbook'?'Flight record':'Duty record'}</strong><span>{String(selectedRecord.data?.date||'')} · {String(selectedRecord.data?.flightNumber||'')}</span></div><button className="icon-button" onClick={()=>setSelectedRecord(null)}><X size={17}/></button></div>
     <div className="record-detail-grid">{Object.entries(selectedRecord.data || {}).filter(([,value])=>value!==''&&value!==null&&value!==undefined).map(([key,value])=><div key={key}><span>{key.replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase())}</span><strong>{typeof value==='boolean'?(value?'Yes':'No'):String(value)}</strong></div>)}</div>
@@ -573,6 +615,26 @@ export function RecordsPage({ flight, mode = 'logbook' }: { flight: FlightSummar
         <button className="compact" onClick={addTrainingRequirement}><Plus size={14}/> Add custom requirement</button>
       </> : <div className="training-empty"><BookOpenCheck size={22}/><div><strong>Create your first training record</strong><p>AeroSlate will generate a regulatory baseline from the authority, operation and crew position, then you can adapt it to the operator's approved training program.</p></div></div>}
       <p className="currency-disclaimer">AeroSlate generates a regulatory baseline and maintenance record, not an FAA/EASA approval. Operator manuals, approved training programs, OpSpecs/approvals, aircraft differences, checking-month rules and competent-authority interpretations can add or alter requirements. Verify the matrix against the program that actually governs you.</p>
+    </div></section>}
+
+    {tab === 'logbook' && <section className="card career-progression-card"><header><div><Calculator size={18}/><h3>Career progression</h3></div><span className="pill blue">CUSTOM · LOGBOOK-LINKED</span></header><div className="card-body">
+      <div className="career-builder"><label><span>Progression name</span><input value={careerDraft.name} onChange={e=>setCareerDraft({...careerDraft,name:e.target.value})} placeholder="e.g. Regional FO → Major airline"/></label><label><span>Destination / goal</span><input value={careerDraft.goal} onChange={e=>setCareerDraft({...careerDraft,goal:e.target.value})} placeholder="e.g. Major airline captain"/></label><button className="primary" onClick={createCareerPlan}><Plus size={15}/> Create progression</button></div>
+      {careerPlans.length>0&&<div className="career-selector"><label><span>Active progression</span><select value={activeCareer?.id||''} onChange={e=>setActiveCareerId(e.target.value)}>{careerPlans.map(plan=><option key={plan.id} value={plan.id}>{plan.name}{plan.goal?` · ${plan.goal}`:''}</option>)}</select></label><button className="danger-button compact" onClick={deleteCareerPlan}><Trash2 size={14}/> Delete</button></div>}
+      {activeCareer&&careerStats?<>
+        <div className="career-overview"><div><span>Overall</span><strong>{careerStats.percent}%</strong><small>{careerStats.completedReq} / {careerStats.totalReq} gates complete</small></div><div><span>Current stage</span><strong>{careerStats.current?.stage.title||'Build your plan'}</strong><small>{activeCareer.goal||'Custom career path'}</small></div><div><span>Stages</span><strong>{activeCareer.stages.length}</strong><small>{careerStats.stages.filter(row=>row.complete).length} complete</small></div></div>
+        <div className="career-plan-title"><label><span>Plan name</span><input value={activeCareer.name} onChange={e=>updateCareerPlan({name:e.target.value})}/></label><label><span>Career goal</span><input value={activeCareer.goal} onChange={e=>updateCareerPlan({goal:e.target.value})} placeholder="Optional destination"/></label></div>
+        <div className="career-stage-list">{careerStats.stages.map((stageRow,index)=><div className={`career-stage ${stageRow.complete?'complete':careerStats.currentIndex===index?'active':''}`} key={stageRow.stage.id}>
+          <div className="career-stage-head"><div className="career-stage-number">{index+1}</div><div className="career-stage-title"><input value={stageRow.stage.title} onChange={e=>updateCareerStage(stageRow.stage.id,{title:e.target.value})}/><small>{stageRow.complete?'COMPLETE':careerStats.currentIndex===index?'CURRENT STAGE':'UPCOMING'} · {Math.round(stageRow.progress*100)}%</small></div><label><span>Target date</span><input type="date" value={stageRow.stage.targetDate} onChange={e=>updateCareerStage(stageRow.stage.id,{targetDate:e.target.value})}/></label><button className="icon-button danger-button" title="Delete stage" onClick={()=>removeCareerStage(stageRow.stage.id)}><Trash2 size={14}/></button></div>
+          <div className="career-progress-track"><span style={{width:`${Math.round(stageRow.progress*100)}%`}}/></div>
+          <div className="career-requirements">{stageRow.reqs.map(row=><div className={`career-requirement ${row.complete?'complete':''}`} key={row.item.id}>
+            <div className="career-requirement-main"><input value={row.item.label} onChange={e=>updateCareerRequirement(stageRow.stage.id,row.item.id,{label:e.target.value})}/><select value={row.item.kind} onChange={e=>updateCareerRequirement(stageRow.stage.id,row.item.id,{kind:e.target.value as 'auto'|'manual'})}><option value="auto">Logbook total</option><option value="manual">Manual gate</option></select></div>
+            {row.item.kind==='auto'?<><div className="career-auto-grid"><label><span>Metric</span><select value={row.item.metric} onChange={e=>updateCareerRequirement(stageRow.stage.id,row.item.id,{metric:e.target.value})}>{CAREER_METRICS.map(metric=><option key={metric.key} value={metric.key}>{metric.label}</option>)}</select></label><label><span>Target</span><input type="number" min="0" step="0.1" value={row.item.target} onChange={e=>updateCareerRequirement(stageRow.stage.id,row.item.id,{target:Number(e.target.value)||0})}/></label><label><span>Aircraft contains</span><input value={row.item.aircraftFilter} onChange={e=>updateCareerRequirement(stageRow.stage.id,row.item.id,{aircraftFilter:e.target.value})} placeholder="Any"/></label><label><span>Operation contains</span><input value={row.item.operationFilter} onChange={e=>updateCareerRequirement(stageRow.stage.id,row.item.id,{operationFilter:e.target.value})} placeholder="Any"/></label><label><span>Role</span><select value={row.item.roleFilter||'Any'} onChange={e=>updateCareerRequirement(stageRow.stage.id,row.item.id,{roleFilter:e.target.value})}><option>Any</option><option>PIC</option><option>SIC</option><option>Dual</option><option>Instructor</option></select></label></div><div className="career-gate-result"><strong>{row.value.toFixed(row.item.metric==='flights'||row.item.metric.startsWith('unique')||row.item.metric.includes('Landings')||row.item.metric==='approaches'||row.item.metric==='holds'?0:1)} / {row.target}</strong><span>{row.complete?'MET':'IN PROGRESS'}</span></div></>:<div className="career-manual-row"><label className="check-inline"><input type="checkbox" checked={row.item.completed} onChange={e=>updateCareerRequirement(stageRow.stage.id,row.item.id,{completed:e.target.checked})}/> Completed</label><input value={row.item.notes} onChange={e=>updateCareerRequirement(stageRow.stage.id,row.item.id,{notes:e.target.value})} placeholder="Certificate, application, interview, type rating, degree, etc."/><span className={`pill ${row.complete?'good':'neutral'}`}>{row.complete?'DONE':'OPEN'}</span></div>}
+            <button className="career-remove-gate icon-button" title="Remove gate" onClick={()=>removeCareerRequirement(stageRow.stage.id,row.item.id)}><Trash2 size={13}/></button>
+          </div>)}{!stageRow.reqs.length&&<div className="career-empty-stage">No gates yet. Add a logbook total or a manual milestone.</div>}</div>
+          <div className="career-stage-actions"><button className="compact" onClick={()=>addCareerRequirement(stageRow.stage.id,'auto')}><Plus size={13}/> Logbook gate</button><button className="compact" onClick={()=>addCareerRequirement(stageRow.stage.id,'manual')}><Plus size={13}/> Manual gate</button><input value={stageRow.stage.notes} onChange={e=>updateCareerStage(stageRow.stage.id,{notes:e.target.value})} placeholder="Stage notes / hiring minimums / personal target"/></div>
+        </div>)}</div><button className="compact career-add-stage" onClick={addCareerStage}><Plus size={14}/> Add career stage</button>
+        <p className="currency-disclaimer">Career progression is a personal planning tool. Logbook gates calculate automatically from saved flight records; manual gates let you track certificates, training, applications, interviews, education or operator-specific milestones. Hiring and regulatory requirements remain whatever the authority or employer actually requires.</p>
+      </>:<div className="training-empty"><Calculator size={22}/><div><strong>Build your career ladder</strong><p>Create any sequence of stages, then add automatic logbook thresholds and manual milestones to each stage.</p></div></div>}
     </div></section>}
 
     {tab === 'logbook' && <div className="records-layout"><section className="card record-editor"><header><div><BookOpenCheck size={18} /><h3>Flight log entry</h3></div><button onClick={() => exportRecords('logbook')}><Download size={15} /> CSV</button></header><div className="card-body">
